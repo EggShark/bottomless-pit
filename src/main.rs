@@ -1,44 +1,21 @@
-use bevy::prelude::*;
+use raylib::prelude::*;
 
 fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins)
-        .add_plugin(HelloPlugin)
-        .run();
-}
+    let screen_width: u16 = 800;
+    let screen_height: u16 = 450;
 
-pub struct HelloPlugin;
+    let(mut rl, thread) = raylib::init()
+        .resizable()
+        .size(screen_width as i32, screen_height as i32)
+        .title("cheesed to meet u")
+        .build();
+    
+    rl.set_exit_key(Some(KeyboardKey::KEY_O));
 
-impl Plugin for HelloPlugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(GreetTimer(Timer::from_seconds(2.0, true)))
-            .add_startup_system(add_people)
-            .add_system(greet_people);
+    while !rl.window_should_close() {
+        let mut drawer = rl.begin_drawing(&thread);
+
+        drawer.clear_background(Color::BLUE);
+        drawer.draw_text("Cheesed to meet u", 12, 12, 12, Color::GOLD);
     }
-}
-
-#[derive(Component)]
-struct Person;
-
-#[derive(Component)]
-struct Name(String);
-
-fn add_people(mut commands: Commands) {
-    commands.spawn().insert(Person).insert(Name("Charles Crabtree".to_string()));
-    commands.spawn().insert(Person).insert(Name("Ann Crabtree".to_string()));
-    commands.spawn().insert(Person).insert(Name("Travis Crabtree".to_string()));
-}
-
-struct GreetTimer(Timer);
-
-fn greet_people(time: Res<Time>, mut timer: ResMut<GreetTimer>, query: Query<&Name, With<Person>>) {
-    if timer.0.tick(time.delta()).just_finished(){
-        for name in query.iter() {
-            println!("hello {}!", name.0);
-        }
-    }
-}
-
-fn hello_world() {
-    println!("h")
 }
