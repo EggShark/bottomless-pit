@@ -10,6 +10,7 @@ fn main() {
         .title("cheesed to meet u")
         .build();
     
+    rl.set_target_fps(30);
     rl.set_exit_key(None);
 
     let mut circle_x: i32 = 0;
@@ -17,13 +18,18 @@ fn main() {
 
     while !rl.window_should_close() {
         let mut drawer = rl.begin_drawing(&thread);
-        if drawer.is_key_pressed(KeyboardKey::KEY_RIGHT) {
+
+        // right now movment is tied to frame rate
+        if drawer.is_key_down(KeyboardKey::KEY_RIGHT) {
             circle_x += 5;
-        } else if drawer.is_key_pressed(KeyboardKey::KEY_LEFT) {
+        } 
+        if drawer.is_key_down(KeyboardKey::KEY_LEFT) {
             circle_x -= 5;
-        } else if drawer.is_key_pressed(KeyboardKey::KEY_DOWN) {
+        }
+        if drawer.is_key_down(KeyboardKey::KEY_DOWN) {
             circle_y += 5;
-        } else if drawer.is_key_pressed(KeyboardKey::KEY_UP) {
+        }
+        if drawer.is_key_down(KeyboardKey::KEY_UP) {
             circle_y -= 5;
         }
     
