@@ -1,9 +1,9 @@
 use raylib::prelude::*;
 
 pub struct Button {
-    pub position: Vector2,
-    pub size: Vector2,
-    pub color: Color,
+    position: Vector2,
+    size: Vector2,
+    color: Color,
 }
 
 impl Button {
@@ -15,11 +15,20 @@ impl Button {
         }
     }
 
+    pub fn hovered(&self, rl: &RaylibHandle) -> bool{
+        is_inside(&self.position, &self.size, &rl.get_mouse_position())
+    }
+
     pub fn was_clicked(&self, rl: &RaylibHandle) -> bool {
-        is_inside(&self.position, &self.size, &rl.get_mouse_position()) && rl.is_mouse_button_pressed(MouseButton::MOUSE_LEFT_BUTTON)
+        is_inside(&self.position, &self.size, &rl.get_mouse_position()) && rl.is_mouse_button_released(MouseButton::MOUSE_LEFT_BUTTON)
+    }
+
+    pub fn draw(&self, drawer: &mut RaylibDrawHandle) {
+        drawer.draw_rectangle_v(self.position, self.size, self.color);
     }
 }
 
+// Basic collision code
 fn is_inside(pos: &Vector2, size: &Vector2, point: &Vector2) -> bool {
     // the pos is the top left corrner of the rect
     if point.x < pos.x {
@@ -34,5 +43,6 @@ fn is_inside(pos: &Vector2, size: &Vector2, point: &Vector2) -> bool {
     if point.x > pos.x + size.x {
         return false
     }
+
     true
 }

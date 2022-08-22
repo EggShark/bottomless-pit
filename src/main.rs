@@ -42,13 +42,9 @@ fn main() {
             circle_y -= 5;
         }
         
-        draw_button(&testing, &mut drawer);
+        testing.draw(&mut drawer);
         drawer.draw_rectangle(circle_x, circle_y, 10, 10, Color::WHITE);
         drawer.clear_background(Color::BLUE);
         drawer.draw_text("Cheesed to meet u", 12, 12, 1, Color::GOLD);
     }
-}
-
-fn draw_button(button: &Button, drawer: &mut RaylibDrawHandle) {
-    drawer.draw_rectangle_v(button.position, button.size, button.color);
 }
