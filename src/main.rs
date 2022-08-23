@@ -29,10 +29,10 @@ fn main() {
     let x = vec![z, b];
 
     let yes = Scene::from_vec(x);
-
+    
     while !rl.window_should_close() {
         let mut drawer = rl.begin_drawing(&thread);
-
+        drawer.clear_background(Color::WHITE);
         if testing.was_clicked(&drawer) {
             println!("clicked");
         }
