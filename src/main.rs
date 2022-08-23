@@ -1,6 +1,8 @@
 mod button;
+mod scene;
 
-use button::Button;
+use scene::Scene;
+use button::{Button, Text, UiElements};
 use raylib::prelude::*;
 
 fn main() {
@@ -16,10 +18,17 @@ fn main() {
     rl.set_target_fps(30);
     rl.set_exit_key(None);
 
-    let mut circle_x: i32 = 0;
-    let mut circle_y: i32 = 0;
-
     let testing = Button::new(20.0, 20.0, 100.0, 10.0, Color::LIME);
+
+    let h = Button::new(10.0, 10.0, 100.0, 20.0, Color::GOLD);
+    let y = Text::new("Hey Hey".to_string(), (30, 30), 12, Color::BLACK);
+
+    let z = UiElements::Button(h);
+    let b = UiElements::Text(y);
+
+    let x = vec![z, b];
+
+    let yes = Scene::from_vec(x);
 
     while !rl.window_should_close() {
         let mut drawer = rl.begin_drawing(&thread);
@@ -27,24 +36,9 @@ fn main() {
         if testing.was_clicked(&drawer) {
             println!("clicked");
         }
-
-        // right now movment is tied to frame rate
-        if drawer.is_key_down(KeyboardKey::KEY_RIGHT) {
-            circle_x += 5;
-        } 
-        if drawer.is_key_down(KeyboardKey::KEY_LEFT) {
-            circle_x -= 5;
-        }
-        if drawer.is_key_down(KeyboardKey::KEY_DOWN) {
-            circle_y += 5;
-        }
-        if drawer.is_key_down(KeyboardKey::KEY_UP) {
-            circle_y -= 5;
-        }
         
         testing.draw(&mut drawer);
-        drawer.draw_rectangle(circle_x, circle_y, 10, 10, Color::WHITE);
-        drawer.clear_background(Color::BLUE);
-        drawer.draw_text("Cheesed to meet u", 12, 12, 1, Color::GOLD);
+
+        yes.testing(&mut drawer);
     }
 }
