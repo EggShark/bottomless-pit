@@ -1,11 +1,11 @@
 use super::UiElements;
 use raylib::drawing::RaylibDrawHandle;
 
-pub struct Scene {
+pub struct Menu {
     elements: Vec<UiElements>,
 }
 
-impl Scene {
+impl Menue {
     pub fn new() -> Self {
         Self {
             elements: Vec::new()
