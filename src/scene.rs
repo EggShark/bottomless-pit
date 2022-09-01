@@ -1,11 +1,12 @@
 use super::UiElements;
+use super::Button;
 use raylib::drawing::RaylibDrawHandle;
 
 pub struct Menu {
     elements: Vec<UiElements>,
 }
 
-impl Menue {
+impl Menu {
     pub fn new() -> Self {
         Self {
             elements: Vec::new()
@@ -22,9 +23,20 @@ impl Menue {
         self.elements.push(item);
     }
 
-    pub fn testing(&self, drawer: &mut RaylibDrawHandle) {
+    pub fn draw(&self, drawer: &mut RaylibDrawHandle) {
         for element in self.elements.iter() {
             element.draw(drawer);
         }
+    }
+
+    pub fn get_buttons(&self) -> Vec<&Button> {
+        let mut buttons = Vec::new();
+        for element in self.elements.iter() {
+            match element {
+                UiElements::Button(b) => buttons.push(b),
+                _ => {}
+            }
+        }
+        buttons
     }
 }

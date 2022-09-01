@@ -1,11 +1,13 @@
 mod button;
+mod menus;
 mod scene;
 
-use scene::Scene;
+use menus::{Menus, menu_handler};
 use button::{Button, Text, UiElements};
 use raylib::prelude::*;
 
-enum AppState {
+#[derive(PartialEq)]
+pub enum AppState {
     Menued,
     InGame,
 }
@@ -27,8 +29,8 @@ fn main() {
     
     while !rl.window_should_close() {
         let mut drawer = rl.begin_drawing(&thread);
-        match state {
-            AppState::Menued => todo!(),
+        match &state {
+            AppState::Menued => menus::menu_handler(&mut state, &mut drawer),
             AppState::InGame => unimplemented!(),
         }
     }
