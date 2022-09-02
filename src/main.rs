@@ -1,22 +1,12 @@
 mod button;
-mod menus;
-mod scene;
 
-use menus::{Menus, menu_handler};
-use button::{Button, Text, UiElements};
 use raylib::prelude::*;
 
-#[derive(PartialEq)]
-pub enum AppState {
-    Menued,
-    InGame,
-}
 
 fn main() {
     let screen_width: u16 = 800;
     let screen_height: u16 = 450;
-    
-    let mut state = AppState::Menued;
+
 
     let(mut rl, thread) = raylib::init()
         .resizable()
@@ -26,12 +16,17 @@ fn main() {
     
     rl.set_target_fps(30);
     rl.set_exit_key(None);
-    
+
+    let testing = button::Button::new((10, 10), (100, 40), Some("Hello".to_string()));
+
     while !rl.window_should_close() {
-        let mut drawer = rl.begin_drawing(&thread);
-        match &state {
-            AppState::Menued => menus::menu_handler(&mut state, &mut drawer),
-            AppState::InGame => unimplemented!(),
+        let mut d_handle = rl.begin_drawing(&thread);
+        testing.draw(&mut d_handle);
+
+        if testing.was_clicked(&d_handle) {
+            println!("hello");
         }
+
+        d_handle.clear_background(Color::YELLOW);
     }
 }
