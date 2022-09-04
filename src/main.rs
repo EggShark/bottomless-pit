@@ -1,7 +1,8 @@
-mod button;
+mod ui_elements;
+mod game;
 
 use raylib::prelude::*;
-
+use game::Game;
 
 fn main() {
     let screen_width: u16 = 800;
@@ -17,16 +18,12 @@ fn main() {
     rl.set_target_fps(30);
     rl.set_exit_key(None);
 
-    let testing = button::Button::new((10, 10), (100, 40), Some("Hello".to_string()));
+    let mut game = Game::new();
 
     while !rl.window_should_close() {
+        game.update(&rl);
+
         let mut d_handle = rl.begin_drawing(&thread);
-        testing.draw(&mut d_handle);
-
-        if testing.was_clicked(&d_handle) {
-            println!("hello");
-        }
-
-        d_handle.clear_background(Color::YELLOW);
+        game.draw(d_handle);
     }
 }
