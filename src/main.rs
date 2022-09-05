@@ -10,7 +10,7 @@ fn main() {
 
 
     let(mut rl, thread) = raylib::init()
-        .resizable()
+        .transparent()
         .size(screen_width as i32, screen_height as i32)
         .title("cheesed to meet u")
         .build();
@@ -25,5 +25,9 @@ fn main() {
 
         let mut d_handle = rl.begin_drawing(&thread);
         game.draw(d_handle);
+
+        if game.close_check() {
+            break
+        }
     }
 }
