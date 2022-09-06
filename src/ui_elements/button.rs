@@ -1,5 +1,6 @@
 use raylib::prelude::*;
 
+#[derive(Debug, PartialEq)]
 pub struct Button {
     pos: (u16, u16),
     size: (u16, u16),

@@ -1,12 +1,13 @@
 use raylib::prelude::*;
 use super::ui_elements::Button;
 
+#[derive(Debug, PartialEq)]
 pub struct Game { 
     state: GameState,
     buttons: Vec<Button>,
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum GameState {
     MainMenu,
     Ingame,
@@ -37,7 +38,7 @@ impl Game {
                 }
                 if self.buttons[1].was_clicked(handle) {
                     // TODO replace with a transition functionn for deloading and stuff
-                    self.state = GameState::Ingame;
+                    self.into_game();
                 }
             },
             GameState::Ingame => {
@@ -55,8 +56,14 @@ impl Game {
         }
     }
 
-    pub fn close_check(&self) -> bool{
-        self.state == GameState::Quit
+    pub fn should_close(&self, rl: &RaylibHandle) -> bool{
+        self.state == GameState::Quit || rl.window_should_close()
+    }
+
+    fn into_game(&mut self) {
+        // load what the game needs here
+        self.state = GameState::Ingame;
+        self.buttons = Vec::new();
     }
 }
 
@@ -65,4 +72,18 @@ fn init_main() -> Vec<Button> {
     let go_to_game = Button::new((10, 80), (100, 40), Some("to game".to_string()));
 
     vec![quit, go_to_game]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn menu_gone_in_game() {
+        let mut game = Game::new();
+        game.into_game();
+
+        assert_eq!(game.buttons, Vec::new());
+        assert_eq!(game.buttons.len(), 0);
+    }
 }

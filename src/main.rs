@@ -1,7 +1,6 @@
 mod ui_elements;
 mod game;
 
-use raylib::prelude::*;
 use game::Game;
 
 fn main() {
@@ -20,14 +19,10 @@ fn main() {
 
     let mut game = Game::new();
 
-    while !rl.window_should_close() {
+    while !game.should_close(&rl) {
         game.update(&rl);
 
-        let mut d_handle = rl.begin_drawing(&thread);
+        let d_handle = rl.begin_drawing(&thread);
         game.draw(d_handle);
-
-        if game.close_check() {
-            break
-        }
     }
 }
