@@ -1,16 +1,19 @@
 mod ui_elements;
 mod game;
+mod settings;
 
+use settings::Settings;
 use game::Game;
 
 fn main() {
-    let screen_width: u16 = 800;
-    let screen_height: u16 = 450;
+    let settings = Settings::default();
+    settings.write_to_file().unwrap();
 
+    println!("{:?}", settings);
 
     let(mut rl, thread) = raylib::init()
         .transparent()
-        .size(screen_width as i32, screen_height as i32)
+        .size(settings.length as i32, settings.height as i32)
         .title("cheesed to meet u")
         .build();
     
