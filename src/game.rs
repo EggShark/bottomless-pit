@@ -10,6 +10,7 @@ pub struct Game {
 #[derive(Debug, PartialEq)]
 pub enum GameState {
     MainMenu,
+    SettingsMenu,
     Ingame,
     Quit,
 }
@@ -40,6 +41,9 @@ impl Game {
                     // TODO replace with a transition functionn for deloading and stuff
                     self.into_game();
                 }
+            },
+            GameState::SettingsMenu => {
+                
             },
             GameState::Ingame => {
                 println!("look ma im in game");

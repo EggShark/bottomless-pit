@@ -2,7 +2,7 @@ mod reader;
 mod writer;
 
 use std::io;
-use std::io::{BufReader, BufWriter, Read, Write};
+use std::io::{BufReader, Read, Write};
 use std::fs::{File, OpenOptions};
 
 #[derive(Debug)]
