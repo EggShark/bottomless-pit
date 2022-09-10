@@ -5,6 +5,7 @@ mod settings;
 use settings::Settings;
 use ui_elements::ArrowSelector;
 use game::Game;
+use raylib::prelude::*;
 
 fn main() {
     let settings = Settings::default();
@@ -13,15 +14,15 @@ fn main() {
     println!("{:?}", settings);
 
     let(mut rl, thread) = raylib::init()
-        .transparent()
         .size(settings.length as i32, settings.height as i32)
         .title("cheesed to meet u")
+        .resizable()
         .build();
     
     rl.set_target_fps(30);
     rl.set_exit_key(None);
 
-    let testing = ArrowSelector::new(9, "Cheese", (300, 300), (400, 100));
+    let testing = ArrowSelector::new(vec![String::from("Cheese"), String::from("Cheesing")], (300, 300), (400, 100));
 
     let mut game = Game::new();
 

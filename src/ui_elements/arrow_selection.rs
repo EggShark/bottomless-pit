@@ -2,32 +2,49 @@ use raylib::core::RaylibHandle;
 use raylib::prelude::RaylibDraw;
 use raylib::drawing::RaylibDrawHandle;
 use raylib::color::Color;
-use raylib::core::text::measure_text;
-use super::center_text_x_pos;
+use raylib::core::text::{measure_text, RaylibFont};
+use raylib::core::math::Vector2;
+use super::center_text;
 
 pub struct ArrowSelector {
     pos: (u16, u16),
     size: (u16, u16),
     options: u8,
     curr_option: u8,
-    display_text: String,
+    display_text: Vec<String>,
 }
 
 impl ArrowSelector {
-    pub fn new(options: u8, display_text: &str, pos: (u16, u16), size: (u16, u16)) -> Self {
+    pub fn new(display_text: Vec<String>, pos: (u16, u16), size: (u16, u16)) -> Self {
         Self {
             pos,
             size,
-            options,
+            options: display_text.len() as u8,
             curr_option: 0,
-            display_text: display_text.to_string()
+            display_text: display_text
         }
     }
 
     pub fn draw(&self, d_handle: &mut RaylibDrawHandle) {
         d_handle.draw_rectangle(self.pos.0 as i32, self.pos.1 as i32, self.size.0 as i32, self.size.1 as i32, Color::WHITE);
 
-        let pos = center_text_x_pos(&self.display_text, self.pos.0, self.size.0, 20);
-        d_handle.draw_text(&self.display_text, pos as i32, (self.pos.1 - 2) as i32, 20, Color::BLACK); 
+        let (x, y) = center_text(&self.display_text[self.curr_option as usize], self.pos.0, self.pos.1, self.size.0, self.size.1, 20, d_handle.get_font_default());
+        d_handle.draw_text(&self.display_text[self.curr_option as usize], x as i32, y as i32, 20, Color::BLACK); 
+
+        let left_first_triangle_x = (self.pos.0 + (self.size.0 / 4)) - 10;
+        let left_first_triangle_y = self.size.1/2 + self.pos.1;
+        let left_v = Vector2::new(left_first_triangle_x as f32, left_first_triangle_y as f32);
+        let bottom_right_v = Vector2::new(left_first_triangle_x as f32 + 20.0, left_first_triangle_y as f32 - 10.0);
+        let top_right_v = Vector2::new(left_first_triangle_x as f32 + 20.0, left_first_triangle_y as f32 + 10.0);
+        // triangles need to be drawn in counter clock wise order
+        d_handle.draw_triangle(top_right_v, bottom_right_v, left_v, Color::BLACK);
+
+        let right_first_point_x: f32 = (self.pos.0 as f32 + (self.size.0 as f32 * 0.75)) + 10.0;
+        let right_first_point_y: f32 = self.size.1 as f32 /2.0 + self.pos.1 as f32;
+        let right_first_v = Vector2::new(right_first_point_x, right_first_point_y);
+        let right_bottom_v = Vector2::new(right_first_point_x - 20.0, right_first_point_y - 10.0);
+        let right_top_v = Vector2::new(right_first_point_x - 20.0, right_first_point_y + 10.0);
+
+        d_handle.draw_triangle(right_top_v, right_first_v, right_bottom_v, Color::BLACK);
     }
 }
