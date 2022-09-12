@@ -1,9 +1,11 @@
 use raylib::prelude::*;
 use super::ui_elements::UiScene;
+use super::settings::Settings;
 
 #[derive(Debug, PartialEq)]
 pub struct Game { 
     state: GameState,
+    settings: Settings,
     ui_scene: UiScene,
 }
 
@@ -22,10 +24,11 @@ impl Default for GameState {
 }
 
 impl Game {
-    pub fn new() -> Self {
-        let ui_scene = UiScene::init_main();
+    pub fn new(settings: Settings) -> Self {
+        let ui_scene = UiScene::from_game_state(&GameState::default());
         Self {
             state: GameState::default(),
+            settings,
             ui_scene,
         }
     }
@@ -37,7 +40,7 @@ impl Game {
                 self.main_menu_update(handle);
             },
             GameState::SettingsMenu => {
-                
+                self.settings_update(handle);
             },
             GameState::Ingame => {
                 println!("look ma im in game");
@@ -56,10 +59,20 @@ impl Game {
         self.state == GameState::Quit || rl.window_should_close()
     }
 
-    pub fn into_game(&mut self) {
+    fn into_game(&mut self) {
         // load what the game needs here
         self.state = GameState::Ingame;
-        self.ui_scene = UiScene::default();
+        self.ui_scene = UiScene::from_game_state(&self.state);
+    }
+
+    fn into_settings(&mut self) {
+        self.state = GameState::SettingsMenu;
+        self.ui_scene = UiScene::from_game_state(&self.state);
+    }
+
+    fn into_main(&mut self) {
+        self.state = GameState::MainMenu;
+        self.ui_scene = UiScene::from_game_state(&self.state);
     }
 
     fn main_menu_update(&mut self, handle: &RaylibHandle) {
@@ -70,5 +83,46 @@ impl Game {
         if self.ui_scene.buttons[1].was_clicked(handle) {
             self.into_game();
         }
+
+        if self.ui_scene.buttons[2].was_clicked(handle) {
+            self.into_settings();
+        }
+    }
+
+    fn settings_update(&mut self, handle: &RaylibHandle) {
+        for x in 0..self.ui_scene.selectors.len() {
+            self.ui_scene.selectors[x].update(handle);
+        }
+
+        if self.ui_scene.buttons[0].was_clicked(handle) {
+            self.into_main();
+        }
+
+        if self.ui_scene.buttons[1].was_clicked(handle) {
+            self.apply_settings();
+        }
+    }
+
+    fn apply_settings(&mut self) {
+        let mut selections: Vec<i8> = Vec::new();
+        for x in 0..self.ui_scene.selectors.len() {
+            selections.push(self.ui_scene.selectors[x].get_curr_selection());
+        }
+
+        let (width, height): (u16, u16) = match selections[0] {
+            0 => {
+                (1920, 1080)
+            }
+            1 => {
+                (1280, 720)
+            }
+            2 => {
+                (854, 360)
+            }
+            _ => unreachable!(),
+        };
+        let volume: u8 = selections[1] as u8 + 1;
+
+        self.settings.update_settings(width, height, volume);
     }
 }

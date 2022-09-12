@@ -74,6 +74,10 @@ impl ArrowSelector {
         }
     }
 
+    pub fn get_curr_selection(&self) -> i8 {
+        self.curr_option
+    }
+
     fn get_right_sqaure(&self) -> ((u16, u16), (u16, u16)){
         let x_pos = (self.pos.0 + (self.size.0 as f32 * 0.75) as u16 ) - 10;
         let y_pos = self.size.1/2 + self.pos.1 - 10;

@@ -4,15 +4,19 @@ mod settings;
 mod utils;
 
 use settings::Settings;
-use ui_elements::ArrowSelector;
 use game::Game;
-use raylib::prelude::*;
 
 fn main() {
-    let settings = Settings::default();
-    settings.write_to_file().unwrap();
+    let settings = Settings::load_from_file();
 
-    println!("{:?}", settings);
+    let settings = match settings {
+        Ok(settings) => {
+            settings
+        },
+        Err(_) => {
+            Settings::default()
+        }
+    };
 
     let(mut rl, thread) = raylib::init()
         .size(settings.length as i32, settings.height as i32)
@@ -23,16 +27,12 @@ fn main() {
     rl.set_target_fps(30);
     rl.set_exit_key(None);
 
-    let mut testing = ArrowSelector::new(vec![String::from("1"), String::from("2"), String::from("3"), String::from("still centered")], (300, 300), (400, 100));
-
-    let mut game = Game::new();
+    let mut game = Game::new(settings);
 
     while !game.should_close(&rl) {
         game.update(&rl);
 
-        let mut d_handle = rl.begin_drawing(&thread);
-        testing.update(&d_handle);
-        testing.draw(&mut d_handle);
+        let d_handle = rl.begin_drawing(&thread);
         game.draw(d_handle);
     }
 }
