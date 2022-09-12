@@ -23,7 +23,7 @@ fn main() {
     rl.set_target_fps(30);
     rl.set_exit_key(None);
 
-    let mut testing = ArrowSelector::new(vec![String::from("Cheese"), String::from("Cheesing")], (300, 300), (400, 100));
+    let mut testing = ArrowSelector::new(vec![String::from("1"), String::from("2"), String::from("3"), String::from("still centered")], (300, 300), (400, 100));
 
     let mut game = Game::new();
 

@@ -6,6 +6,7 @@ use raylib::core::math::Vector2;
 use raylib::consts::MouseButton;
 use super::{Collide, center_text};
 
+#[derive(Debug, PartialEq)]
 pub struct ArrowSelector {
     pos: (u16, u16),
     size: (u16, u16),

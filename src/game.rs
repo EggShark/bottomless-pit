@@ -1,10 +1,10 @@
 use raylib::prelude::*;
-use super::ui_elements::Button;
+use super::ui_elements::UiScene;
 
 #[derive(Debug, PartialEq)]
 pub struct Game { 
     state: GameState,
-    buttons: Vec<Button>,
+    ui_scene: UiScene,
 }
 
 #[derive(Debug, PartialEq)]
@@ -23,10 +23,10 @@ impl Default for GameState {
 
 impl Game {
     pub fn new() -> Self {
-        let buttons = init_main();
+        let ui_scene = UiScene::init_main();
         Self {
             state: GameState::default(),
-            buttons,
+            ui_scene,
         }
     }
 
@@ -34,13 +34,7 @@ impl Game {
         // the logic loop for the game
         match self.state {
             GameState::MainMenu => {
-                if self.buttons[0].was_clicked(handle) {
-                    self.state = GameState::Quit;
-                }
-                if self.buttons[1].was_clicked(handle) {
-                    // TODO replace with a transition functionn for deloading and stuff
-                    self.into_game();
-                }
+                self.main_menu_update(handle);
             },
             GameState::SettingsMenu => {
                 
@@ -55,39 +49,40 @@ impl Game {
     pub fn draw(&self, mut drawer: RaylibDrawHandle) {
         // the drawing loop for the game
         drawer.clear_background(Color::GREEN);
-        for button in self.buttons.iter() {
-            button.draw(&mut drawer);
-        }
+        self.ui_scene.draw(&mut drawer);
+    }
+
+    pub fn set_state(&mut self, state: GameState) {
+        self.state =  state;
     }
 
     pub fn should_close(&self, rl: &RaylibHandle) -> bool{
         self.state == GameState::Quit || rl.window_should_close()
     }
 
-    fn into_game(&mut self) {
+    pub fn into_game(&mut self) {
         // load what the game needs here
         self.state = GameState::Ingame;
-        self.buttons = Vec::new();
+        self.ui_scene = UiScene::default();
+    }
+
+    fn main_menu_update(&mut self, handle: &RaylibHandle) {
+        if self.ui_scene.buttons[0].was_clicked(handle) {
+            self.state = GameState::Quit;
+        }
+
+        if self.ui_scene.buttons[1].was_clicked(handle) {
+            self.into_game();
+        }
     }
 }
 
-fn init_main() -> Vec<Button> {
-    let quit = Button::new((10, 10), (100, 40), Some("Quit".to_string()));
-    let go_to_game = Button::new((10, 80), (100, 40), Some("to game".to_string()));
-
-    vec![quit, go_to_game]
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn menu_gone_in_game() {
-        let mut game = Game::new();
-        game.into_game();
-
-        assert_eq!(game.buttons, Vec::new());
-        assert_eq!(game.buttons.len(), 0);
-    }
-}
+// pub fn main_menu_update(&self, game: &mut Game, handle: &RaylibHandle) {
+//     if self.buttons[0].was_clicked(handle) {
+//         game.set_state(GameState::Quit);
+//     }
+//     if self.buttons[1].was_clicked(handle) {
+//         // TODO replace with a transition functionn for deloading and stuff
+//         game.into_game();
+//     }
+// }
