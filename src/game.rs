@@ -52,10 +52,6 @@ impl Game {
         self.ui_scene.draw(&mut drawer);
     }
 
-    pub fn set_state(&mut self, state: GameState) {
-        self.state =  state;
-    }
-
     pub fn should_close(&self, rl: &RaylibHandle) -> bool{
         self.state == GameState::Quit || rl.window_should_close()
     }
@@ -76,13 +72,3 @@ impl Game {
         }
     }
 }
-
-// pub fn main_menu_update(&self, game: &mut Game, handle: &RaylibHandle) {
-//     if self.buttons[0].was_clicked(handle) {
-//         game.set_state(GameState::Quit);
-//     }
-//     if self.buttons[1].was_clicked(handle) {
-//         // TODO replace with a transition functionn for deloading and stuff
-//         game.into_game();
-//     }
-// }

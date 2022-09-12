@@ -1,12 +1,10 @@
 mod button;
 mod arrow_selection;
 
-use raylib::text::{measure_text, measure_text_ex};
-use raylib::RaylibHandle;
+use raylib::text::measure_text;
 use raylib::drawing::RaylibDrawHandle;
 use raylib::core::text::{RaylibFont, WeakFont};
 use super::utils::Collide;
-use super::game::{Game, GameState};
 
 pub use button::Button;
 pub use arrow_selection::ArrowSelector;
