@@ -1,4 +1,5 @@
 use raylib::prelude::*;
+use super::Collide;
 
 #[derive(Debug, PartialEq)]
 pub struct Button {
@@ -28,23 +29,6 @@ impl Button {
     }
 
     pub fn was_clicked(&self, rl: &RaylibHandle) -> bool {
-        point_in_rect(self.size, self.pos, &rl.get_mouse_position()) && rl.is_mouse_button_released(MouseButton::MOUSE_LEFT_BUTTON)
+        Collide::point_in_rect(self.size, self.pos, &rl.get_mouse_position()) && rl.is_mouse_button_released(MouseButton::MOUSE_LEFT_BUTTON)
     }
-}
-
-fn point_in_rect(size: (u16, u16), pos: (u16, u16), point: &Vector2) -> bool{
-    if point.x < pos.0 as f32 {
-        return false
-    }
-    if point.y < pos.1 as f32 {
-        return false
-    }
-    if point.y > (pos.1 + size.1) as f32 {
-        return false
-    }
-    if point.x > (pos.0 + size.0) as f32 {
-        return false
-    }
-
-    true
 }

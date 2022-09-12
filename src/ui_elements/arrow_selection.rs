@@ -2,15 +2,15 @@ use raylib::core::RaylibHandle;
 use raylib::prelude::RaylibDraw;
 use raylib::drawing::RaylibDrawHandle;
 use raylib::color::Color;
-use raylib::core::text::{measure_text, RaylibFont};
 use raylib::core::math::Vector2;
-use super::center_text;
+use raylib::consts::MouseButton;
+use super::{Collide, center_text};
 
 pub struct ArrowSelector {
     pos: (u16, u16),
     size: (u16, u16),
     options: u8,
-    curr_option: u8,
+    curr_option: i8,
     display_text: Vec<String>,
 }
 
@@ -46,5 +46,42 @@ impl ArrowSelector {
         let right_top_v = Vector2::new(right_first_point_x - 20.0, right_first_point_y + 10.0);
 
         d_handle.draw_triangle(right_top_v, right_first_v, right_bottom_v, Color::BLACK);
+    }
+
+    pub fn update(&mut self, rl: &RaylibHandle) {
+        // change options on click
+        let mouse_pos: Vector2 = rl.get_mouse_position();
+        let ((r_x, r_y), (r_width, r_height)) = self.get_right_sqaure();
+        let over_right = Collide::point_in_rect((r_width, r_height), (r_x, r_y), &mouse_pos);
+
+        let ((l_x, l_y), (l_width, l_height)) = self.get_left_square();
+        let over_left = Collide::point_in_rect((l_width, l_height), (l_x, l_y), &mouse_pos);
+        let click =  rl.is_mouse_button_released(MouseButton::MOUSE_LEFT_BUTTON);
+
+        if over_left && click {
+            self.curr_option -= 1;
+            if self.curr_option < 0 {
+                self.curr_option = self.options as i8 - 1;
+            }
+        }
+
+        if over_right && click {
+            self.curr_option += 1;
+            if self.curr_option == self.options as i8 {
+                self.curr_option = 0;
+            }
+        }
+    }
+
+    fn get_right_sqaure(&self) -> ((u16, u16), (u16, u16)){
+        let x_pos = (self.pos.0 + (self.size.0 as f32 * 0.75) as u16 ) - 10;
+        let y_pos = self.size.1/2 + self.pos.1 - 10;
+        ((x_pos, y_pos), (20, 20))
+    }
+
+    fn get_left_square(&self) -> ((u16, u16), (u16, u16)) {
+        let x_pos = (self.pos.0 + (self.size.0 / 4)) - 10;
+        let y_pos = self.size.1/2 + self.pos.1 - 10;
+        ((x_pos, y_pos), (20, 20))
     }
 }

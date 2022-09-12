@@ -1,6 +1,7 @@
 mod ui_elements;
 mod game;
 mod settings;
+mod utils;
 
 use settings::Settings;
 use ui_elements::ArrowSelector;
@@ -22,7 +23,7 @@ fn main() {
     rl.set_target_fps(30);
     rl.set_exit_key(None);
 
-    let testing = ArrowSelector::new(vec![String::from("Cheese"), String::from("Cheesing")], (300, 300), (400, 100));
+    let mut testing = ArrowSelector::new(vec![String::from("Cheese"), String::from("Cheesing")], (300, 300), (400, 100));
 
     let mut game = Game::new();
 
@@ -30,6 +31,7 @@ fn main() {
         game.update(&rl);
 
         let mut d_handle = rl.begin_drawing(&thread);
+        testing.update(&d_handle);
         testing.draw(&mut d_handle);
         game.draw(d_handle);
     }

@@ -3,6 +3,7 @@ mod arrow_selection;
 
 use raylib::text::{measure_text, measure_text_ex};
 use raylib::core::text::{RaylibFont, WeakFont};
+use super::utils::Collide;
 
 pub use button::Button;
 pub use arrow_selection::ArrowSelector;
