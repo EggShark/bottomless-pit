@@ -30,7 +30,7 @@ fn main() {
     let mut game = Game::new(settings);
 
     while !game.should_close(&rl) {
-        game.update(&rl);
+        game.update(&mut rl);
 
         let d_handle = rl.begin_drawing(&thread);
         game.draw(d_handle);

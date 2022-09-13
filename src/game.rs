@@ -33,7 +33,7 @@ impl Game {
         }
     }
 
-    pub fn update(&mut self, handle: &RaylibHandle) {
+    pub fn update(&mut self, handle: &mut RaylibHandle) {
         // the logic loop for the game
         match self.state {
             GameState::MainMenu => {
@@ -91,7 +91,7 @@ impl Game {
         }
     }
 
-    fn settings_update(&mut self, handle: &RaylibHandle) {
+    fn settings_update(&mut self, handle: &mut RaylibHandle) {
         for x in 0..self.ui_scene.selectors.len() {
             self.ui_scene.selectors[x].update(handle);
         }
@@ -101,11 +101,11 @@ impl Game {
         }
 
         if self.ui_scene.buttons[1].was_clicked(handle) {
-            self.apply_settings();
+            self.apply_settings(handle);
         }
     }
 
-    fn apply_settings(&mut self) {
+    fn apply_settings(&mut self, rl: &mut RaylibHandle) {
         let mut selections: Vec<i8> = Vec::new();
         for x in 0..self.ui_scene.selectors.len() {
             selections.push(self.ui_scene.selectors[x].get_curr_selection());
@@ -124,7 +124,7 @@ impl Game {
             _ => unreachable!(),
         };
         let volume: u8 = selections[1] as u8 + 1;
-
+        rl.set_window_size(width as i32, height as i32);
         self.settings.update_settings(width, height, volume);
     }
 }
