@@ -81,11 +81,13 @@ impl Game {
         }
 
         if self.ui_scene.buttons[1].was_clicked(handle) {
-            self.into_game();
+            return self.into_game();
+            // need to return early to back out after clearing the vec
+            // otherwise it will tried to read [2] when there is nothing there
         }
 
         if self.ui_scene.buttons[2].was_clicked(handle) {
-            self.into_settings();
+            return self.into_settings();
         }
     }
 
