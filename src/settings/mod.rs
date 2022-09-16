@@ -46,7 +46,7 @@ impl From<u8> for Resolutions {
             0 => Self::X1920x1080,
             1 => Self::X1280x720,
             2 => Self::X854x360,
-            _ => panic!("Invalid num expected 0-2 found {}", num)
+            _ => Self::defualt(),
         }
     }
 }
