@@ -1,6 +1,6 @@
 use raylib::prelude::*;
 use super::ui_elements::UiScene;
-use super::settings::Settings;
+use super::settings::{Settings, Resolutions};
 
 #[derive(Debug, PartialEq)]
 pub struct Game { 
@@ -111,20 +111,12 @@ impl Game {
             selections.push(self.ui_scene.selectors[x].get_curr_selection());
         }
 
-        let (width, height): (u16, u16) = match selections[0] {
-            0 => {
-                (1920, 1080)
-            }
-            1 => {
-                (1280, 720)
-            }
-            2 => {
-                (854, 360)
-            }
-            _ => unreachable!(),
-        };
+        let resolution = Resolutions::from(selections[0] as u8);
+
+        let (width, height) = resolution.len_width();
+
         let volume: u8 = selections[1] as u8 + 1;
         rl.set_window_size(width as i32, height as i32);
-        self.settings.update_settings(width, height, volume);
+        self.settings.update_settings(resolution, volume);
     }
 }

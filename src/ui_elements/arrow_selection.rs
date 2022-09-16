@@ -4,7 +4,7 @@ use raylib::drawing::RaylibDrawHandle;
 use raylib::color::Color;
 use raylib::core::math::Vector2;
 use raylib::consts::MouseButton;
-use super::{Collide, center_text};
+use super::{Collide, Text};
 
 #[derive(Debug, PartialEq)]
 pub struct ArrowSelector {
@@ -29,7 +29,7 @@ impl ArrowSelector {
     pub fn draw(&self, d_handle: &mut RaylibDrawHandle) {
         d_handle.draw_rectangle(self.pos.0 as i32, self.pos.1 as i32, self.size.0 as i32, self.size.1 as i32, Color::WHITE);
 
-        let (x, y) = center_text(&self.display_text[self.curr_option as usize], self.pos.0, self.pos.1, self.size.0, self.size.1, 20, d_handle.get_font_default());
+        let (x, y) = Text::center_text(&self.display_text[self.curr_option as usize], self.pos.0, self.pos.1, self.size.0, self.size.1, 20, d_handle.get_font_default());
         d_handle.draw_text(&self.display_text[self.curr_option as usize], x as i32, y as i32, 20, Color::BLACK); 
 
         let left_first_triangle_x = (self.pos.0 + (self.size.0 / 4)) - 10;

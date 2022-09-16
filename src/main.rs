@@ -18,8 +18,10 @@ fn main() {
         }
     };
 
+    let (length, height) = settings.get_resoultion();
+
     let(mut rl, thread) = raylib::init()
-        .size(settings.length as i32, settings.height as i32)
+        .size(length as i32, height as i32)
         .title("cheesed to meet u")
         .resizable()
         .build();
