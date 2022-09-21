@@ -29,12 +29,16 @@ fn main() {
     rl.set_target_fps(30);
     rl.set_exit_key(None);
 
+    let player = rl.load_texture(&thread, "assets/walk_forwards.png").unwrap();
+
+    println!("{}, {}", player.width, player.height);
     let mut game = Game::new(settings);
 
     while !game.should_close(&rl) {
         game.update(&mut rl);
 
         let d_handle = rl.begin_drawing(&thread);
+        //d_handle.draw_texture(&player, 100, 100, Color::WHITE);
         game.draw(d_handle);
     }
 }
