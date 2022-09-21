@@ -1,5 +1,5 @@
 use raylib::prelude::*;
-use super::{Collide, Point};
+use utils::{Collide, Point};
 
 #[derive(Debug, PartialEq)]
 pub struct Button {

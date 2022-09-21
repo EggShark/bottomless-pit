@@ -2,7 +2,7 @@ mod button;
 mod arrow_selection;
 
 use raylib::drawing::RaylibDrawHandle;
-use super::utils::{Collide, Text, Point};
+use utils::Point;
 use super::game::GameState;
 
 pub use button::Button;

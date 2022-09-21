@@ -1,17 +1,17 @@
 use raylib::core::text::{RaylibFont, WeakFont};
 use raylib::text::measure_text;
-use super::Point;
+use crate::point::Point;
 
 pub struct Text;
 
 impl Text {
-    fn center_text_x_pos(text: &str, x: i32, width: i32, font_size: i32) -> i32 {
+    pub fn center_text_x_pos(text: &str, x: i32, width: i32, font_size: i32) -> i32 {
         let size = measure_text(text, font_size);
         let text_pos = ((width/ 2) - (size/2)) + x;
         text_pos
     }
     
-    fn center_text_y(font: WeakFont, font_size: i32, y: i32, obj_height: i32) -> i32 {
+    pub fn center_text_y(font: WeakFont, font_size: i32, y: i32, obj_height: i32) -> i32 {
         let text_height = font.base_size();
         let scale_factor = font_size/font.base_size();
     

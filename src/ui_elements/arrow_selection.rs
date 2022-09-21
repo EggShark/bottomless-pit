@@ -4,7 +4,7 @@ use raylib::drawing::RaylibDrawHandle;
 use raylib::color::Color;
 use raylib::core::math::Vector2;
 use raylib::consts::MouseButton;
-use super::{Collide, Text, Point};
+use utils::{Collide, Text, Point};
 
 #[derive(Debug, PartialEq)]
 pub struct ArrowSelector {

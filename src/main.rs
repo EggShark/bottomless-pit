@@ -1,7 +1,6 @@
 mod ui_elements;
 mod game;
 mod settings;
-mod utils;
 
 use settings::Settings;
 use game::Game;

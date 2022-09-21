@@ -1,5 +1,5 @@
 use raylib::math::Vector2;
-use super::Point;
+use crate::point::Point;
 pub struct Collide;
 
 impl Collide {
