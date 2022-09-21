@@ -1,10 +1,2 @@
-[package]
-name = "bottomless-pit"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-utils = {path="./crates/utils"}
-raylib = "3.7.0"
+[workspace]
+members = ["crates/*"]

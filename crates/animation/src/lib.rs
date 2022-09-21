@@ -1,14 +1,12 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+use raylib::core::texture::Texture2D;
+
+pub struct PlayerAnimation {
+    sprite: Texture2D,
+    animation_length: u8,
+    curr_frame: i8,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+pub enum PlayerAnimations {
+    Walking,
+    Running,
 }

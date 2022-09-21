@@ -1,10 +1,11 @@
 [package]
-name = "animation"
+name = "bottomless-pit"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-utils = {path = "../utils"}
+utils = {path="../utils"}
+animation = {path="../animation"}
 raylib = "3.7.0"

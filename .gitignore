@@ -13,4 +13,4 @@ Cargo.lock
 # Added by cargo
 
 /target
-/settings.bps
+settings.bps
