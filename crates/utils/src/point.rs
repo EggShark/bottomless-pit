@@ -11,3 +11,12 @@ impl Into<Vector2> for Point {
         Vector2::new(self.x as f32, self.y as f32)
     }
 }
+
+impl From<Vector2> for Point {
+    fn from(vector: Vector2) -> Self {
+        Self{
+            x: vector.x as i32,
+            y: vector.y as i32,
+        }
+    }
+}

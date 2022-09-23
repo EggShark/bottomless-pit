@@ -3,6 +3,8 @@ mod game;
 mod settings;
 mod player;
 
+use animation::PlayerAnimation;
+use utils::Point;
 use settings::Settings;
 use game::Game;
 
@@ -29,15 +31,16 @@ fn main() {
     rl.set_target_fps(30);
     rl.set_exit_key(None);
 
-    let player = rl.load_texture(&thread, "assets/walk_forwards.png").unwrap();
+    let mut test_animation = PlayerAnimation::new("assets/walk_forwards.png", 2, &mut rl, &thread);
 
-    println!("{}, {}", player.width, player.height);
     let mut game = Game::new(settings);
 
     while !game.should_close(&rl) {
         game.update(&mut rl);
 
-        let d_handle = rl.begin_drawing(&thread);
+        let mut d_handle = rl.begin_drawing(&thread);
+        test_animation.update();
+        test_animation.draw(&mut d_handle, Point{x: 100, y:100});
         //d_handle.draw_texture(&player, 100, 100, Color::WHITE);
         game.draw(d_handle);
     }
