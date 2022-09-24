@@ -1,6 +1,6 @@
 use raylib::core::math::Vector2;
 
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Point {
     pub x: i32,
     pub y: i32,

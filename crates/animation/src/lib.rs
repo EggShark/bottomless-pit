@@ -17,6 +17,7 @@ pub struct PlayerAnimation {
 pub enum PlayerAnimations {
     Walking,
     Running,
+    Idle,
 }
 
 impl PlayerAnimation {
@@ -52,6 +53,5 @@ impl PlayerAnimation {
             self.advance();
         }
 
-        println!("{}, {}", self.curr_frame, self.framecounter);
     }
 }
