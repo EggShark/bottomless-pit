@@ -1,5 +1,7 @@
 use raylib::prelude::*;
-use super::ui_elements::UiScene;
+use crate::ui_elements::SelectableUiElements;
+
+use super::ui_elements::{UiScene, UiUtils};
 use super::settings::{Settings, Resolutions};
 
 #[derive(Debug, PartialEq)]
@@ -76,6 +78,8 @@ impl Game {
     }
 
     fn main_menu_update(&mut self, handle: &RaylibHandle) {
+        self.ui_scene.slection_check(handle);
+
         if self.ui_scene.buttons[0].was_clicked(handle) {
             self.state = GameState::Quit;
         }
@@ -92,6 +96,8 @@ impl Game {
     }
 
     fn settings_update(&mut self, handle: &mut RaylibHandle) {
+        self.ui_scene.slection_check(handle);
+        
         for x in 0..self.ui_scene.selectors.len() {
             self.ui_scene.selectors[x].update(handle);
         }

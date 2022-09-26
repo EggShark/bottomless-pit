@@ -1,81 +1,137 @@
 mod button;
 mod arrow_selection;
+mod ui_scene;
 
-use raylib::drawing::RaylibDrawHandle;
+use raylib::ffi::DrawEllipse;
 use utils::Point;
 use super::game::GameState;
 
 pub use button::Button;
 pub use arrow_selection::ArrowSelector;
+pub use ui_scene::UiScene;
 
-#[derive(Debug, PartialEq)]
-pub struct UiScene {
-    pub buttons: Vec<Button>,
-    pub selectors: Vec<ArrowSelector>
+#[derive(Debug)]
+pub enum SelectableUiElements {
+    ArrowSelector,
+    Button,
 }
 
-impl Default for UiScene {
-    fn default() -> Self {
-        Self {
-            buttons: Vec::new(),
-            selectors: Vec::new(),
-        }
-    }
-}
+pub struct UiUtils;
 
-impl UiScene {
-    fn init_main() -> Self {
-        let quit = Button::new(Point{x: 10, y: 10}, Point{x: 100, y:40}, Some("Quit".to_string()));
-        let go_to_game = Button::new(Point{x:10, y:80}, Point{x:100, y:40}, Some("to game".to_string()));
-        let go_to_settings = Button::new(Point{x:10, y:180}, Point{x:100, y:40}, Some("Settings".to_string()));
+impl UiUtils {
+    pub fn advance(buttons: &Vec<Button>, arrow_selectors: &Vec<ArrowSelector>, current_selected: Point) -> (usize, SelectableUiElements) {
+        let mut a_dist:i32 = i32::MAX;
+        let mut b_dist: i32 = i32::MAX;
+        let mut array_pos: usize = 0;
+        let mut a_pos: usize = 0;
+        let mut b_pos: usize = 0;
+        let mut select_type = SelectableUiElements::Button;
 
-        let buttons = vec![quit, go_to_game, go_to_settings];
-
-        Self{
-            buttons,
-            selectors: Vec::new(),
-        }
-    }
-
-    fn init_settings_menu() -> Self {
-        let back = Button::new(Point{x:200, y:400}, Point{x:100, y:40}, Some("Go Back".to_string()));
-        let submit = Button::new(Point{x:400, y:400}, Point{x:100, y:40}, Some("Apply".to_string()));
-        
-        let buttons = vec![back, submit];
-
-        let resolution = ArrowSelector::new(vec![String::from("1920x1080"), String::from("1280x720"), String::from("854x360")], Point{x:200, y:100}, Point{x:400, y:100});
-        let voloptions: Vec<String> = vec![String::from("1"), String::from("2"), String::from("3"), String::from("4"), String::from("5"), String::from("6"), String::from("7"), String::from("8"), String::from("9"), String::from("10")];
-        let volume = ArrowSelector::new(voloptions, Point{x:200, y:200}, Point{x:400, y:100});
-
-        let selectors = vec![resolution, volume];
-
-        Self {
-            buttons,
-            selectors
-        }
-    }
-
-    pub fn from_game_state(state: &GameState) -> Self {
-        match state {
-            GameState::MainMenu => {
-                Self::init_main()
-            }
-            GameState::SettingsMenu => {
-                Self::init_settings_menu()
-            }
-            _ => {
-                Self::default()
+        for i in 0..buttons.len() {
+            let temp_distacne = buttons[i].get_pos().y - current_selected.y;
+            if !(temp_distacne <= 0) {
+                if temp_distacne < b_dist {
+                    b_pos = i;
+                    b_dist = temp_distacne;
+                }
+            } else if buttons[i].get_pos() != current_selected && buttons[i].get_pos().x > current_selected.x {
+                    b_pos = i;
+                    b_dist = temp_distacne;
             }
         }
-    }   
 
-    pub fn draw(&self, d_handle: &mut RaylibDrawHandle) {
-        for button in self.buttons.iter() {
-            button.draw(d_handle);
+        for i in 0..arrow_selectors.len() {
+            let temp_distacne = arrow_selectors[i].get_pos().y - current_selected.y;
+            let pos = arrow_selectors[i].get_pos();
+            if !(temp_distacne <= 0) {
+                if temp_distacne < a_dist {
+                    a_pos = i;
+                    a_dist = temp_distacne;
+                }
+            } else if pos != current_selected && pos.x > current_selected.x {
+                a_pos = i;
+                a_dist = temp_distacne;
+                
+            }
         }
 
-        for selector in self.selectors.iter() {
-            selector.draw(d_handle);
-        } 
+        if a_dist == i32::MAX && b_dist < 0 {
+            return Self::advance(buttons, arrow_selectors, Point{x: 0, y: 0});
+        } else if b_dist == i32::MAX && b_dist < 0{
+            return Self::advance(buttons, arrow_selectors, Point{x: 0, y: 0});
+        } else if b_dist < 0 && a_dist < 0 {
+            return Self::advance(buttons, arrow_selectors, Point{x: 0, y: 0});
+        }
+        else if a_dist < 0 {
+            array_pos = b_pos;
+            select_type = SelectableUiElements::Button;
+        } else if b_dist < 0{
+            array_pos = a_pos;
+            select_type = SelectableUiElements::ArrowSelector;
+        } else if a_dist < b_dist {
+            array_pos = a_pos;
+            select_type = SelectableUiElements::ArrowSelector;
+        } else {
+            array_pos = b_pos;
+            select_type = SelectableUiElements::Button;
+        }
+
+        (array_pos, select_type)
+    }
+    
+    pub fn go_back(buttons: &Vec<Button>, arrow_selectors: &Vec<ArrowSelector>, current_selected: Point) -> (usize, SelectableUiElements) {
+        let mut a_dist:i32 = i32::MAX;
+        let mut b_dist: i32 = i32::MAX;
+        let mut array_pos: usize = 0;
+        let mut a_pos: usize = 0;
+        let mut b_pos: usize = 0;
+        let mut select_type = SelectableUiElements::Button;
+
+        for i in 0..buttons.len() {
+            let temp_distacne = current_selected.y - buttons[i].get_pos().y;
+            println!("{}, {}", temp_distacne, b_dist);
+            if !(temp_distacne >= 0) {
+                if temp_distacne < b_dist {
+                    b_pos = i;
+                    b_dist = temp_distacne;
+                }
+            } else if buttons[i].get_pos() != current_selected && buttons[i].get_pos().x > current_selected.x {
+                    b_pos = i;
+                    b_dist = temp_distacne;
+            }
+        }
+
+        for i in 0..arrow_selectors.len() {
+            let temp_distacne = current_selected.y - arrow_selectors[i].get_pos().y;
+            println!("{}, {}", temp_distacne, a_dist);
+            if !(temp_distacne >= 0) {
+                if temp_distacne < b_dist {
+                    a_pos = i;
+                    a_dist = temp_distacne;
+                }
+            } else if arrow_selectors[i].get_pos() != current_selected && arrow_selectors[i].get_pos().x > current_selected.x {
+                    a_pos = i;
+                    a_dist = temp_distacne;
+            }
+        }
+
+        println!("{}, {}", a_dist, b_dist);
+
+
+        if a_dist < 0 {
+            array_pos = b_pos;
+            select_type = SelectableUiElements::Button;
+        } else if b_dist < 0{
+            array_pos = a_pos;
+            select_type = SelectableUiElements::ArrowSelector;
+        } else if a_dist < b_dist {
+            array_pos = a_pos;
+            select_type = SelectableUiElements::ArrowSelector;
+        } else {
+            array_pos = b_pos;
+            select_type = SelectableUiElements::Button;
+        }
+    
+        (array_pos, select_type)
     }
 }

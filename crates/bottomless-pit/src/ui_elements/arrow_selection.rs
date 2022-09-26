@@ -12,6 +12,7 @@ pub struct ArrowSelector {
     size: Point,
     options: u8,
     curr_option: i8,
+    selected: bool,
     display_text: Vec<String>,
 }
 
@@ -22,12 +23,19 @@ impl ArrowSelector {
             size,
             options: display_text.len() as u8,
             curr_option: 0,
-            display_text: display_text
+            selected: false,
+            display_text: display_text,
         }
     }
 
     pub fn draw(&self, d_handle: &mut RaylibDrawHandle) {
-        d_handle.draw_rectangle(self.pos.x, self.pos.y, self.size.x, self.size.y, Color::WHITE);
+        let color = if self.selected {
+            Color::RED
+        } else {
+            Color::WHITE
+        };
+
+        d_handle.draw_rectangle(self.pos.x, self.pos.y, self.size.x, self.size.y, color);
 
         let (x, y) = Text::center_text(&self.display_text[self.curr_option as usize], &self.pos, &self.size, 20, d_handle.get_font_default());
         d_handle.draw_text(&self.display_text[self.curr_option as usize], x as i32, y as i32, 20, Color::BLACK); 
@@ -76,6 +84,18 @@ impl ArrowSelector {
 
     pub fn get_curr_selection(&self) -> i8 {
         self.curr_option
+    }
+
+    pub fn get_pos(&self) -> Point {
+        self.pos
+    }
+
+    pub fn select(&mut self) {
+        self.selected = true;
+    }
+
+    pub fn deslect(&mut self) {
+        self.selected = false;
     }
 
     fn get_right_sqaure(&self) -> (Point, Point){
