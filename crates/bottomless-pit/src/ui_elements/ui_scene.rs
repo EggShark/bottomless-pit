@@ -26,8 +26,9 @@ impl UiScene {
         let go_to_game = Button::new(Point{x:10, y:80}, Point{x:100, y:40}, Some("to game".to_string()));
         let go_to_settings = Button::new(Point{x:10, y:180}, Point{x:100, y:40}, Some("Settings".to_string()));
         let test: Button = Button::new(Point {x: 800, y: 180}, Point{x: 100, y:40}, None);
+        let mid_test: Button = Button::new(Point{x: 400, y: 180}, Point{x: 100, y:40}, None);
 
-        let buttons = vec![quit, go_to_game, go_to_settings, test];
+        let buttons = vec![quit, go_to_game, go_to_settings, mid_test, test];
 
         let yat = ArrowSelector::new(vec![String::from("a")], Point{x: 200, y:1}, Point{x:400, y:100});
         let arrow_test = ArrowSelector::new(vec![String::from("a")], Point{x: 200, y:600}, Point{x:400, y:100});

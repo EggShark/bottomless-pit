@@ -34,7 +34,6 @@ impl UiUtils {
             if temp_distacne == 0 && buttons[i].get_pos().x > current_selected.x {
                 b_pos = i;
                 b_dist = temp_distacne;
-                break; // this is the closet we can get so just get outa there bestie :)
             } else if temp_distacne < b_dist && temp_distacne != 0 {
                 b_pos = i;
                 b_dist = temp_distacne;
@@ -46,7 +45,6 @@ impl UiUtils {
             if temp_distacne == 0 && arrow_selectors[i].get_pos().x > current_selected.x {
                 a_pos = i;
                 a_dist = temp_distacne;
-                break;
             }
             else if temp_distacne < a_dist && temp_distacne != 0 {
                 a_pos = i;
@@ -78,7 +76,6 @@ impl UiUtils {
             if temp_distacne == 0 && buttons[i].get_pos().x < current_selected.x {
                 b_dist = temp_distacne;
                 b_pos = i;
-                break; 
             } else if temp_distacne < b_dist && temp_distacne != 0 {
                 b_dist = temp_distacne;
                 b_pos = i;
@@ -90,7 +87,6 @@ impl UiUtils {
             if temp_distance == 0 && arrow_selectors[i].get_pos().x < current_selected.x {
                 a_dist = temp_distance;
                 a_pos = i;
-                break;
             } else if temp_distance < a_dist && temp_distance != 0 {
                 a_dist = temp_distance;
                 a_pos = i;
