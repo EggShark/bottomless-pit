@@ -106,12 +106,66 @@ mod tests {
 
     #[test]
     fn above_to_bellow_b_to_b() {
-        let top: Button = Button::new(Point{x:0, y:0}, Point {x:10, y:10}, None);
+        let top: Button = Button::new(Point{x:0, y:1}, Point {x:10, y:10}, None);
         let bottom: Button = Button::new(Point{x: 0,y: 10}, Point{x: 100, y:100}, None);
         let buttons = vec![top, bottom];
 
-        let (pos, kind) = UiUtils::advance(&buttons, &Vec::new(), Point{x:0, y:0});
+        let (pos, _) = UiUtils::advance(&buttons, &Vec::new(), Point{x:0, y:0}); // simulates selecting the first
+        let (pos, kind) = UiUtils::advance(&buttons, &Vec::new(), buttons[pos].get_pos()); // then selects the bottom
 
         assert_eq!((1, SelectableUiElements::Button), (pos, kind));
     }
+
+    #[test]
+    fn above_to_bellow_b_to_b_inverse_array() {
+        let top: Button = Button::new(Point{x:0, y:1}, Point {x:10, y:10}, None);
+        let bottom: Button = Button::new(Point{x: 0,y: 10}, Point{x: 100, y:100}, None);
+        let buttons = vec![bottom, top];
+
+        let (pos, _) = UiUtils::advance(&buttons, &Vec::new(), Point{x:0, y:0});
+        let (pos, kind) = UiUtils::advance(&buttons, &Vec::new(), buttons[pos].get_pos());
+
+        assert_eq!((0, SelectableUiElements::Button), (pos, kind));
+    }
+
+    #[test]
+    fn same_y_2_buttons() {
+        let left: Button = Button::new(Point{x: 0, y: 1}, Point{x:10, y:10}, None);
+        let right: Button = Button::new(Point{x: 100, y: 1}, Point{x:10, y:10}, None);
+
+        let buttons = vec![left, right];
+
+        let (pos, kind) = UiUtils::advance(&buttons, &Vec::new(), Point{x:0,y:0});
+        assert_eq!((0, SelectableUiElements::Button), (pos, kind));
+        let (pos, kind) = UiUtils::advance(&buttons, &Vec::new(), buttons[pos].get_pos());
+        assert_eq!((1, SelectableUiElements::Button), (pos, kind));
+    }
+
+    #[test]
+    fn same_y_3_buttons() {
+        let left: Button = Button::new(Point{x: 0, y: 1}, Point{x:10, y:10}, None);
+        let mid: Button = Button::new(Point{x: 100, y: 1}, Point{x:10, y:10}, None);
+        let right: Button = Button::new(Point{x: 300, y: 1}, Point{x:10, y:10}, None);
+
+        let buttons = vec![left, right, mid];
+
+        let (pos, kind) = UiUtils::advance(&buttons, &Vec::new(), Point{x:0,y:0});
+        assert_eq!((0, SelectableUiElements::Button), (pos, kind));
+        let (pos, kind) = UiUtils::advance(&buttons, &Vec::new(), buttons[pos].get_pos());
+        assert_eq!((2, SelectableUiElements::Button), (pos, kind));
+    }
+
+    #[test]
+    fn same_y_3_buttons_diff_order() {
+        let left: Button = Button::new(Point{x: 0, y: 1}, Point{x:10, y:10}, None);
+        let mid: Button = Button::new(Point{x: 100, y: 1}, Point{x:10, y:10}, None);
+        let right: Button = Button::new(Point{x: 300, y: 1}, Point{x:10, y:10}, None);
+
+        let buttons = vec![left, mid, right];
+
+        let (pos, kind) = UiUtils::advance(&buttons, &Vec::new(), Point{x:0,y:0});
+        assert_eq!((0, SelectableUiElements::Button), (pos, kind));
+        let (pos, kind) = UiUtils::advance(&buttons, &Vec::new(), buttons[pos].get_pos());
+        assert_eq!((1, SelectableUiElements::Button), (pos, kind));
+    } 
 }
