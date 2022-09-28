@@ -1,4 +1,3 @@
-mod ui_elements;
 mod game;
 mod settings;
 mod player;

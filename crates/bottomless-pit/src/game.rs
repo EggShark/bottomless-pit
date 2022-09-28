@@ -1,7 +1,6 @@
 use raylib::prelude::*;
-use crate::ui_elements::SelectableUiElements;
-
-use super::ui_elements::{UiScene, UiUtils};
+use utils::GameState;
+use ui::{UiScene};
 use super::settings::{Settings, Resolutions};
 
 #[derive(Debug, PartialEq)]
@@ -9,20 +8,6 @@ pub struct Game {
     state: GameState,
     settings: Settings,
     ui_scene: UiScene,
-}
-
-#[derive(Debug, PartialEq)]
-pub enum GameState {
-    MainMenu,
-    SettingsMenu,
-    Ingame,
-    Quit,
-}
-
-impl Default for GameState {
-    fn default() -> Self {
-        Self::MainMenu
-    }
 }
 
 impl Game {

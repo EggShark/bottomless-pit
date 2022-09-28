@@ -1,20 +1,15 @@
-mod button;
-mod arrow_selection;
-mod ui_scene;
-
-use raylib::ffi::DrawEllipse;
 use utils::Point;
-use super::game::GameState;
 
-pub use button::Button;
-pub use arrow_selection::ArrowSelector;
-pub use ui_scene::UiScene;
+use crate::button::Button;
+use crate::arrow_selection::ArrowSelector;
 
-#[derive(Debug)]
+
+#[derive(Debug, PartialEq)]
 pub enum SelectableUiElements {
     ArrowSelector,
     Button,
 }
+
 
 pub struct UiUtils;
 
@@ -102,5 +97,21 @@ impl UiUtils {
         }
 
         (array_pos, select_type)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn above_to_bellow_b_to_b() {
+        let top: Button = Button::new(Point{x:0, y:0}, Point {x:10, y:10}, None);
+        let bottom: Button = Button::new(Point{x: 0,y: 10}, Point{x: 100, y:100}, None);
+        let buttons = vec![top, bottom];
+
+        let (pos, kind) = UiUtils::advance(&buttons, &Vec::new(), Point{x:0, y:0});
+
+        assert_eq!((1, SelectableUiElements::Button), (pos, kind));
     }
 }

@@ -1,7 +1,9 @@
 use raylib::{drawing::RaylibDrawHandle, RaylibHandle};
 use raylib::consts::KeyboardKey;
-use utils::Point;
-use super::{ArrowSelector, Button, GameState, UiUtils, SelectableUiElements};
+use utils::{Point, GameState};
+use crate::button::Button;
+use crate::arrow_selection::ArrowSelector;
+use crate::ui_utils::{UiUtils, SelectableUiElements};
 
 #[derive(Debug, PartialEq)]
 pub struct UiScene {
