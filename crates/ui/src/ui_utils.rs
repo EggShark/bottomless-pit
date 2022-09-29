@@ -85,42 +85,66 @@ impl UiUtils {
     pub fn go_back(buttons: &Vec<Button>, arrow_selectors: &Vec<ArrowSelector>, current_selected: Point) -> (usize, SelectableUiElements) {
         let mut a_dist: u32 = u32::MAX;
         let mut b_dist: u32 = u32::MAX;
-        let mut array_pos: usize = 0;
         let mut a_pos: usize = 0;
         let mut b_pos: usize = 0;
-        let mut select_type = SelectableUiElements::Button;
 
+        let mut b_x_dist = i32::MIN;
         for i in 0..buttons.len() {
-            let temp_distacne = (current_selected.y - buttons[i].get_pos().y) as u32;
-            if temp_distacne == 0 && buttons[i].get_pos().x < current_selected.x {
-                b_dist = temp_distacne;
-                b_pos = i;
-            } else if temp_distacne < b_dist && temp_distacne != 0 {
-                b_dist = temp_distacne;
-                b_pos = i;
+            if buttons[i].get_pos() != current_selected {
+                let temp_distacne = (current_selected.y - buttons[i].get_pos().y) as u32;
+                if temp_distacne == 0 && buttons[i].get_pos().y == current_selected.y {
+                    let temp_x = current_selected.x - buttons[i].get_pos().x;
+                    if temp_x > b_x_dist && temp_x < 0 {
+                        b_dist = temp_distacne;
+                        b_pos = i;
+                        b_x_dist = temp_x;
+                    }
+                } else if temp_distacne == b_dist {
+                    let temp_x = current_selected.x - buttons[i].get_pos().x;
+                    if temp_x > b_x_dist && temp_x < 0 {
+                        b_x_dist = temp_x;
+                    }
+                } else if temp_distacne < b_dist && temp_distacne != 0 {
+                    b_dist = temp_distacne;
+                    b_pos = i;
+                }
             }
         }
 
+        let mut a_x_dist = i32::MIN;
         for i in 0..arrow_selectors.len() {
-            let temp_distance: u32 = (current_selected.y - arrow_selectors[i].get_pos().y) as u32;
-            if temp_distance == 0 && arrow_selectors[i].get_pos().x < current_selected.x {
-                a_dist = temp_distance;
-                a_pos = i;
-            } else if temp_distance < a_dist && temp_distance != 0 {
-                a_dist = temp_distance;
-                a_pos = i;
+            if arrow_selectors[i].get_pos() != current_selected {
+                let temp_distacne = (current_selected.y - arrow_selectors[i].get_pos().y) as u32;
+                if temp_distacne == 0 && arrow_selectors[i].get_pos().y == current_selected.y {
+                    let temp_x = current_selected.x - arrow_selectors[i].get_pos().x;
+                    if temp_x > a_x_dist && temp_x < 0 {
+                        a_dist = temp_distacne;
+                        a_pos = i;
+                        a_x_dist = temp_x;
+                    }
+                } else if temp_distacne == a_dist {
+                    let temp_x = current_selected.x - arrow_selectors[i].get_pos().x;
+                    if temp_x > a_x_dist && temp_x < 0 {
+                        a_x_dist = temp_x;
+                    }
+                } else if temp_distacne < a_dist && temp_distacne != 0 {
+                    a_dist = temp_distacne;
+                    a_pos = i;
+                }
             }
         }
 
-        if a_dist < b_dist {
-            select_type = SelectableUiElements::ArrowSelector;
-            array_pos = a_pos;
+        if a_dist == b_dist {
+            if b_x_dist > a_x_dist {
+                return (b_pos, SelectableUiElements::Button);
+            } else {
+                return (a_pos, SelectableUiElements::ArrowSelector);
+            }
+        } else if a_dist < b_dist {
+            return (a_pos, SelectableUiElements::ArrowSelector);
         } else {
-            select_type = SelectableUiElements::Button;
-            array_pos = b_pos;
+            return (b_pos, SelectableUiElements::Button);
         }
-
-        (array_pos, select_type)
     }
 }
 
@@ -227,5 +251,89 @@ mod tests {
         assert_eq!((0, SelectableUiElements::Button), (pos, kind));
         let (pos, kind) = UiUtils::advance(&buttons, &arrow_selectors, buttons[pos].get_pos());
         assert_eq!((1, SelectableUiElements::ArrowSelector), (pos, kind));
+    }
+
+    #[test]
+    fn bottom_up_b_b() {
+        let top: Button = Button::new(Point{x:0, y:1}, Point {x:10, y:10}, None);
+        let bottom: Button = Button::new(Point{x: 0,y: 10}, Point{x: 100, y:100}, None);
+        let buttons = vec![top, bottom];
+
+        let (pos, kind) = UiUtils::go_back(&buttons, &Vec::new(), Point{x: 0, y:0});
+        assert_eq!((1, SelectableUiElements::Button), (pos, kind));
+        let (pos, kind) = UiUtils::go_back(&buttons, &Vec::new(), buttons[pos].get_pos());
+        assert_eq!((0, SelectableUiElements::Button), (pos, kind));
+        let (pos, kind) = UiUtils::go_back(&buttons, &Vec::new(), buttons[pos].get_pos());
+        assert_eq!((1, SelectableUiElements::Button), (pos, kind));
+    }
+
+    #[test]
+    fn bottom_up_b_b_inverse() {
+        let top: Button = Button::new(Point{x:0, y:1}, Point {x:10, y:10}, None);
+        let bottom: Button = Button::new(Point{x: 0,y: 10}, Point{x: 100, y:100}, None);
+        let buttons = vec![bottom, top];
+
+        let (pos, kind) = UiUtils::go_back(&buttons, &Vec::new(), Point{x: 0, y:0});
+        assert_eq!((0, SelectableUiElements::Button), (pos, kind));
+        let (pos, kind) = UiUtils::go_back(&buttons, &Vec::new(), buttons[pos].get_pos());
+        assert_eq!((1, SelectableUiElements::Button), (pos, kind));
+        let (pos, kind) = UiUtils::go_back(&buttons, &Vec::new(), buttons[pos].get_pos());
+        assert_eq!((0, SelectableUiElements::Button), (pos, kind));
+    }
+
+    #[test]
+    fn bottom_up_a_a() {
+        let top: ArrowSelector = ArrowSelector::new(vec!["a".to_string()], Point{x:0, y:1}, Point{x:10, y:10});
+        let bottom: ArrowSelector = ArrowSelector::new(vec!["a".to_string()], Point{x:0, y:100}, Point{x:10, y:10});
+        let arrow_selectors = vec![top, bottom];
+        let buttons: Vec<Button> = Vec::new();
+
+        let (pos, kind) = UiUtils::go_back(&buttons, &arrow_selectors, Point{x:0,y:0});
+        assert_eq!((1, SelectableUiElements::ArrowSelector), (pos, kind));
+        let (pos, kind) = UiUtils::go_back(&buttons, &arrow_selectors, arrow_selectors[pos].get_pos());
+        assert_eq!((0, SelectableUiElements::ArrowSelector), (pos, kind));
+        let (pos, kind) = UiUtils::go_back(&buttons, &arrow_selectors, arrow_selectors[pos].get_pos());
+        assert_eq!((1, SelectableUiElements::ArrowSelector), (pos, kind));
+    }
+
+    #[test]
+    fn bottom_up_a_a_inverse() {
+        let top: ArrowSelector = ArrowSelector::new(vec!["a".to_string()], Point{x:0, y:1}, Point{x:10, y:10});
+        let bottom: ArrowSelector = ArrowSelector::new(vec!["a".to_string()], Point{x:0, y:100}, Point{x:10, y:10});
+        let arrow_selectors = vec![bottom, top];
+        let buttons: Vec<Button> = Vec::new();
+
+        let (pos, kind) = UiUtils::go_back(&buttons, &arrow_selectors, Point{x:0,y:0});
+        assert_eq!((0, SelectableUiElements::ArrowSelector), (pos, kind));
+        let (pos, kind) = UiUtils::go_back(&buttons, &arrow_selectors, arrow_selectors[pos].get_pos());
+        assert_eq!((1, SelectableUiElements::ArrowSelector), (pos, kind));
+        let (pos, kind) = UiUtils::go_back(&buttons, &arrow_selectors, arrow_selectors[pos].get_pos());
+        assert_eq!((0, SelectableUiElements::ArrowSelector), (pos, kind));
+    }
+
+    #[test]
+    fn bottom_up_same_y_b_b() {
+        let left: Button = Button::new(Point{x: 10, y:10}, Point{x:10,y:10}, None);
+        let right: Button = Button::new(Point{x: 100, y:10}, Point{x:10,y:10}, None);
+        let buttons = vec![left, right];
+        let arrow_selectors: Vec<ArrowSelector> = Vec::new();
+
+        let (pos, kind) = UiUtils::go_back(&buttons, &arrow_selectors, Point{x:0, y:0});
+        assert_eq!((1, SelectableUiElements::Button), (pos, kind));
+        let (pos, kind) = UiUtils::go_back(&buttons, &arrow_selectors, buttons[pos].get_pos());
+        assert_eq!((0, SelectableUiElements::Button), (pos, kind));
+    }
+
+    #[test]
+    fn bottom_up_same_y_a_a() {
+        let left: ArrowSelector = ArrowSelector::new(vec!["s".to_string()], Point{x: 10, y: 10}, Point{x: 10, y:10});
+        let right: ArrowSelector = ArrowSelector::new(vec!["a".to_string()], Point{x: 30, y: 10}, Point{x: 10, y: 10});
+        let arrow_selectors = vec![left, right];
+        let buttons: Vec<Button> = Vec::new();
+
+        let (pos, kind) = UiUtils::go_back(&buttons, &arrow_selectors, Point{x:0, y:0});
+        assert_eq!((1, SelectableUiElements::ArrowSelector), (pos, kind));
+        let (pos, kind) = UiUtils::go_back(&buttons, &arrow_selectors, arrow_selectors[pos].get_pos());
+        assert_eq!((0, SelectableUiElements::ArrowSelector), (pos, kind));
     }
 }
