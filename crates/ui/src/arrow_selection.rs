@@ -5,6 +5,7 @@ use raylib::color::Color;
 use raylib::core::math::Vector2;
 use raylib::consts::MouseButton;
 use utils::{Collide, Text, Point};
+use crate::ui_utils::Slectable;
 
 #[derive(Debug, PartialEq)]
 pub struct ArrowSelector {
@@ -14,6 +15,18 @@ pub struct ArrowSelector {
     curr_option: i8,
     selected: bool,
     display_text: Vec<String>,
+}
+
+impl Slectable for ArrowSelector {
+    fn get_pos(&self) -> Point {
+        self.pos
+    }
+    fn select(&mut self) {
+        self.selected = true;
+    }
+    fn deslect(&mut self) {
+        self.selected = false;
+    }
 }
 
 impl ArrowSelector {
@@ -84,18 +97,6 @@ impl ArrowSelector {
 
     pub fn get_curr_selection(&self) -> i8 {
         self.curr_option
-    }
-
-    pub fn get_pos(&self) -> Point {
-        self.pos
-    }
-
-    pub fn select(&mut self) {
-        self.selected = true;
-    }
-
-    pub fn deslect(&mut self) {
-        self.selected = false;
     }
 
     fn get_right_sqaure(&self) -> (Point, Point){

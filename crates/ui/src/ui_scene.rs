@@ -87,7 +87,6 @@ impl UiScene {
     }
 
     pub fn slection_check(&mut self, rl: &RaylibHandle) {
-        self.deslect();
         if rl.is_key_pressed(KeyboardKey::KEY_DOWN) {
             let (pos, kind) = UiUtils::advance(&self.buttons, &self.selectors, self.current_selection);
             match kind {
@@ -112,20 +111,6 @@ impl UiScene {
                     self.selectors[pos].select();
                     self.current_selection = self.selectors[pos].get_pos();
                 },
-            }
-        }
-    }
-
-    fn deslect(&mut self) {
-        for i in 0..self.buttons.len() {
-            if self.buttons[i].get_pos() != self.current_selection {
-                self.buttons[i].deslect();
-            }
-        }
-
-        for i in 0..self.selectors.len() {
-            if self.selectors[i].get_pos() != self.current_selection {
-                self.selectors[i].deslect();
             }
         }
     }

@@ -1,5 +1,6 @@
 use raylib::prelude::*;
 use utils::{Collide, Point};
+use crate::ui_utils::Slectable;
 
 #[derive(Debug, PartialEq)]
 pub struct Button {
@@ -7,6 +8,18 @@ pub struct Button {
     size: Point,
     selected: bool,
     text: Option<String>,
+}
+
+impl Slectable for Button {
+    fn get_pos(&self) -> Point {
+        self.pos
+    }
+    fn deslect(&mut self) {
+        self.selected = false;
+    }
+    fn select(&mut self) {
+        self.selected = true;
+    }
 }
 
 impl Button {
@@ -38,17 +51,5 @@ impl Button {
 
     pub fn was_clicked(&self, rl: &RaylibHandle) -> bool {
         Collide::point_in_rect(&self.size, &self.pos, &rl.get_mouse_position()) && rl.is_mouse_button_released(MouseButton::MOUSE_LEFT_BUTTON)
-    }
-
-    pub fn select(&mut self) {
-        self.selected = true;
-    }
-
-    pub fn deslect(&mut self) {
-        self.selected = false;
-    }
-
-    pub fn get_pos(&self) -> Point {
-        self.pos
     }
 }

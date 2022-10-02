@@ -4,6 +4,14 @@ use crate::button::Button;
 use crate::arrow_selection::ArrowSelector;
 
 
+pub trait Slectable {
+    fn get_pos(&self) -> Point;
+    fn select(&mut self);
+    fn deslect(&mut self);
+}
+
+type Selectables = Vec<Box<dyn Slectable>>;
+
 #[derive(Debug, PartialEq)]
 pub enum SelectableUiElements {
     ArrowSelector,
@@ -14,7 +22,7 @@ pub enum SelectableUiElements {
 pub struct UiUtils;
 
 impl UiUtils {
-    pub fn advance(buttons: &Vec<Button>, arrow_selectors: &Vec<ArrowSelector>, current_selected: Point) -> (usize, SelectableUiElements) {
+    pub fn advance(items: &mut Selectables, current_selected: Point) -> (usize, SelectableUiElements) {
         let mut a_dist: u32 = u32::MAX;
         let mut b_dist: u32 = u32::MAX;
         let mut a_pos: usize = 0;
@@ -82,7 +90,7 @@ impl UiUtils {
         }
     }
     
-    pub fn go_back(buttons: &Vec<Button>, arrow_selectors: &Vec<ArrowSelector>, current_selected: Point) -> (usize, SelectableUiElements) {
+    pub fn go_back(items: &mut Selectables, current_selected: Point) -> (usize, SelectableUiElements) {
         let mut a_pos: usize = 0;
         let mut b_pos: usize = 0;
 
@@ -91,6 +99,7 @@ impl UiUtils {
         for i in 0..buttons.len() {
             if current_selected != buttons[i].get_pos() {
                 let temp_dist = (current_selected.y - buttons[i].get_pos().y) as u32;
+                println!("{}, {}, {:?}", temp_dist, current_selected.y, buttons[i].get_pos());
                 if temp_dist == 0 && b_right_x < buttons[i].get_pos().x {
                     b_right_x = buttons[i].get_pos().x;
                     b_dist = temp_dist;
@@ -119,7 +128,6 @@ impl UiUtils {
                     a_pos = i;
                     a_dist = temp_dist;
                 } else if temp_dist == a_dist && a_right_x < arrow_selectors[i].get_pos().x {
-                    println!("Hi Bestie");
                     a_right_x = arrow_selectors[i].get_pos().x;
                     a_dist = temp_dist;
                     a_pos = i;
@@ -128,13 +136,15 @@ impl UiUtils {
         };
 
         if a_dist == b_dist {
-            println!("{}, {}", a_right_x, b_right_x);
+            println!("a_dist == b_dist, {} , {}" , {a_dist}, {b_dist});
+            println!("{}, {} aaaa", a_right_x, b_right_x);
             if a_right_x < b_right_x {
                 return (a_pos, SelectableUiElements::ArrowSelector);
             } else {
                 return (b_pos, SelectableUiElements::Button);
             }
         } else if a_dist < b_dist {
+            println!("a_dist < b_dist, {} , {}" , {a_dist}, {b_dist});
             return (a_pos, SelectableUiElements::ArrowSelector);
         } else {
             return (b_pos, SelectableUiElements::Button);
