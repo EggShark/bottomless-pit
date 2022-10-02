@@ -3,7 +3,7 @@ use raylib::consts::KeyboardKey;
 use utils::{Point, GameState};
 use crate::button::Button;
 use crate::arrow_selection::ArrowSelector;
-use crate::ui_utils::{UiUtils, SelectableUiElements};
+use crate::ui_utils::{UiUtils, SelectableUiElements, Slectable};
 
 #[derive(Debug, PartialEq)]
 pub struct UiScene {
@@ -87,8 +87,9 @@ impl UiScene {
     }
 
     pub fn slection_check(&mut self, rl: &RaylibHandle) {
+        let selectables = self.congregatge_selectables();
         if rl.is_key_pressed(KeyboardKey::KEY_DOWN) {
-            let (pos, kind) = UiUtils::advance(&self.buttons, &self.selectors, self.current_selection);
+            let (pos, kind) = UiUtils::advance(&mut selectables, self.current_selection);
             match kind {
                 SelectableUiElements::Button => {
                     self.buttons[pos].select();
@@ -101,7 +102,7 @@ impl UiScene {
             }
         }
         if rl.is_key_pressed(KeyboardKey::KEY_UP) {
-            let (pos, kind) = UiUtils::go_back(&self.buttons, &self.selectors, self.current_selection);
+            let (pos, kind) = UiUtils::go_back(&mut selectables, self.current_selection);
             match kind {
                 SelectableUiElements::Button => {
                     self.buttons[pos].select();
@@ -113,5 +114,15 @@ impl UiScene {
                 },
             }
         }
+    }
+    fn congregatge_selectables(&self) -> Vec<Box<dyn Slectable>> {
+        let selectables: Vec<Box<dyn Slectable>>;
+        for z in 0..self.buttons.len() {
+            selectables.push(Box::new(self.buttons[z]));
+        }
+        for z in 0..self.selectors.len() {
+            selectables.push(Box::new(self.selectors[z]))
+        }
+        selectables
     }
 }
