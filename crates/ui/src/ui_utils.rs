@@ -22,37 +22,39 @@ pub enum SelectableUiElements {
 pub struct UiUtils;
 
 impl UiUtils {
-    pub fn advance(items: &mut Selectables, current_selected: Point) {
-        // let mut x_dist = i32::MAX;
-        // for i in 0..buttons.len() {
-        //     if buttons[i].get_pos() != current_selected {
-        //         // we cast as a u32 bc a negative will wrap around to u32 max - whatever it was absolute value
-        //         // this makes the negative values the farthest ones away!
-        //         let temp_distacne = (buttons[i].get_pos().y - current_selected.y) as u32;
-        //         if temp_distacne == 0 && buttons[i].get_pos().y == current_selected.y {
-        //             // dont use type casting here as I do not want this to loop around
-        //             let temp_x = buttons[i].get_pos().x - current_selected.x;
-        //             if temp_x < x_dist && temp_x > 0 {
-        //                 b_pos = i;
-        //                 b_dist = temp_distacne;
-        //                 x_dist = temp_x;
-        //             }
-        //         } else if temp_distacne == b_dist {
-        //             let temp_x = buttons[i].get_pos().x - current_selected.x;
-        //             if temp_x < x_dist && temp_x > 0 {
-        //                 x_dist = temp_x;
-        //             }
-        //         } else if temp_distacne < b_dist && temp_distacne != 0 {
-        //             b_pos = i;
-        //             b_dist = temp_distacne;
-        //         }
-        //     }
-        // }
-        items[0].select();
+    pub fn advance(items: &mut Selectables, current_selected: Point) -> Point {
+        let mut y_dist = u32::MAX;
+        let mut array_pos: usize = 0;
+        let mut x_dist = i32::MAX;
+        for i in 0..items.len() {
+            if items[i].get_pos() != current_selected {
+                // we cast as a u32 bc a negative will wrap around to u32 max - whatever it was absolute value
+                // this makes the negative values the farthest ones away!
+                let temp_distacne = (items[i].get_pos().y - current_selected.y) as u32;
+                if temp_distacne == 0 && items[i].get_pos().y == current_selected.y {
+                    let temp_x = items[i].get_pos().x - current_selected.x;
+                    if temp_x < x_dist && temp_x > 0 {
+                        array_pos = i;
+                        x_dist = temp_x;
+                        y_dist = temp_distacne;
+                    }
+                } else if temp_distacne == y_dist {
+                    let temp_x = items[i].get_pos().x - current_selected.x;
+                    if temp_x < x_dist && temp_x > 0 {
+                        x_dist = temp_x;
+                    }
+                } else if temp_distacne < y_dist && temp_distacne != 0 {
+                    array_pos = i;
+                    y_dist = temp_distacne;
+                }
+            }
+        }
+        items[array_pos].select();
+        items[array_pos].get_pos()
     }
     
-    pub fn go_back(items: &Selectables, current_selected: Point) {
-
+    pub fn go_back(items: &Selectables, current_selected: Point) -> Point {
+        Point{x: 10, y: 10}
     }
 }
 

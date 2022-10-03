@@ -88,22 +88,39 @@ impl UiScene {
 
     pub fn slection_check(&mut self, rl: &RaylibHandle) {
         let current_selction = self.current_selection;
-        let mut selectables = self.congregatge_selectables();
+        deslect(&mut self.buttons, &mut self.selectors, current_selction);
+        let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
         if rl.is_key_pressed(KeyboardKey::KEY_DOWN) {
-            UiUtils::advance(&mut selectables, current_selction);
+            let new_selection = UiUtils::advance(&mut selectables, current_selction);
+            self.current_selection = new_selection;
         }
         if rl.is_key_pressed(KeyboardKey::KEY_UP) {
-            UiUtils::go_back(&mut selectables, current_selction);
+            let new_selection = UiUtils::go_back(&mut selectables, current_selction);
+            self.current_selection = new_selection;
         }
     }
-    fn congregatge_selectables(&mut self) -> Vec<&mut dyn Slectable> {
-        let mut selectables: Vec<&mut dyn Slectable> = Vec::new();
-        for z in self.buttons.iter_mut() {
-            selectables.push(z);
+}
+
+fn deslect(buttons: &mut Vec<Button>, selectors: &mut Vec<ArrowSelector>, cur_selction: Point) {
+    for z in buttons.iter_mut() {
+        if z.get_pos() != cur_selction {
+            z.deslect();
         }
-        for x in self.selectors.iter_mut() {
-            selectables.push(x)
-        }
-        selectables
     }
+    for x in selectors.iter_mut() {
+        if x.get_pos() != cur_selction {
+            x.deslect();
+        }
+    }
+}
+
+fn congregatge_selectables<'b>(buttons: &'b mut Vec<Button>, selectors: &'b mut Vec<ArrowSelector>) -> Vec<&'b mut dyn Slectable> {
+    let mut selectables: Vec<&'b mut dyn Slectable> = Vec::new();
+    for z in buttons.iter_mut() {
+        selectables.push(z);
+    }
+    for x in selectors.iter_mut() {
+        selectables.push(x);
+    }
+    selectables
 }
