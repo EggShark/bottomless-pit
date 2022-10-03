@@ -10,7 +10,7 @@ pub trait Slectable {
     fn deslect(&mut self);
 }
 
-type Selectables = Vec<Box<dyn Slectable>>;
+type Selectables<'a> = Vec<&'a mut dyn Slectable>;
 
 #[derive(Debug, PartialEq)]
 pub enum SelectableUiElements {
@@ -22,133 +22,37 @@ pub enum SelectableUiElements {
 pub struct UiUtils;
 
 impl UiUtils {
-    pub fn advance(items: &mut Selectables, current_selected: Point) -> (usize, SelectableUiElements) {
-        let mut a_dist: u32 = u32::MAX;
-        let mut b_dist: u32 = u32::MAX;
-        let mut a_pos: usize = 0;
-        let mut b_pos: usize = 0;
-
-        let mut x_dist = i32::MAX;
-        for i in 0..buttons.len() {
-            if buttons[i].get_pos() != current_selected {
-                // we cast as a u32 bc a negative will wrap around to u32 max - whatever it was absolute value
-                // this makes the negative values the farthest ones away!
-                let temp_distacne = (buttons[i].get_pos().y - current_selected.y) as u32;
-                if temp_distacne == 0 && buttons[i].get_pos().y == current_selected.y {
-                    // dont use type casting here as I do not want this to loop around
-                    let temp_x = buttons[i].get_pos().x - current_selected.x;
-                    if temp_x < x_dist && temp_x > 0 {
-                        b_pos = i;
-                        b_dist = temp_distacne;
-                        x_dist = temp_x;
-                    }
-                } else if temp_distacne == b_dist {
-                    let temp_x = buttons[i].get_pos().x - current_selected.x;
-                    if temp_x < x_dist && temp_x > 0 {
-                        x_dist = temp_x;
-                    }
-                } else if temp_distacne < b_dist && temp_distacne != 0 {
-                    b_pos = i;
-                    b_dist = temp_distacne;
-                }
-            }
-        }
-
-        let mut a_x_dist = i32::MAX;
-        for i in 0..arrow_selectors.len() {
-            if arrow_selectors[i].get_pos() != current_selected {
-                let temp_distacne = (arrow_selectors[i].get_pos().y - current_selected.y) as u32;
-                if temp_distacne == 0 && arrow_selectors[i].get_pos().y == current_selected.y {
-                    let temp_x = arrow_selectors[i].get_pos().x - current_selected.x;
-                    if temp_x < x_dist && temp_x > 0 {
-                        a_pos = i;
-                        a_dist = temp_distacne;
-                        a_x_dist = temp_x;
-                    }
-                } else if temp_distacne == a_dist {
-                    let temp_x = arrow_selectors[i].get_pos().x - current_selected.x;
-                    if temp_x < x_dist && temp_x > 0 {
-                        a_x_dist = temp_x;
-                    }
-                } else if temp_distacne < a_dist && temp_distacne != 0 {
-                    a_pos = i;
-                    a_dist = temp_distacne;
-                }
-            }
-        }
-
-        if a_dist == b_dist {
-            if x_dist < a_x_dist {
-                return (b_pos, SelectableUiElements::Button);
-            } else {
-                return (a_pos, SelectableUiElements::ArrowSelector);
-            }
-        } else if a_dist < b_dist {
-            return (a_pos, SelectableUiElements::ArrowSelector);
-        } else {
-            return (b_pos, SelectableUiElements::Button);
-        }
+    pub fn advance(items: &mut Selectables, current_selected: Point) {
+        // let mut x_dist = i32::MAX;
+        // for i in 0..buttons.len() {
+        //     if buttons[i].get_pos() != current_selected {
+        //         // we cast as a u32 bc a negative will wrap around to u32 max - whatever it was absolute value
+        //         // this makes the negative values the farthest ones away!
+        //         let temp_distacne = (buttons[i].get_pos().y - current_selected.y) as u32;
+        //         if temp_distacne == 0 && buttons[i].get_pos().y == current_selected.y {
+        //             // dont use type casting here as I do not want this to loop around
+        //             let temp_x = buttons[i].get_pos().x - current_selected.x;
+        //             if temp_x < x_dist && temp_x > 0 {
+        //                 b_pos = i;
+        //                 b_dist = temp_distacne;
+        //                 x_dist = temp_x;
+        //             }
+        //         } else if temp_distacne == b_dist {
+        //             let temp_x = buttons[i].get_pos().x - current_selected.x;
+        //             if temp_x < x_dist && temp_x > 0 {
+        //                 x_dist = temp_x;
+        //             }
+        //         } else if temp_distacne < b_dist && temp_distacne != 0 {
+        //             b_pos = i;
+        //             b_dist = temp_distacne;
+        //         }
+        //     }
+        // }
+        items[0].select();
     }
     
-    pub fn go_back(items: &mut Selectables, current_selected: Point) -> (usize, SelectableUiElements) {
-        let mut a_pos: usize = 0;
-        let mut b_pos: usize = 0;
+    pub fn go_back(items: &Selectables, current_selected: Point) {
 
-        let mut b_dist = u32::MAX;
-        let mut b_right_x = i32::MIN;
-        for i in 0..buttons.len() {
-            if current_selected != buttons[i].get_pos() {
-                let temp_dist = (current_selected.y - buttons[i].get_pos().y) as u32;
-                println!("{}, {}, {:?}", temp_dist, current_selected.y, buttons[i].get_pos());
-                if temp_dist == 0 && b_right_x < buttons[i].get_pos().x {
-                    b_right_x = buttons[i].get_pos().x;
-                    b_dist = temp_dist;
-                    b_pos = i;
-                } else if temp_dist < b_dist && temp_dist != 0 {
-                    b_pos = i;
-                    b_dist = temp_dist;
-                } else if temp_dist == b_dist && b_right_x < buttons[i].get_pos().x {
-                    b_right_x = buttons[i].get_pos().x;
-                    b_dist = temp_dist;
-                    b_pos = i;
-                }
-            }
-        };
-
-        let mut a_dist = u32::MAX;
-        let mut a_right_x: i32 = i32::MIN;
-        for i in 0..arrow_selectors.len() {
-            if current_selected != arrow_selectors[i].get_pos() {
-                let temp_dist = (current_selected.y - arrow_selectors[i].get_pos().y) as u32;
-                if temp_dist == 0  && a_right_x < arrow_selectors[i].get_pos().x {
-                    a_right_x = arrow_selectors[i].get_pos().x;
-                    a_dist = temp_dist;
-                    a_pos = i;
-                } else if temp_dist < a_dist && temp_dist != 0 {
-                    a_pos = i;
-                    a_dist = temp_dist;
-                } else if temp_dist == a_dist && a_right_x < arrow_selectors[i].get_pos().x {
-                    a_right_x = arrow_selectors[i].get_pos().x;
-                    a_dist = temp_dist;
-                    a_pos = i;
-                }
-            }
-        };
-
-        if a_dist == b_dist {
-            println!("a_dist == b_dist, {} , {}" , {a_dist}, {b_dist});
-            println!("{}, {} aaaa", a_right_x, b_right_x);
-            if a_right_x < b_right_x {
-                return (a_pos, SelectableUiElements::ArrowSelector);
-            } else {
-                return (b_pos, SelectableUiElements::Button);
-            }
-        } else if a_dist < b_dist {
-            println!("a_dist < b_dist, {} , {}" , {a_dist}, {b_dist});
-            return (a_pos, SelectableUiElements::ArrowSelector);
-        } else {
-            return (b_pos, SelectableUiElements::Button);
-        }
     }
 }
 

@@ -87,41 +87,22 @@ impl UiScene {
     }
 
     pub fn slection_check(&mut self, rl: &RaylibHandle) {
-        let selectables = self.congregatge_selectables();
+        let current_selction = self.current_selection;
+        let mut selectables = self.congregatge_selectables();
         if rl.is_key_pressed(KeyboardKey::KEY_DOWN) {
-            let (pos, kind) = UiUtils::advance(&mut selectables, self.current_selection);
-            match kind {
-                SelectableUiElements::Button => {
-                    self.buttons[pos].select();
-                    self.current_selection = self.buttons[pos].get_pos();
-                },
-                SelectableUiElements::ArrowSelector => {
-                    self.selectors[pos].select();
-                    self.current_selection = self.selectors[pos].get_pos();
-                },
-            }
+            UiUtils::advance(&mut selectables, current_selction);
         }
         if rl.is_key_pressed(KeyboardKey::KEY_UP) {
-            let (pos, kind) = UiUtils::go_back(&mut selectables, self.current_selection);
-            match kind {
-                SelectableUiElements::Button => {
-                    self.buttons[pos].select();
-                    self.current_selection = self.buttons[pos].get_pos();
-                },
-                SelectableUiElements::ArrowSelector => {
-                    self.selectors[pos].select();
-                    self.current_selection = self.selectors[pos].get_pos();
-                },
-            }
+            UiUtils::go_back(&mut selectables, current_selction);
         }
     }
-    fn congregatge_selectables(&self) -> Vec<Box<dyn Slectable>> {
-        let selectables: Vec<Box<dyn Slectable>>;
-        for z in 0..self.buttons.len() {
-            selectables.push(Box::new(self.buttons[z]));
+    fn congregatge_selectables(&mut self) -> Vec<&mut dyn Slectable> {
+        let mut selectables: Vec<&mut dyn Slectable> = Vec::new();
+        for z in self.buttons.iter_mut() {
+            selectables.push(z);
         }
-        for z in 0..self.selectors.len() {
-            selectables.push(Box::new(self.selectors[z]))
+        for x in self.selectors.iter_mut() {
+            selectables.push(x)
         }
         selectables
     }
