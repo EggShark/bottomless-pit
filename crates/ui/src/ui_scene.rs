@@ -31,14 +31,13 @@ impl UiScene {
         let mid_test: Button = Button::new(Point{x: 400, y: 180}, Point{x: 100, y:40}, None);
 
         let buttons = vec![quit, go_to_game, go_to_settings, mid_test, test];
-        let z = ArrowSelector::new(vec![String::from("a")], Point{x: 200, y:180}, Point{x: 200, y: 10});
+
         let yat = ArrowSelector::new(vec![String::from("a")], Point{x: 200, y:1}, Point{x:400, y:100});
-        let x = ArrowSelector::new(vec![String::from("a")], Point{x: 600, y:180}, Point{x: 200, y: 10});
         let arrow_test = ArrowSelector::new(vec![String::from("a")], Point{x: 200, y:600}, Point{x:400, y:100});
 
         Self {
             buttons,
-            selectors: vec![z, x, arrow_test, yat],
+            selectors: vec![arrow_test, yat],
             current_selection: Point{x:0,y:0},
         }
     }

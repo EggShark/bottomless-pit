@@ -53,8 +53,33 @@ impl UiUtils {
         items[array_pos].get_pos()
     }
     
-    pub fn go_up(items: &Selectables, current_selected: Point) -> Point {
-        Point{x: 10, y: 10}
+    pub fn go_up(items: &mut Selectables, current_selected: Point) -> Point {
+        let mut y_dist = u32::MAX;
+        let mut array_pos: usize = 0;
+        let mut x_pos = 0;
+        for i in 0..items.len() {
+            let item_pos = items[i].get_pos();
+            if item_pos != current_selected {
+                let temp_distance = (current_selected.y - item_pos.y) as u32;
+                if temp_distance == 0 && item_pos.y == current_selected.y {
+                    if item_pos.x < current_selected.x && item_pos.x > x_pos {
+                        array_pos = i;
+                        x_pos = item_pos.x;
+                        y_dist = temp_distance;
+                    }
+                } else if temp_distance == y_dist {
+                    if item_pos.x > x_pos {
+                        x_pos = item_pos.x;
+                    }
+                } else if temp_distance < y_dist && temp_distance != 0 {
+                    array_pos = i;
+                    y_dist = temp_distance;
+                }
+            }
+        }
+
+        items[array_pos].select();
+        items[array_pos].get_pos()
     }
 }
 
