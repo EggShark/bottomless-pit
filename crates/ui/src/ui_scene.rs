@@ -9,7 +9,7 @@ use crate::ui_utils::{UiUtils, SelectableUiElements, Slectable};
 pub struct UiScene {
     pub buttons: Vec<Button>,
     pub selectors: Vec<ArrowSelector>,
-    pub current_selection: Point,
+    pub current_selection: usize,
 }
 
 impl Default for UiScene {
@@ -17,7 +17,7 @@ impl Default for UiScene {
         Self {
             buttons: Vec::new(),
             selectors: Vec::new(),
-            current_selection: Point{x:0,y:0}
+            current_selection: 0,
         }
     }
 }
@@ -38,7 +38,7 @@ impl UiScene {
         Self {
             buttons,
             selectors: vec![arrow_test, yat],
-            current_selection: Point{x:0,y:0},
+            current_selection: 0,
         }
     }
 
@@ -58,7 +58,7 @@ impl UiScene {
         Self {
             buttons,
             selectors,
-            current_selection: Point{x:0, y:0},
+            current_selection: 0,
         }
     }
 
@@ -88,8 +88,8 @@ impl UiScene {
 
     pub fn slection_check(&mut self, rl: &RaylibHandle) {
         let current_selction = self.current_selection;
-        deslect(&mut self.buttons, &mut self.selectors, current_selction);
         let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
+        deslect(&mut selectables, current_selction);
         if rl.is_key_pressed(KeyboardKey::KEY_DOWN) {
             let new_selection = UiUtils::go_down(&mut selectables, current_selction);
             self.current_selection = new_selection;
@@ -101,15 +101,10 @@ impl UiScene {
     }
 }
 
-fn deslect(buttons: &mut Vec<Button>, selectors: &mut Vec<ArrowSelector>, cur_selction: Point) {
-    for z in buttons.iter_mut() {
-        if z.get_pos() != cur_selction {
-            z.deslect();
-        }
-    }
-    for x in selectors.iter_mut() {
-        if x.get_pos() != cur_selction {
-            x.deslect();
+fn deslect(elements: &mut Vec<&mut dyn Slectable>, current_selected: usize) {
+    for i in 0..elements.len() {
+        if i != current_selected {
+            elements[i].deslect();
         }
     }
 }
