@@ -122,5 +122,18 @@ fn congregatge_selectables<'b>(buttons: &'b mut Vec<Button>, selectors: &'b mut 
     for x in selectors.iter_mut() {
         selectables.push(x);
     }
+    let selectables = sort_by_points(selectables);
     selectables
+}
+
+pub fn sort_by_points(mut list: Vec<&mut dyn Slectable>) -> Vec<&mut dyn Slectable> {
+    list.sort_by(|a, b| {
+        let y_order = a.get_pos().y.cmp(&b.get_pos().y);
+        if y_order == std::cmp::Ordering::Equal {
+            a.get_pos().x.cmp(&b.get_pos().x)
+        } else {
+            y_order
+        }
+    });
+    list
 }
