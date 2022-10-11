@@ -3,7 +3,7 @@ use raylib::consts::KeyboardKey;
 use utils::{Point, GameState};
 use crate::button::Button;
 use crate::arrow_selection::ArrowSelector;
-use crate::ui_utils::{UiUtils, SelectableUiElements, Slectable};
+use crate::ui_utils::{UiUtils, SelectableUiElements, Selectable};
 
 #[derive(Debug, PartialEq)]
 pub struct UiScene {
@@ -87,21 +87,22 @@ impl UiScene {
     }
 
     pub fn slection_check(&mut self, rl: &RaylibHandle) {
-        let current_selction = self.current_selection;
-        let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
-        deslect(&mut selectables, current_selction);
         if rl.is_key_pressed(KeyboardKey::KEY_DOWN) {
-            let new_selection = UiUtils::go_down(&mut selectables, current_selction);
+            let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
+            let new_selection = UiUtils::go_down(&mut selectables, self.current_selection);
             self.current_selection = new_selection;
+            deslect(&mut selectables, self.current_selection);
         }
         if rl.is_key_pressed(KeyboardKey::KEY_UP) {
-            let new_selection = UiUtils::go_up(&mut selectables, current_selction);
+            let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
+            let new_selection = UiUtils::go_up(&mut selectables, self.current_selection);
             self.current_selection = new_selection;
+            deslect(&mut selectables, self.current_selection);
         }
     }
 }
 
-fn deslect(elements: &mut Vec<&mut dyn Slectable>, current_selected: usize) {
+fn deslect(elements: &mut Vec<&mut dyn Selectable>, current_selected: usize) {
     for i in 0..elements.len() {
         if i != current_selected {
             elements[i].deslect();
@@ -109,8 +110,8 @@ fn deslect(elements: &mut Vec<&mut dyn Slectable>, current_selected: usize) {
     }
 }
 
-fn congregatge_selectables<'b>(buttons: &'b mut Vec<Button>, selectors: &'b mut Vec<ArrowSelector>) -> Vec<&'b mut dyn Slectable> {
-    let mut selectables: Vec<&'b mut dyn Slectable> = Vec::new();
+fn congregatge_selectables<'b>(buttons: &'b mut Vec<Button>, selectors: &'b mut Vec<ArrowSelector>) -> Vec<&'b mut dyn Selectable> {
+    let mut selectables: Vec<&'b mut dyn Selectable> = Vec::new();
     for z in buttons.iter_mut() {
         selectables.push(z);
     }
@@ -121,7 +122,7 @@ fn congregatge_selectables<'b>(buttons: &'b mut Vec<Button>, selectors: &'b mut 
     selectables
 }
 
-pub fn sort_by_points(mut list: Vec<&mut dyn Slectable>) -> Vec<&mut dyn Slectable> {
+fn sort_by_points(mut list: Vec<&mut dyn Selectable>) -> Vec<&mut dyn Selectable> {
     list.sort_by(|a, b| {
         let y_order = a.get_pos().y.cmp(&b.get_pos().y);
         if y_order == std::cmp::Ordering::Equal {

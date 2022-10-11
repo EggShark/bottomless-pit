@@ -5,7 +5,7 @@ use raylib::color::Color;
 use raylib::core::math::Vector2;
 use raylib::consts::MouseButton;
 use utils::{Collide, Text, Point};
-use crate::ui_utils::Slectable;
+use crate::ui_utils::Selectable;
 
 #[derive(Debug, PartialEq)]
 pub struct ArrowSelector {
@@ -17,7 +17,7 @@ pub struct ArrowSelector {
     display_text: Vec<String>,
 }
 
-impl Slectable for ArrowSelector {
+impl Selectable for ArrowSelector {
     fn get_pos(&self) -> Point {
         self.pos
     }

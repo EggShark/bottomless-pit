@@ -1,6 +1,6 @@
 use raylib::prelude::*;
 use utils::{Collide, Point};
-use crate::ui_utils::Slectable;
+use crate::ui_utils::Selectable;
 
 #[derive(Debug, PartialEq)]
 pub struct Button {
@@ -10,7 +10,7 @@ pub struct Button {
     text: Option<String>,
 }
 
-impl Slectable for Button {
+impl Selectable for Button {
     fn get_pos(&self) -> Point {
         self.pos
     }

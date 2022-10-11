@@ -4,13 +4,13 @@ use crate::button::Button;
 use crate::arrow_selection::ArrowSelector;
 
 
-pub trait Slectable {
+pub trait Selectable {
     fn get_pos(&self) -> Point;
     fn select(&mut self);
     fn deslect(&mut self);
 }
 
-type Selectables<'a> = Vec<&'a mut dyn Slectable>;
+type Selectables<'a> = Vec<&'a mut dyn Selectable>;
 
 #[derive(Debug, PartialEq)]
 pub enum SelectableUiElements {
