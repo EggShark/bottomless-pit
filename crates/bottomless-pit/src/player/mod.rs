@@ -2,18 +2,26 @@ use raylib::core::drawing::RaylibDrawHandle;
 use raylib::core::{RaylibThread, RaylibHandle};
 use raylib::consts::KeyboardKey;
 use utils::Point;
-use animation::{PlayerAnimation, PlayerAnimations};
+use animation::{PlayerAnimation, PlayerAnimations, HitBox};
 
 pub struct Player {
     pos: Point,
+    state: PlayerState,
     animation_state: PlayerAnimations,
     animations: [PlayerAnimation; 2],
+    attacks: [Option<Attack>; 2],
     player_type: PlayerTypes,
 }
 
 pub enum PlayerTypes {
     BaseBaller,
     TestOne
+}
+
+pub enum PlayerState {
+    Attacking,
+    Normal,
+    Hurt,
 }
 
 impl Player {
@@ -25,8 +33,10 @@ impl Player {
 
         Self {
             pos,
+            state: PlayerState::Normal,
             animation_state: PlayerAnimations::Idle,
             animations,
+            attacks: [None, None],
             player_type: PlayerTypes::BaseBaller,
         }
     }
@@ -55,4 +65,31 @@ impl Player {
         let animation_pos: usize = self.animation_state.into_uszie(); 
         self.animations[animation_pos].update(dir);
     }
+
+    pub fn attack(&self) {
+        // find attack data excute attack with animation generic Animation struct maybe? with Attack
+    }
+}
+
+
+struct Attack {
+    hitbox: HitBox,
+    animation: PlayerAnimation,
+    base_damage: f32,
+}
+
+impl Attack {
+    pub fn new(hitbox: HitBox, path: &str, base_damage: f32, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
+        let animation = PlayerAnimation::new(path, 7, rl, thread);
+        Self {
+            hitbox,
+            animation,
+            base_damage
+        }
+    }
+}
+
+enum AttackType{
+    Slash,
+    Normal,
 }

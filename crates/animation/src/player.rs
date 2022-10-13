@@ -12,7 +12,7 @@ pub struct PlayerAnimation {
     frames: u8,
     curr_frame: u8,
     framecounter: u8,
-    dirrection: i8, //true is facing right 
+    direction: i8, //0 is facing right
 }
 
 pub enum PlayerAnimations {
@@ -39,7 +39,7 @@ impl PlayerAnimation {
             frames,
             curr_frame: 0,
             framecounter: 0,
-            dirrection: 0,
+            direction: 0,
         }
     }
 
@@ -53,13 +53,13 @@ impl PlayerAnimation {
     }
 
     pub fn draw(&self, d_handle: &mut RaylibDrawHandle, pos: Point) {
-        let frame_rec = Rectangle::new((self.curr_frame as i32 * (self.sprite.width()/self.frames as i32))as f32, 0.0, (self.sprite.width() as f32 /self.frames as f32) * self.dirrection as f32, self.sprite.height() as f32);
+        let frame_rec = Rectangle::new((self.curr_frame as i32 * (self.sprite.width()/self.frames as i32))as f32, 0.0, (self.sprite.width() as f32 /self.frames as f32) * self.direction as f32, self.sprite.height() as f32);
         d_handle.draw_texture_rec(&self.sprite, frame_rec, <Point as Into<Vector2>>::into(pos), Color::WHITE);
     }
 
     pub fn update(&mut self, dir: i8) {
         self.framecounter += 1;
-        self.dirrection = dir;
+        self.direction = dir;
         if self.framecounter >= 10 {
             self.framecounter = 0;
             self.advance();

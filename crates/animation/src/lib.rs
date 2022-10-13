@@ -1,5 +1,5 @@
 mod player;
-mod attack;
+mod hitbox;
 
 pub use crate::player::*;
-pub use crate::attack::*;
+pub use crate::hitbox::*;

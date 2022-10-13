@@ -6,6 +6,7 @@ use player::Player;
 use utils::Point;
 use settings::Settings;
 use game::Game;
+use animation::{HitBox, HitboxType};
 
 fn main() {
     let settings = Settings::load_from_file();
@@ -33,13 +34,14 @@ fn main() {
     let mut game = Game::new(settings);
 
     let mut player = Player::make_baller(&mut rl, &thread, Point{x: 200, y: 200});
+    let test = HitBox::new(vec![Point{x:100, y:100}, Point{x: 200, y:100}, Point{x:200, y:200}, Point{x:100, y:200}], HitboxType::DamageAble);
 
     while !game.should_close(&rl) {
         player.update(&rl);
         game.update(&mut rl);
 
         let mut d_handle = rl.begin_drawing(&thread);
-
+        test.draw_hibox(&mut d_handle);
         player.draw(&mut d_handle);
         game.draw(d_handle);
     }

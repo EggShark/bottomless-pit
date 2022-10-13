@@ -6,6 +6,20 @@ pub struct Point {
     pub y: i32,
 }
 
+impl Point {
+    pub fn sort_vec(mut points: Vec<Point>) -> Vec<Point>{
+        points.sort_by(|a, b| {
+            let y_order = a.y.cmp(&b.y);
+            if y_order == std::cmp::Ordering::Equal {
+                a.x.cmp(&b.x)
+            } else {
+                y_order
+            }
+        });
+        points
+    }
+}
+
 impl Into<Vector2> for Point {
     fn into(self) -> Vector2 {
         Vector2::new(self.x as f32, self.y as f32)
