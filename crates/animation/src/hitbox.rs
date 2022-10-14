@@ -27,4 +27,9 @@ impl HitBox {
         }
         d_handle.draw_line(self.polygon[0].x, self.polygon[0].y, self.polygon[self.polygon.len() - 1].x, self.polygon[self.polygon.len() - 1].y, Color::RED);
     }
+
+    // cant always return a bool just for test time it will
+    pub fn collision_check(&self, other: &HitBox) -> bool {
+        utils::Collide::ploy_poly(&self.polygon, &other.polygon)
+    }
 }

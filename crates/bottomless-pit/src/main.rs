@@ -35,6 +35,7 @@ fn main() {
 
     let mut player = Player::make_baller(&mut rl, &thread, Point{x: 200, y: 200});
     let test = HitBox::new(vec![Point{x:100, y:100}, Point{x: 200, y:100}, Point{x:200, y:200}, Point{x:100, y:200}], HitboxType::DamageAble);
+    let test2 = HitBox::new(vec![Point{x:150, y:150}, Point{x: 300, y:600}, Point{x: 100, y: 600}], HitboxType::DamageDealing);
 
     while !game.should_close(&rl) {
         player.update(&rl);
@@ -42,6 +43,8 @@ fn main() {
 
         let mut d_handle = rl.begin_drawing(&thread);
         test.draw_hibox(&mut d_handle);
+        test2.draw_hibox(&mut d_handle);
+        println!("{}", test.collision_check(&test2));
         player.draw(&mut d_handle);
         game.draw(d_handle);
     }
