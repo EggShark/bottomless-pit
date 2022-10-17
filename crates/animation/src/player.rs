@@ -22,7 +22,7 @@ pub enum PlayerAnimations {
 }
 
 impl PlayerAnimations {
-    pub fn into_uszie(&self) -> usize {
+    pub fn into_usize(&self) -> usize {
         match self {
             Self::Idle => 0,
             Self::Walking => 1,
