@@ -11,7 +11,6 @@ pub struct PlayerAnimation {
     sprite: Texture2D,
     frames: i16,
     curr_frame: i16,
-    framecounter: i16,
     direction: i16, //1 is facing right
 }
 
@@ -38,12 +37,11 @@ impl PlayerAnimation {
             sprite,
             frames,
             curr_frame: 0,
-            framecounter: 0,
             direction: 1,
         }
     }
 
-    pub fn advance(&mut self) {
+    fn advance(&mut self) {
         if self.curr_frame + 1 > self.frames {
             self.curr_frame = 0;
         }
@@ -58,12 +56,8 @@ impl PlayerAnimation {
     }
 
     pub fn update(&mut self, dir: i16) {
-        self.framecounter += 1;
         self.direction = dir;
-        if self.framecounter >= 10 {
-            self.framecounter = 0;
-            self.advance();
-        }
+        self.advance();
     }
 
     pub fn set_frame(&mut self, new_frame: i16) {

@@ -73,7 +73,7 @@ impl Attack {
 
     pub fn update(&mut self) -> bool {
         self.frame_count += 1;
-        self.animation.advance();
+        self.animation.update(1);
 
         if self.frame_count > self.frame_data.active {
             self.state = AttackState::Recovery
