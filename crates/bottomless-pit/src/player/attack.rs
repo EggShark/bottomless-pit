@@ -53,11 +53,13 @@ impl Attack {
     }
 
     pub fn shift_actual(&mut self, shift_x: i32, shift_y: i32) {
+        // used to have a hitbox based off where the player actually is
         self.actual.shift_x(shift_x);
         self.actual.shift_y(shift_y);
     }
 
     pub fn reset_actual(&mut self) {
+        // resets the hitbox allowing us to change it for the next attack
         self.actual = self.base_hitbox.copy();
     }
 
@@ -71,16 +73,20 @@ impl Attack {
         }
     }
 
+    // reutrns true if the attack is over I liked this more
+    // compared to a is_over functions
     pub fn update(&mut self) -> bool {
         self.frame_count += 1;
         self.animation.update(1);
 
+        // sets the state to the approraite state based off the frame data
         if self.frame_count > self.frame_data.active {
             self.state = AttackState::Recovery
         } else if self.frame_count > self.frame_data.startup {
             self.state = AttackState::Active
         }
 
+        // checks to see if the attack is "over"
         if self.frame_count == (self.frame_data.active + self.frame_data.recovery + self.frame_data.startup) {
             self.reset_actual();
             self.frame_count = 0;

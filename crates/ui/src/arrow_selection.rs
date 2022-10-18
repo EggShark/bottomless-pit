@@ -53,6 +53,9 @@ impl ArrowSelector {
         let (x, y) = Text::center_text(&self.display_text[self.curr_option as usize], &self.pos, &self.size, 20, d_handle.get_font_default());
         d_handle.draw_text(&self.display_text[self.curr_option as usize], x as i32, y as i32, 20, Color::BLACK); 
 
+        // lots of funky math to have the arrows be on
+        // 1/4 and 3/4 of the selector
+        // while the text is centered at 1/2 of the box
         let left_first_triangle_x = (self.pos.x + (self.size.x / 4)) - 10;
         let left_first_triangle_y = self.size.y/2 + self.pos.y;
         let left_v = Vector2::new(left_first_triangle_x as f32, left_first_triangle_y as f32);

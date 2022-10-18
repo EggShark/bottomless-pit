@@ -52,6 +52,7 @@ impl PlayerAnimation {
 
     pub fn draw(&self, d_handle: &mut RaylibDrawHandle, pos: Point) {
         let frame_rec = Rectangle::new((self.curr_frame as i32 * (self.sprite.width()/self.frames as i32))as f32, 0.0, (self.sprite.width() as f32 /self.frames as f32) * self.direction as f32, self.sprite.height() as f32);
+        // gets the x (0,0) is top left by multiplying the frame by (witdh/num of frames), y is always 0 as our spritesheets are 1D ish  width is just how big each frame should be having a negative value flips the sprite
         d_handle.draw_texture_rec(&self.sprite, frame_rec, <Point as Into<Vector2>>::into(pos), Color::WHITE);
     }
 

@@ -32,7 +32,7 @@ impl Button {
         }
     }
 
-    pub fn draw(&self ,d: &mut RaylibDrawHandle) {
+    pub fn draw(&self, d: &mut RaylibDrawHandle) {
         let color = if self.selected {
             Color::RED
         } else {

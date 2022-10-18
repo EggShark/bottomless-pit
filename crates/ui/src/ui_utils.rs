@@ -1,8 +1,5 @@
 use utils::Point;
 
-use crate::button::Button;
-use crate::arrow_selection::ArrowSelector;
-
 
 pub trait Selectable {
     fn get_pos(&self) -> Point;

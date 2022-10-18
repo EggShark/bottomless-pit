@@ -81,6 +81,9 @@ impl Player {
     }
 
     pub fn update(&mut self, rl: &RaylibHandle) {
+        // resets to default animation state when needed
+        // however almost any action in the other checks will
+        // change the state so it is rarley kept at idle
         self.animation_state = PlayerAnimations::Idle;
         self.attack(rl);
 
@@ -97,6 +100,10 @@ impl Player {
 
     fn normal_update(&mut self, rl: &RaylibHandle) {
         let mut dir = 1;
+
+        // handles the movment we plan to have a 
+        // more complex character controller
+        // plus a input buffer for fg reasons
         if rl.is_key_down(KeyboardKey::KEY_D) {
             dir = 1;
             self.animation_state = PlayerAnimations::Walking;
@@ -118,6 +125,8 @@ impl Player {
     fn update_attacking(&mut self) {
         let attack = self.attacks[self.attack_type.into_uszie()].as_mut().unwrap(); 
         // shouldn't fail as the state will only be this way if there is an attack there
+
+        // if it returns true the attack is 'over'
         if attack.update() {
             self.state = PlayerState::Normal;
         }
@@ -127,6 +136,9 @@ impl Player {
         // each input = attack type  check array and see if its some or none
         if self.state == PlayerState::Normal {
             let mut attack: Option<&mut Attack> = None;
+
+            // checks for an attack input and
+            // looks into the array of attacks
             if rl.is_key_pressed(KeyboardKey::KEY_I) {
                 self.attack_type = AttackType::Slash;
                 attack = self.attacks[AttackType::Slash.into_uszie()].as_mut()
@@ -134,6 +146,8 @@ impl Player {
     
             match attack {
                 Some(attack) => {
+                    // updates the player as well as the attacks
+                    // hitbox to the appropriate space
                     self.state = PlayerState::Attacking;
                     attack.shift_actual(self.pos.x, self.pos.y);
                 },
