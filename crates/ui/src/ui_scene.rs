@@ -10,6 +10,7 @@ pub struct UiScene {
     pub buttons: Vec<Button>,
     pub selectors: Vec<ArrowSelector>,
     pub current_selection: usize,
+    first_selection: bool
 }
 
 impl Default for UiScene {
@@ -18,6 +19,7 @@ impl Default for UiScene {
             buttons: Vec::new(),
             selectors: Vec::new(),
             current_selection: 0,
+            first_selection: true,
         }
     }
 }
@@ -33,6 +35,7 @@ impl UiScene {
             buttons,
             selectors: Vec::new(),
             current_selection: 0,
+            first_selection: true,
         }
     }
 
@@ -52,6 +55,7 @@ impl UiScene {
             buttons,
             selectors,
             current_selection: 0,
+            first_selection: true,
         }
     }
 
@@ -80,11 +84,23 @@ impl UiScene {
     }
 
     pub fn slection_check(&mut self, rl: &RaylibHandle) {
+        // this allows for mouseless navigtion of the menus
+        // by first sorting the array and then depedning on
+        // which key was pressed increment down or increment
+        // up through the list
         if rl.is_key_pressed(KeyboardKey::KEY_DOWN) {
-            let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
-            let new_selection = UiUtils::go_down(&mut selectables, self.current_selection);
-            self.current_selection = new_selection;
-            deslect(&mut selectables, self.current_selection);
+            if self.first_selection {
+                self.first_selection = false;
+                let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
+                selectables[0].select();
+                // fixes a bug where it would selected the second element first as it would just advance
+                // to the second element 'ignoreing' the first
+            } else {
+                let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
+                let new_selection = UiUtils::go_down(&mut selectables, self.current_selection);
+                self.current_selection = new_selection;
+                deslect(&mut selectables, self.current_selection);
+            }
         }
         if rl.is_key_pressed(KeyboardKey::KEY_UP) {
             let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
