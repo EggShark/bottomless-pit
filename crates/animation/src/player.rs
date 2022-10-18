@@ -9,10 +9,10 @@ use utils::Point;
 
 pub struct PlayerAnimation {
     sprite: Texture2D,
-    frames: u8,
-    curr_frame: u8,
-    framecounter: u8,
-    direction: i8, //0 is facing right
+    frames: i16,
+    curr_frame: i16,
+    framecounter: i16,
+    direction: i16, //1 is facing right
 }
 
 pub enum PlayerAnimations {
@@ -32,18 +32,18 @@ impl PlayerAnimations {
 }
 
 impl PlayerAnimation {
-    pub fn new(path: &str, frames: u8, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
+    pub fn new(path: &str, frames: i16, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
         let sprite = rl.load_texture(thread, path).unwrap();
         Self {
             sprite,
             frames,
             curr_frame: 0,
             framecounter: 0,
-            direction: 0,
+            direction: 1,
         }
     }
 
-    fn advance(&mut self) {
+    pub fn advance(&mut self) {
         if self.curr_frame + 1 > self.frames {
             self.curr_frame = 0;
         }
@@ -57,12 +57,16 @@ impl PlayerAnimation {
         d_handle.draw_texture_rec(&self.sprite, frame_rec, <Point as Into<Vector2>>::into(pos), Color::WHITE);
     }
 
-    pub fn update(&mut self, dir: i8) {
+    pub fn update(&mut self, dir: i16) {
         self.framecounter += 1;
         self.direction = dir;
         if self.framecounter >= 10 {
             self.framecounter = 0;
             self.advance();
         }
+    }
+
+    pub fn set_frame(&mut self, new_frame: i16) {
+        self.curr_frame = new_frame;
     }
 }

@@ -1,6 +1,7 @@
 use raylib::prelude::{RaylibDrawHandle, RaylibDraw, Color};
 use utils::Point;
 
+#[derive(Clone, Copy)]
 pub enum HitboxType {
     DamageAble,
     DamageDealing,
@@ -21,7 +22,7 @@ impl HitBox {
         }
     }
 
-    pub fn draw_hibox(&self, d_handle: &mut RaylibDrawHandle) {
+    pub fn draw_hitbox(&self, d_handle: &mut RaylibDrawHandle) {
         let color = match self.kind {
             HitboxType::DamageAble => Color::BLUE,
             HitboxType::DamageDealing => Color::RED,
@@ -47,6 +48,14 @@ impl HitBox {
     pub fn shift_y(&mut self, amount: i32) {
         for point in self.polygon.iter_mut() {
             point.y = point.y + amount
+        }
+    }
+
+    pub fn copy(&self) -> Self {
+        let poly: Vec<Point> = self.polygon.iter().map(|p| *p).collect();
+        Self {
+            polygon: poly,
+            kind: self.kind
         }
     }
 }

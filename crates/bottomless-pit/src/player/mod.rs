@@ -1,2 +1,2 @@
 mod attack;
-mod player;
+pub mod player;
