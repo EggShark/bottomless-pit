@@ -50,7 +50,7 @@ impl Player {
             animation_state: PlayerAnimations::Idle,
             animations,
             attacks: [Some(slash), None],
-            attack_type: AttackType::Not,
+            attack_type: AttackType::Kick,
             player_type: PlayerTypes::BaseBaller,
             hurtbox,
         }
