@@ -101,7 +101,6 @@ impl Attack {
 pub(super) enum AttackType {
     Slash,
     Kick,
-    Not,
 }
 
 impl AttackType {
@@ -109,7 +108,6 @@ impl AttackType {
         match self {
             Self::Slash => 0,
             Self::Kick => 1,
-            Self::Not => 99999999999999,
         }
     }
 }
