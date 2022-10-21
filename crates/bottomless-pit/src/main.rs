@@ -12,9 +12,11 @@ fn main() {
 
     let settings = match settings {
         Ok(settings) => {
+            println!("settings loaded succsesfully");
             settings
         },
-        Err(_) => {
+        Err(e) => {
+            println!("settings could not be loaded {}", e);
             Settings::default()
         }
     };

@@ -2,13 +2,12 @@ use utils::Point;
 use raylib::consts::KeyboardKey;
 
 #[derive(Clone, Copy, PartialEq)]
-enum InputKeys {
+pub enum MovmentKeys {
     None,
     LeftKey,
     RightKey,
     UpKey,
     DownKey,
-    SlashKey,
 }
 
 // example of number pad noation
@@ -17,14 +16,13 @@ enum InputKeys {
 // -1 | 1 2 3
 // ====-1 0 1
 
-fn key_to_direction(key: &InputKeys) -> Point {
+pub fn key_to_direction(key: &MovmentKeys) -> Point {
     match key {
-        InputKeys::LeftKey => Point {x: -1, y: 0},
-        InputKeys::RightKey => Point {x: 1, y: 0},
-        InputKeys::UpKey => Point {x: 0, y: 1},
-        InputKeys::DownKey => Point{x: 0, y: -1},
-        InputKeys::None => Point {x: 0, y: 0},
-        _ => unreachable!(),
+        MovmentKeys::LeftKey => Point {x: -1, y: 0},
+        MovmentKeys::RightKey => Point {x: 1, y: 0},
+        MovmentKeys::UpKey => Point {x: 0, y: 1},
+        MovmentKeys::DownKey => Point{x: 0, y: -1},
+        MovmentKeys::None => Point {x: 0, y: 0},
     }
 }
 
@@ -43,7 +41,7 @@ fn point_to_numpad(point: Point) -> i32 {
     }
 }
 
-fn inputs_to_numpad(sequence: &[InputKeys]) -> i32 {
+pub fn inputs_to_numpad(sequence: &[MovmentKeys]) -> i32 {
     let points: Vec<Point> = sequence.iter().map(|input| key_to_direction(input)).collect();
 
     let mut x_sum = 0;
@@ -71,12 +69,12 @@ impl InputBuffer {
         }
     }
 
-    fn new_input(&mut self, input: i32) {
+    pub fn new_input(&mut self, input: i32) {
         self.inputs.rotate_right(1); // shifts array to the right making 20 -> 0
         self.inputs[0] = input; // makes the "newest" input at 0
     }
 
-    fn check_sequence(&self, sequence: &[i32], max_duration: i32) -> bool {
+    pub fn check_sequence(&self, sequence: &[i32], max_duration: i32) -> bool {
         let mut w = sequence.len() as i32 - 1;
 
         for i in 0..max_duration {
@@ -127,7 +125,7 @@ mod tests {
 
     #[test]
     fn down_left_numpad() {
-        let input = [InputKeys::DownKey, InputKeys::LeftKey];
+        let input = [MovmentKeys::DownKey, MovmentKeys::LeftKey];
 
         assert_eq!(inputs_to_numpad(&input), 1);
     }
