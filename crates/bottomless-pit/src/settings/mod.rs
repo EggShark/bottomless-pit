@@ -57,7 +57,7 @@ pub type Inputs = [KeyboardKey; 7];
 #[derive(Debug, PartialEq)]
 pub struct Settings {
     pub resolution: Resolutions,
-    keys: Inputs,
+    pub keys: Inputs,
     volume: u8,
 }
 

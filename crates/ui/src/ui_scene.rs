@@ -29,7 +29,8 @@ impl UiScene {
         let quit = Button::new(Point{x: 10, y: 10}, Point{x: 100, y:40}, Some("Quit".to_string()));
         let go_to_game = Button::new(Point{x:10, y:80}, Point{x:100, y:40}, Some("to game".to_string()));
         let go_to_settings = Button::new(Point{x:10, y:180}, Point{x:100, y:40}, Some("Settings".to_string()));
-        let buttons = vec![quit, go_to_game, go_to_settings];
+        let go_to_testing = Button::new(Point{x:10, y:260}, Point{x:100, y:40}, Some("Testing Zone".to_string()));
+        let buttons = vec![quit, go_to_game, go_to_settings, go_to_testing];
 
         Self {
             buttons,

@@ -34,13 +34,9 @@ fn main() {
 
     let mut game = Game::new(settings);
 
-    let mut player = Player::make_baller(&mut rl, &thread, Point{x: 200, y: 200});
-    
     while !game.should_close(&rl) {
-        player.update(&rl);
-        game.update(&mut rl);
-        let mut d_handle = rl.begin_drawing(&thread);
-        player.draw(&mut d_handle);
+        game.update(&mut rl, &thread);
+        let d_handle = rl.begin_drawing(&thread);
         game.draw(d_handle);
     }
 }

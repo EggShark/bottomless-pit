@@ -4,8 +4,9 @@ use raylib::consts::KeyboardKey;
 use utils::Point;
 use animation::{PlayerAnimation, PlayerAnimations, HitBox, HitboxType};
 use super::attack::{Attack, AttackType, FrameData};
+use super::Inputs;
 
-
+#[derive(Debug)]
 pub struct Player {
     pos: Point,
     state: PlayerState,
@@ -17,12 +18,13 @@ pub struct Player {
     hurtbox: HitBox,
 }
 
+#[derive(Debug)]
 pub enum PlayerTypes {
     BaseBaller,
     TestOne
 }
 
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum PlayerState {
     Attacking,
     Normal,
@@ -80,7 +82,7 @@ impl Player {
         self.hurtbox.draw_hitbox(d_handle);
     }
 
-    pub fn update(&mut self, rl: &RaylibHandle) {
+    pub fn update(&mut self, rl: &RaylibHandle, keys: &Inputs) {
         // resets to default animation state when needed
         // however almost any action in the other checks will
         // change the state so it is rarley kept at idle

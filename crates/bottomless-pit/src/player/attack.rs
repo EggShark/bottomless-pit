@@ -2,6 +2,7 @@ use raylib::{core::{RaylibThread, RaylibHandle}, prelude::RaylibDrawHandle};
 use animation::{PlayerAnimation, HitBox};
 use utils::Point;
 
+#[derive(Debug)]
 pub(super) struct Attack {
     base_hitbox: HitBox, // all hitboxes should originate at 0,0
     actual: HitBox,      // then we shift this when the attack starts,
@@ -12,12 +13,14 @@ pub(super) struct Attack {
     frame_count: i16,
 }
 
+#[derive(Debug)]
 enum AttackState {
     Startup,
     Active,
     Recovery,
 }
 
+#[derive(Debug)]
 pub(super) struct FrameData {
     startup: i16, // animation no hitbox
     active: i16,  // anumation + hitbox
@@ -98,6 +101,7 @@ impl Attack {
     }
 }
 
+#[derive(Debug)]
 pub(super) enum AttackType {
     Slash,
     Kick,

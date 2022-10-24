@@ -1,12 +1,13 @@
 use raylib::prelude::{RaylibDrawHandle, RaylibDraw, Color};
 use utils::Point;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum HitboxType {
     DamageAble,
     DamageDealing,
 }
 
+#[derive(Debug)]
 pub struct HitBox {
     polygon: Vec<Point>,
     kind: HitboxType,

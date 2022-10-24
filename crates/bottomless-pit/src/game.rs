@@ -1,13 +1,15 @@
 use raylib::prelude::*;
-use utils::GameState;
+use utils::{GameState, Point};
 use ui::{UiScene};
 use super::settings::{Settings, Resolutions};
+use super::player::player::Player;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub struct Game { 
     state: GameState,
-    settings: Settings,
+    pub settings: Settings,
     ui_scene: UiScene,
+    player: Option<Player>
 }
 
 impl Game {
@@ -17,14 +19,15 @@ impl Game {
             state: GameState::default(),
             settings,
             ui_scene,
+            player: None,
         }
     }
 
-    pub fn update(&mut self, handle: &mut RaylibHandle) {
+    pub fn update(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread) {
         // the logic loop for the game
         match self.state {
             GameState::MainMenu => {
-                self.main_menu_update(handle);
+                self.main_menu_update(handle, thread);
             },
             GameState::SettingsMenu => {
                 self.settings_update(handle);
@@ -32,14 +35,24 @@ impl Game {
             GameState::Ingame => {
                 println!("look ma im in game");
             },
+            GameState::Testing => {
+                self.testing_update(handle);
+            }
             GameState::Quit => unreachable!()
         }
     }
 
-    pub fn draw(&self, mut drawer: RaylibDrawHandle) {
+    pub fn draw(&self, mut d_handle: RaylibDrawHandle) {
         // the drawing loop for the game
-        drawer.clear_background(Color::GREEN);
-        self.ui_scene.draw(&mut drawer);
+        d_handle.clear_background(Color::GREEN);
+        self.ui_scene.draw(&mut d_handle);
+
+        match &self.player {
+            Some(player) => {
+                player.draw(&mut d_handle);
+            }
+            None => {},
+        }
     }
 
     pub fn should_close(&self, rl: &RaylibHandle) -> bool{
@@ -62,7 +75,13 @@ impl Game {
         self.ui_scene = UiScene::from_game_state(&self.state);
     }
 
-    fn main_menu_update(&mut self, handle: &RaylibHandle) {
+    fn into_testing(&mut self, rl: &mut RaylibHandle, thread: &RaylibThread) {
+        self.state = GameState::Testing;
+        self.ui_scene = UiScene::default();
+        self.player = Some(Player::make_baller(rl, thread, Point{x: 0, y: 50}));
+    }
+
+    fn main_menu_update(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread) {
         self.ui_scene.slection_check(handle);
 
         if self.ui_scene.buttons[0].was_clicked(handle) {
@@ -77,6 +96,10 @@ impl Game {
 
         if self.ui_scene.buttons[2].was_clicked(handle) {
             return self.into_settings();
+        }
+
+        if self.ui_scene.buttons[3].was_clicked(handle) {
+            return self.into_testing(handle, thread);
         }
     }
 
@@ -109,5 +132,12 @@ impl Game {
         let volume: u8 = selections[1] as u8 + 1;
         rl.set_window_size(width as i32, height as i32);
         self.settings.update_settings(resolution, volume);
+    }
+
+    // quick and dirty way to put stuff for testing
+    fn testing_update(&mut self, rl: &mut RaylibHandle) {
+        self.player.as_mut()
+            .unwrap()
+            .update(rl, &self.settings.keys);
     }
 }

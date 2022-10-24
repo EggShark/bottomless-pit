@@ -1,5 +1,4 @@
 use utils::Point;
-use raylib::consts::KeyboardKey;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum MovmentKeys {
@@ -14,7 +13,7 @@ pub enum MovmentKeys {
 //  1 | 7 8 9
 //  0 | 4 5 6
 // -1 | 1 2 3
-// ====-1 0 1
+//    |-1 0 1
 
 pub fn key_to_direction(key: &MovmentKeys) -> Point {
     match key {

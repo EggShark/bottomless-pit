@@ -9,4 +9,5 @@ edition = "2021"
 utils = {path="../utils"}
 ui = {path="../ui"}
 animation = {path="../animation"}
+input-handler = {path="../input-handler"}
 raylib = "3.7.0"

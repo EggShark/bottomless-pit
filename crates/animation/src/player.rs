@@ -7,6 +7,7 @@ use raylib::core::color::Color;
 use raylib::texture::RaylibTexture2D;
 use utils::Point;
 
+#[derive(Debug)]
 pub struct PlayerAnimation {
     sprite: Texture2D,
     frames: i16,
@@ -14,6 +15,7 @@ pub struct PlayerAnimation {
     direction: i16, //1 is facing right
 }
 
+#[derive(Debug)]
 pub enum PlayerAnimations {
     Walking,
     Running,

@@ -12,6 +12,7 @@ pub enum GameState {
     SettingsMenu,
     Ingame,
     Quit,
+    Testing,
 }
 
 impl Default for GameState {
