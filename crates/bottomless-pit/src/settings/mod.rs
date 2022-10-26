@@ -3,6 +3,7 @@ use std::io::{BufReader, Read, Write};
 use std::fs::{File, OpenOptions};
 use std::convert::{From, Into};
 use raylib::consts::KeyboardKey;
+use input_handler::Inputs;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Resolutions {
@@ -52,8 +53,6 @@ impl From<u8> for Resolutions {
     }
 }
 
-pub type Inputs = [KeyboardKey; 7];
-
 #[derive(Debug, PartialEq)]
 pub struct Settings {
     pub resolution: Resolutions,
@@ -66,7 +65,7 @@ impl Default for Settings {
         Self {
             resolution: Resolutions::defualt(),
             volume: 10,
-            keys: [KeyboardKey::KEY_W, KeyboardKey::KEY_A, KeyboardKey::KEY_S, KeyboardKey::KEY_D, KeyboardKey::KEY_I, KeyboardKey::KEY_K, KeyboardKey::KEY_J]
+            keys: Inputs::new([KeyboardKey::KEY_W, KeyboardKey::KEY_A, KeyboardKey::KEY_S, KeyboardKey::KEY_D, KeyboardKey::KEY_I, KeyboardKey::KEY_K, KeyboardKey::KEY_J]),
             // as of 10/20/22 0 = up 1 = left 2 = down 3 = right 4 = slash 5 = heavy slash 6 = kick
         }
     }
@@ -99,7 +98,7 @@ impl Settings {
     }
 
     fn load_keys(reader: &mut BufReader<File>) -> Result<Inputs, std::io::Error> {
-        let mut buffer: Inputs = [KeyboardKey::KEY_NULL; 7];
+        let mut buffer = [KeyboardKey::KEY_NULL; 7];
 
         for i in 0..buffer.len() {
             let mut key_byte: [u8; 1] = [0; 1];
@@ -108,7 +107,7 @@ impl Settings {
             buffer[i] = read_key;
         }
 
-        Ok(buffer)
+        Ok(Inputs::new(buffer))
     }
 
     pub fn update_settings(&mut self, resolution: Resolutions, volume: u8) {
@@ -137,9 +136,9 @@ impl Settings {
 
     fn write_keys_to_file(&self, settings: &mut File) -> io::Result<()>{
         let mut buf: [u8; 7] = [0; 7];
-
-        for i in 0..self.keys.len() {
-            buf[i] = rl_key_to_u8(&self.keys[i]);
+        let keys = self.keys.get_raw();
+        for i in 0..keys.len() {
+            buf[i] = rl_key_to_u8(&keys[i]);
         }
 
         settings.write(&buf)?;

@@ -3,8 +3,8 @@ use raylib::core::{RaylibThread, RaylibHandle};
 use raylib::consts::KeyboardKey;
 use utils::Point;
 use animation::{PlayerAnimation, PlayerAnimations, HitBox, HitboxType};
+use input_handler::{InputBuffer, Inputs, MovmentKeys, point_to_numpad};
 use super::attack::{Attack, AttackType, FrameData};
-use super::Inputs;
 
 #[derive(Debug)]
 pub struct Player {
@@ -16,12 +16,12 @@ pub struct Player {
     attack_type: AttackType,
     player_type: PlayerTypes,
     hurtbox: HitBox,
+    input_buffer: InputBuffer,
 }
 
 #[derive(Debug)]
 pub enum PlayerTypes {
     BaseBaller,
-    TestOne
 }
 
 #[derive(Debug, PartialEq)]
@@ -55,6 +55,7 @@ impl Player {
             attack_type: AttackType::Kick,
             player_type: PlayerTypes::BaseBaller,
             hurtbox,
+            input_buffer: InputBuffer::new(),
         }
     }
 
@@ -91,7 +92,7 @@ impl Player {
 
         match self.state {
             PlayerState::Normal => {
-                self.normal_update(rl);
+                self.normal_update(rl, keys);
             },
             PlayerState::Attacking => {
                 self.update_attacking();
@@ -100,20 +101,27 @@ impl Player {
         }
     }
 
-    fn normal_update(&mut self, rl: &RaylibHandle) {
+    fn normal_update(&mut self, rl: &RaylibHandle, keys: &Inputs) {
         let mut dir = 1;
+
+        // updates the input buffer I dont do anything about it rn
+        let mb_point = keys.point_sum(rl);
+        let numpad_notation = point_to_numpad(mb_point);
+        self.input_buffer.new_input(numpad_notation);
+
+        println!("{}", self.input_buffer.get(0));
 
         // handles the movment we plan to have a 
         // more complex character controller
         // plus a input buffer for fg reasons
-        if rl.is_key_down(KeyboardKey::KEY_D) {
+        if keys.is_movment_key_down(MovmentKeys::RightKey, rl) {
             dir = 1;
             self.animation_state = PlayerAnimations::Walking;
             self.pos.x += 1;
             self.hurtbox.shift_x(1);
         }
 
-        if rl.is_key_down(KeyboardKey::KEY_A) {
+        if keys.is_movment_key_down(MovmentKeys::LeftKey, rl) {
             dir = -1;
             self.animation_state = PlayerAnimations::Walking;
             self.pos.x -= 1;
