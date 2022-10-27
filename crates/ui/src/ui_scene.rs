@@ -3,12 +3,14 @@ use raylib::consts::KeyboardKey;
 use utils::{Point, GameState};
 use crate::button::Button;
 use crate::arrow_selection::ArrowSelector;
+use crate::key_changer::KeyChanger;
 use crate::ui_utils::{UiUtils, Selectable};
 
 #[derive(Debug, PartialEq)]
 pub struct UiScene {
     pub buttons: Vec<Button>,
     pub selectors: Vec<ArrowSelector>,
+    pub key_changers: Vec<KeyChanger>,
     pub current_selection: usize,
     first_selection: bool
 }
@@ -18,6 +20,7 @@ impl Default for UiScene {
         Self {
             buttons: Vec::new(),
             selectors: Vec::new(),
+            key_changers: Vec::new(),
             current_selection: 0,
             first_selection: true,
         }
@@ -35,6 +38,7 @@ impl UiScene {
         Self {
             buttons,
             selectors: Vec::new(),
+            key_changers: Vec::new(),
             current_selection: 0,
             first_selection: true,
         }
@@ -55,8 +59,17 @@ impl UiScene {
         Self {
             buttons,
             selectors,
+            key_changers: Vec::new(),
             current_selection: 0,
             first_selection: true,
+        }
+    }
+
+    fn init_testing() -> Self {
+        let key_changer = KeyChanger::new(Point{x:100,y:100}, Point {x:200, y: 100}, String::from("Move Forawrd:"), KeyboardKey::KEY_W);
+        Self {
+            key_changers: vec![key_changer],
+            ..Default::default()
         }
     }
 
@@ -67,6 +80,9 @@ impl UiScene {
             }
             GameState::SettingsMenu => {
                 Self::init_settings_menu()
+            }
+            GameState::Testing => {
+                Self::init_testing()
             }
             _ => {
                 Self::default()
@@ -82,6 +98,10 @@ impl UiScene {
         for selector in self.selectors.iter() {
             selector.draw(d_handle);
         } 
+
+        for changer in self.key_changers.iter() {
+            changer.draw(d_handle);
+        }
     }
 
     pub fn slection_check(&mut self, rl: &RaylibHandle) {
@@ -92,19 +112,19 @@ impl UiScene {
         if rl.is_key_pressed(KeyboardKey::KEY_DOWN) {
             if self.first_selection {
                 self.first_selection = false;
-                let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
+                let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors, &mut self.key_changers);
                 selectables[0].select();
                 // fixes a bug where it would selected the second element first as it would just advance
                 // to the second element 'ignoreing' the first
             } else {
-                let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
+                let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors, &mut self.key_changers);
                 let new_selection = UiUtils::go_down(&mut selectables, self.current_selection);
                 self.current_selection = new_selection;
                 deslect(&mut selectables, self.current_selection);
             }
         }
         if rl.is_key_pressed(KeyboardKey::KEY_UP) {
-            let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors);
+            let mut selectables = congregatge_selectables(&mut self.buttons, &mut self.selectors, &mut self.key_changers);
             let new_selection = UiUtils::go_up(&mut selectables, self.current_selection);
             self.current_selection = new_selection;
             deslect(&mut selectables, self.current_selection);
@@ -120,13 +140,16 @@ fn deslect(elements: &mut Vec<&mut dyn Selectable>, current_selected: usize) {
     }
 }
 
-fn congregatge_selectables<'b>(buttons: &'b mut Vec<Button>, selectors: &'b mut Vec<ArrowSelector>) -> Vec<&'b mut dyn Selectable> {
+fn congregatge_selectables<'b>(buttons: &'b mut Vec<Button>, selectors: &'b mut Vec<ArrowSelector>, key_changers: &'b mut Vec<KeyChanger>) -> Vec<&'b mut dyn Selectable> {
     let mut selectables: Vec<&'b mut dyn Selectable> = Vec::new();
     for z in buttons.iter_mut() {
         selectables.push(z);
     }
     for x in selectors.iter_mut() {
         selectables.push(x);
+    }
+    for k in key_changers.iter_mut() {
+        selectables.push(k);
     }
     let selectables = sort_by_points(selectables);
     selectables

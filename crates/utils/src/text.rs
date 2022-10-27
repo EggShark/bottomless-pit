@@ -27,5 +27,4 @@ impl Text {
     
         (x, y)
     }
-    
 }

@@ -2,8 +2,7 @@ mod game;
 mod settings;
 mod player;
 
-use player::player::Player;
-use utils::Point;
+use std::fmt;
 use settings::Settings;
 use game::Game;
 

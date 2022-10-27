@@ -77,7 +77,7 @@ impl Game {
 
     fn into_testing(&mut self, rl: &mut RaylibHandle, thread: &RaylibThread) {
         self.state = GameState::Testing;
-        self.ui_scene = UiScene::default();
+        self.ui_scene = UiScene::from_game_state(&self.state);
         self.player = Some(Player::make_baller(rl, thread, Point{x: 0, y: 50}));
     }
 
@@ -136,6 +136,8 @@ impl Game {
 
     // quick and dirty way to put stuff for testing
     fn testing_update(&mut self, rl: &mut RaylibHandle) {
+        self.ui_scene.slection_check(rl);
+
         self.player.as_mut()
             .unwrap()
             .update(rl, &self.settings.keys);
