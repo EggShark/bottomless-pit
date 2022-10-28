@@ -137,7 +137,7 @@ impl Game {
     // quick and dirty way to put stuff for testing
     fn testing_update(&mut self, rl: &mut RaylibHandle) {
         self.ui_scene.slection_check(rl);
-
+        self.ui_scene.key_changers[0].update(rl);
         self.player.as_mut()
             .unwrap()
             .update(rl, &self.settings.keys);
