@@ -10,6 +10,7 @@ pub use crate::collide::Collide;
 pub enum GameState {
     MainMenu,
     SettingsMenu,
+    KeySettings,
     Ingame,
     Quit,
     Testing,

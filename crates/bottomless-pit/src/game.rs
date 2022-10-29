@@ -1,6 +1,7 @@
 use raylib::prelude::*;
 use utils::{GameState, Point};
 use ui::{UiScene};
+use input_handler::Inputs;
 use super::settings::{Settings, Resolutions};
 use super::player::player::Player;
 
@@ -14,7 +15,7 @@ pub struct Game {
 
 impl Game {
     pub fn new(settings: Settings) -> Self {
-        let ui_scene = UiScene::from_game_state(&GameState::default());
+        let ui_scene = UiScene::from_game_state(&GameState::default(), &settings.keys);
         Self {
             state: GameState::default(),
             settings,
@@ -31,6 +32,9 @@ impl Game {
             },
             GameState::SettingsMenu => {
                 self.settings_update(handle);
+            },
+            GameState::KeySettings => {
+                self.key_settings_update(handle);
             },
             GameState::Ingame => {
                 println!("look ma im in game");
@@ -62,22 +66,27 @@ impl Game {
     fn into_game(&mut self) {
         // load what the game needs here
         self.state = GameState::Ingame;
-        self.ui_scene = UiScene::from_game_state(&self.state);
+        self.ui_scene = UiScene::from_game_state(&self.state, &self.settings.keys);
     }
 
     fn into_settings(&mut self) {
         self.state = GameState::SettingsMenu;
-        self.ui_scene = UiScene::from_game_state(&self.state);
+        self.ui_scene = UiScene::from_game_state(&self.state, &self.settings.keys);
+    }
+
+    fn into_key_settings(&mut self) {
+        self.state = GameState::KeySettings;
+        self.ui_scene = UiScene::from_game_state(&self.state, &self.settings.keys);
     }
 
     fn into_main(&mut self) {
         self.state = GameState::MainMenu;
-        self.ui_scene = UiScene::from_game_state(&self.state);
+        self.ui_scene = UiScene::from_game_state(&self.state, &self.settings.keys);
     }
 
     fn into_testing(&mut self, rl: &mut RaylibHandle, thread: &RaylibThread) {
         self.state = GameState::Testing;
-        self.ui_scene = UiScene::from_game_state(&self.state);
+        self.ui_scene = UiScene::from_game_state(&self.state, &self.settings.keys);
         self.player = Some(Player::make_baller(rl, thread, Point{x: 0, y: 50}));
     }
 
@@ -111,11 +120,29 @@ impl Game {
         }
 
         if self.ui_scene.buttons[0].was_clicked(handle) {
-            self.into_main();
+            return self.into_main();
+        }
+
+        if self.ui_scene.buttons[2].was_clicked(handle) {
+            return self.into_key_settings();
         }
 
         if self.ui_scene.buttons[1].was_clicked(handle) {
             self.apply_settings(handle);
+        }
+    }
+
+    fn key_settings_update(&mut self, handle: &mut RaylibHandle) {
+        for changer in self.ui_scene.key_changers.iter_mut() {
+            changer.update(handle);
+        }
+
+        if self.ui_scene.buttons[0].was_clicked(handle) {
+            return self.into_settings();
+        }
+
+        if self.ui_scene.buttons[1].was_clicked(handle) {
+            self.apply_key_binds();
         }
     }
 
@@ -132,6 +159,16 @@ impl Game {
         let volume: u8 = selections[1] as u8 + 1;
         rl.set_window_size(width as i32, height as i32);
         self.settings.update_settings(resolution, volume);
+    }
+
+    fn apply_key_binds(&mut self) {
+        let mut new_binds: [KeyboardKey; 7] = [KeyboardKey::KEY_NULL; 7];
+        for i in 0..self.ui_scene.key_changers.len() {
+            new_binds[i] = self.ui_scene.key_changers[i].get_key();
+        }
+
+        let keys = Inputs::new(new_binds);
+        self.settings.update_bindings(keys)
     }
 
     // quick and dirty way to put stuff for testing

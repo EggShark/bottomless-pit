@@ -74,6 +74,10 @@ impl KeyChanger {
             }
         }
     }
+
+    pub fn get_key(&self) -> KeyboardKey {
+        self.key_selcted
+    }
 }
 
 fn rl_key_str<'a>(key: KeyboardKey) -> &'a str {

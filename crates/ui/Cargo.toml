@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 raylib = "3.7.0"
 utils = {path="../utils"}
+input-handler = {path="../input-handler"}

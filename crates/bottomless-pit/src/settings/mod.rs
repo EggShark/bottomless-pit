@@ -117,6 +117,12 @@ impl Settings {
         self.write_to_file().unwrap();
     }
 
+    pub fn update_bindings(&mut self, keys: Inputs) {
+        self.keys = keys;
+
+        self.write_to_file().unwrap();
+    }
+
     fn write_to_file(&self) -> io::Result<()>{
         let mut settings = OpenOptions::new()
             .write(true)
