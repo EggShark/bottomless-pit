@@ -34,7 +34,7 @@ pub enum PlayerState {
 
 impl Player {
     pub fn make_baller(rl: &mut RaylibHandle, thread: &RaylibThread, pos: Point) -> Self {
-        let walk_anim = PlayerAnimation::new("assets/walk_forwards.png", 2, rl, thread);
+        let walk_anim = PlayerAnimation::new("assets/walk_forwards.png", 5, rl, thread);
         let idle = PlayerAnimation::new("assets/idle.png", 2, rl, thread);
 
         let animations: [PlayerAnimation; 2] = [idle, walk_anim];
