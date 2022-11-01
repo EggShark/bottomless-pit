@@ -17,6 +17,7 @@ pub struct Player {
     player_type: PlayerTypes,
     hurtbox: HitBox,
     input_buffer: InputBuffer,
+    health: f32,
 }
 
 #[derive(Debug)]
@@ -34,17 +35,17 @@ pub enum PlayerState {
 
 impl Player {
     pub fn make_baller(rl: &mut RaylibHandle, thread: &RaylibThread, pos: Point) -> Self {
-        let walk_anim = PlayerAnimation::new("assets/walk_forwards.png", 5, rl, thread);
-        let idle = PlayerAnimation::new("assets/idle.png", 2, rl, thread);
+        let walk_anim = PlayerAnimation::new("assets/walk_forwards.png", 5, 10,rl, thread);
+        let idle = PlayerAnimation::new("assets/idle.png", 2, 10, rl, thread);
 
         let animations: [PlayerAnimation; 2] = [idle, walk_anim];
         let poly = vec![Point{x: pos.x, y: pos.y}, Point{x: pos.x + 64, y: pos.y}, Point{x:pos.x + 64, y: pos.y + 64}, Point{x: pos.x, y: pos.y + 64}];
         let hurtbox = HitBox::new(poly, animation::HitboxType::DamageAble);
 
-        let slash_hitbox_poly: Vec<Point> = vec![Point{x:0, y:0}, Point{x:10, y:0}, Point{x:10, y:20}, Point{x:0, y:20}];
+        let slash_hitbox_poly: Vec<Point> = vec![Point{x:120, y:120}, Point{x:500, y:120}, Point{x:500, y:500}, Point{x:120, y:500}];
         let slash_hitbox: HitBox = HitBox::new(slash_hitbox_poly, HitboxType::DamageDealing);
         let slash_frame_data = FrameData::new(1, 3, 3, -1, 2);
-        let slash = Attack::new(slash_hitbox, "assets/slash_test.png", 10.0, 7, slash_frame_data, rl, thread);
+        let slash = Attack::new(slash_hitbox, "assets/slash_test.png", 10.0, 7, 10, slash_frame_data, rl, thread);
 
         Self {
             pos,
@@ -56,6 +57,7 @@ impl Player {
             player_type: PlayerTypes::BaseBaller,
             hurtbox,
             input_buffer: InputBuffer::new(),
+            health: 100.0,
         }
     }
 
@@ -69,6 +71,10 @@ impl Player {
             }
             _ => todo!()
         }
+    }
+
+    pub fn get_health(&self) -> f32 {
+        self.health
     }
 
     fn draw_normal(&self, d_handle: &mut RaylibDrawHandle) {

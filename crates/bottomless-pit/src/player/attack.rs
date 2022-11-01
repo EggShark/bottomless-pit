@@ -39,11 +39,18 @@ impl FrameData {
             on_hit,
         }
     }
+
+    pub fn add_delay(&mut self, frame_delay: i16) {
+        self.startup *= frame_delay;
+        self.active *= frame_delay;
+        self.recovery *= frame_delay;
+    }
 }
 
 impl Attack {
-    pub fn new(base_hitbox: HitBox, path: &str, base_damage: f32, animation_frames: i16, frame_data: FrameData, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
-        let animation = PlayerAnimation::new(path, animation_frames, rl, thread);
+    pub fn new(base_hitbox: HitBox, path: &str, base_damage: f32, animation_frames: i16, frame_delay: i16, mut frame_data: FrameData, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
+        let animation = PlayerAnimation::new(path, animation_frames, frame_delay, rl, thread);
+        frame_data.add_delay(frame_delay);
         Self {
             actual: base_hitbox.copy(),
             base_hitbox,

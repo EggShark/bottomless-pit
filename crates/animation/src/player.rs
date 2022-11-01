@@ -12,6 +12,8 @@ pub struct PlayerAnimation {
     sprite: Texture2D,
     frames: i16,
     curr_frame: i16,
+    frame_delay: i16,
+    frame_counter: i16,
     direction: i16, //1 is facing right
 }
 
@@ -33,17 +35,21 @@ impl PlayerAnimations {
 }
 
 impl PlayerAnimation {
-    pub fn new(path: &str, frames: i16, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
+    pub fn new(path: &str, frames: i16, frame_delay: i16, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
         let sprite = rl.load_texture(thread, path).unwrap();
         Self {
             sprite,
             frames,
+            frame_delay,
             curr_frame: 0,
+            frame_counter: 0,
             direction: 1,
         }
     }
 
     fn advance(&mut self) {
+        self.frame_counter = 0;
+        
         if self.curr_frame + 1 > self.frames {
             self.curr_frame = 0;
         }
@@ -59,8 +65,14 @@ impl PlayerAnimation {
     }
 
     pub fn update(&mut self, dir: i16) {
+        self.frame_counter += 1;
+
+        if self.frame_counter >= self.frame_delay {
+            self.advance();
+
+        }
+
         self.direction = dir;
-        self.advance();
     }
 
     pub fn set_frame(&mut self, new_frame: i16) {

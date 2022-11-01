@@ -54,6 +54,7 @@ impl Game {
         match &self.player {
             Some(player) => {
                 player.draw(&mut d_handle);
+                draw_healthbar(player, &mut d_handle);
             }
             None => {},
         }
@@ -87,7 +88,7 @@ impl Game {
     fn into_testing(&mut self, rl: &mut RaylibHandle, thread: &RaylibThread) {
         self.state = GameState::Testing;
         self.ui_scene = UiScene::from_game_state(&self.state, &self.settings.keys);
-        self.player = Some(Player::make_baller(rl, thread, Point{x: 0, y: 50}));
+        self.player = Some(Player::make_baller(rl, thread, Point{x: 0, y: 250}));
     }
 
     fn main_menu_update(&mut self, handle: &mut RaylibHandle, thread: &RaylibThread) {
@@ -179,4 +180,14 @@ impl Game {
             .unwrap()
             .update(rl, &self.settings.keys);
     }
+}
+
+fn draw_healthbar(player: &Player, d_handle: &mut RaylibDrawHandle) {
+    // assume 100 = 100% fill should take up 1/2 or 1/3 of the screen?
+    let window_width = d_handle.get_screen_width();
+    let hp = player.get_health();
+    let fill = ((window_width / 3)as f32 * (hp/100.0)).round() as i32;
+
+    d_handle.draw_rectangle(20, 20, fill, 40, Color::RED);
+    d_handle.draw_rectangle_lines(20, 20, window_width / 3, 40, Color::BLACK);
 }
