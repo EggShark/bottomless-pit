@@ -4,7 +4,6 @@ use raylib::consts::{KeyboardKey, MouseButton};
 use raylib::prelude::RaylibDraw;
 use raylib::drawing::RaylibDrawHandle;
 use raylib::color::Color;
-use raylib::core::math::Vector2;
 
 use crate::ui_utils::Selectable;
 

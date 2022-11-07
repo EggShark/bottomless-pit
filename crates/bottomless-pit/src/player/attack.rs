@@ -3,7 +3,7 @@ use animation::{PlayerAnimation, HitBox};
 use utils::Point;
 
 #[derive(Debug)]
-pub(super) struct Attack {
+pub struct Attack {
     base_hitbox: HitBox, // all hitboxes should originate at 0,0
     actual: HitBox,      // then we shift this when the attack starts,
     animation: PlayerAnimation,
@@ -20,8 +20,10 @@ enum AttackState {
     Recovery,
 }
 
+// frame data is no based on animation frames
+// we account for animation delay when creating the attack
 #[derive(Debug)]
-pub(super) struct FrameData {
+pub struct FrameData {
     startup: i16, // animation no hitbox
     active: i16,  // anumation + hitbox
     recovery: i16,// animation no hitbox
@@ -50,7 +52,7 @@ impl FrameData {
 impl Attack {
     pub fn new(base_hitbox: HitBox, path: &str, base_damage: f32, animation_frames: i16, frame_delay: i16, mut frame_data: FrameData, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
         let animation = PlayerAnimation::new(path, animation_frames, frame_delay, rl, thread);
-        frame_data.add_delay(frame_delay);
+        frame_data.add_delay(frame_delay); // accounts for the animation delay
         Self {
             actual: base_hitbox.copy(),
             base_hitbox,
@@ -105,6 +107,14 @@ impl Attack {
         }
 
         false
+    }
+
+    pub fn get_base_damage(&self) -> f32 {
+        self.base_damage
+    }
+
+    pub fn get_curr_hitbox(&self) -> &HitBox {
+        &self.actual
     }
 }
 

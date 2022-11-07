@@ -13,7 +13,7 @@ pub enum MovmentKeys {
 }
 
 // wrapping an array for easy implmentations and custom features
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Inputs {
     inputs: [KeyboardKey; 7],
 } // as of 10/20/22 0 = up 1 = left 2 = down 3 = right 4 = slash 5 = heavy slash 6 = kick

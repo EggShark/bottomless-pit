@@ -29,8 +29,15 @@ pub enum PlayerTypes {
 pub enum PlayerState {
     Attacking,
     Normal,
+    Blocking,
     Hurt,
     Inactionable,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum AttackOutcome {
+    Blocked,
+    Hit,
 }
 
 impl Player {
@@ -75,6 +82,19 @@ impl Player {
 
     pub fn get_health(&self) -> f32 {
         self.health
+    }
+
+    pub fn get_hurtbox(&self) -> &HitBox {
+        &self.hurtbox
+    }
+
+    pub fn get_active_attack(&self) -> Option<&Attack> {
+        match self.state {
+            PlayerState::Attacking => {
+                self.attacks[self.attack_type.into_uszie()].as_ref()
+            },
+            _ => None,
+        }
     }
 
     fn draw_normal(&self, d_handle: &mut RaylibDrawHandle) {
@@ -170,6 +190,16 @@ impl Player {
                 None => {}
             }
         }
+    }
+
+    pub fn on_hit(&mut self, attack: &Attack) -> AttackOutcome {
+        if self.state == PlayerState::Blocking {
+            return AttackOutcome::Blocked;
+        }
+        // do more idk,
+        self.health -= attack.get_base_damage();
+
+        AttackOutcome::Hit
     }
 
     fn change_state(&mut self, new_state: PlayerState) {

@@ -52,6 +52,10 @@ impl HitBox {
         }
     }
 
+    pub fn get_poly(&self) -> &Vec<Point> {
+        &self.polygon
+    }
+
     pub fn copy(&self) -> Self {
         let poly: Vec<Point> = self.polygon.iter().map(|p| *p).collect();
         Self {

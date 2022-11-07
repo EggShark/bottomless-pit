@@ -1,6 +1,6 @@
 use raylib::{drawing::RaylibDrawHandle, RaylibHandle};
 use raylib::consts::KeyboardKey;
-use utils::{Point, GameState};
+use utils::{Point, MenuState};
 use input_handler::Inputs;
 use crate::button::Button;
 use crate::arrow_selection::ArrowSelector;
@@ -87,33 +87,13 @@ impl UiScene {
         }
     }
 
-    fn init_testing() -> Self {
-        let key_changer = KeyChanger::new(Point{x:100,y:100}, Point {x:200, y: 100}, String::from("Move Forawrd:"), KeyboardKey::KEY_W);
-        Self {
-            key_changers: vec![key_changer],
-            ..Default::default()
+    pub fn from_menu_state(state: MenuState, keys: &Inputs) -> Self {
+        match state {
+            MenuState::MainMenu => Self::init_main(),
+            MenuState::SettingsMenu => Self::init_settings_menu(),
+            MenuState::KeySettings => Self::init_keychange_menu(keys),
         }
     }
-
-    pub fn from_game_state(state: &GameState, keys: &Inputs) -> Self {
-        match state {
-            GameState::MainMenu => {
-                Self::init_main()
-            }
-            GameState::SettingsMenu => {
-                Self::init_settings_menu()
-            }
-            GameState::Testing => {
-                Self::init_testing()
-            },
-            GameState::KeySettings => {
-                Self::init_keychange_menu(keys)
-            }
-            _ => {
-                Self::default()
-            }
-        }
-    }   
 
     pub fn draw(&self, d_handle: &mut RaylibDrawHandle) {
         for button in self.buttons.iter() {

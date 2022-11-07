@@ -1,9 +1,11 @@
 mod game;
 mod settings;
 mod player;
+mod app;
+mod menu_manger;
 
 use settings::Settings;
-use game::Game;
+use app::App;
 
 fn main() {
     let settings = Settings::load_from_file();
@@ -30,11 +32,11 @@ fn main() {
     rl.set_target_fps(30);
     rl.set_exit_key(None);
 
-    let mut game = Game::new(settings);
+    let mut app = App::new(settings);
 
-    while !game.should_close(&rl) {
-        game.update(&mut rl, &thread);
+    while !app.should_close(&rl) {
+        app.update(&mut rl, &thread);
         let d_handle = rl.begin_drawing(&thread);
-        game.draw(d_handle);
+        app.draw(d_handle);
     }
 }
