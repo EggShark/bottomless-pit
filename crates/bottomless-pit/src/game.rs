@@ -39,6 +39,9 @@ impl Game {
             }
             None => {},
         }
+
+        let test_hitbox = vec![Point{x: 300, y: 50}, Point{x: 500, y:50}, Point{x: 500, y: 200}, Point{x: 300, y: 200}];
+        draw_poly(&test_hitbox, Color::BLUE, &mut d_handle);
     }
 
     // quick and dirty way to put stuff for testing
@@ -46,6 +49,7 @@ impl Game {
         self.player.as_mut()
             .unwrap()
             .update(rl, &self.keys);
+        self.player_collision_check();
     }
 
     // for now just feeding it an hitbox to check
@@ -53,8 +57,9 @@ impl Game {
         match self.player.as_mut() {
             Some(p) => {
                 let attack = p.get_active_attack();
-                let hurtbox = p.get_hurtbox();
-                let hit = Collide::ploy_poly(hurtbox.get_poly(), &Vec::new());
+                let hurtbox = p.get_hurtbox().get_poly();
+                let test_hitbox = vec![Point{x: 300, y: 50}, Point{x: 500, y:50}, Point{x: 500, y: 200}, Point{x: 300, y: 200}];
+                let hit = Collide::ploy_poly(hurtbox, &test_hitbox);
             },
             None => {},
         }
@@ -69,4 +74,12 @@ fn draw_healthbar(player: &Player, d_handle: &mut RaylibDrawHandle) {
 
     d_handle.draw_rectangle(20, 20, fill, 40, Color::RED);
     d_handle.draw_rectangle_lines(20, 20, window_width / 3, 40, Color::BLACK);
+}
+
+fn draw_poly(poly: &[Point], color: Color,d_handle: &mut RaylibDrawHandle) {
+    for i in 0..poly.len() - 1 {
+        d_handle.draw_line(poly[i].x, poly[i].y, poly[i + 1].x, poly[i + 1].y, color);
+    }
+
+    d_handle.draw_line(poly[0].x, poly[0].y, poly[poly.len() - 1].x, poly[poly.len() - 1].y, color);
 }

@@ -123,27 +123,3 @@ impl MenuManager {
         settings.update_bindings(keys)
     }
 }
-// fn apply_settings(&mut self, rl: &mut RaylibHandle) {
-//     let mut selections: Vec<i8> = Vec::new();
-//     for x in 0..self.ui_scene.selectors.len() {
-//         selections.push(self.ui_scene.selectors[x].get_curr_selection());
-//     }
-
-//     let resolution = Resolutions::from(selections[0] as u8);
-
-//     let (width, height) = resolution.len_width();
-
-//     let volume: u8 = selections[1] as u8 + 1;
-//     rl.set_window_size(width as i32, height as i32);
-//     self.settings.update_settings(resolution, volume);
-// }
-
-// fn apply_key_binds(&mut self) {
-//     let mut new_binds: [KeyboardKey; 7] = [KeyboardKey::KEY_NULL; 7];
-//     for i in 0..self.ui_scene.key_changers.len() {
-//         new_binds[i] = self.ui_scene.key_changers[i].get_key();
-//     }
-
-//     let keys = Inputs::new(new_binds);
-//     self.settings.update_bindings(keys)
-// }

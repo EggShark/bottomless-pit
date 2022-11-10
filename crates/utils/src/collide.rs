@@ -44,12 +44,11 @@ impl Collide {
             let current_point = poly[i];
             let next_point = poly[next];
 
-            if ((current_point.y >= point.x && next_point.y < point.y) || (current_point.y < point.y && next_point.y >= point.y)) && 
+            if ((current_point.y >= point.y && next_point.y < point.y) || (current_point.y < point.y && next_point.y >= point.y)) && 
             ((point.x as f32) < ((next_point.x - current_point.x)*(point.y-current_point.y)) as f32 / ((next_point.y-current_point.y) as f32) + (current_point.x as f32)) {
                 collision = !collision;
             }
         }
-
         collision
     }
 
@@ -87,7 +86,6 @@ impl Collide {
             if collision {
                 return true;
             }
-
             let collision = Self::point_poly(poly2[0], poly1);
             if collision {
                 return true;

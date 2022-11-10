@@ -135,8 +135,6 @@ impl Player {
         let numpad_notation = point_to_numpad(mb_point);
         self.input_buffer.new_input(numpad_notation);
 
-        println!("{}", self.input_buffer.get(0));
-
         // handles the movment we plan to have a 
         // more complex character controller
         // plus a input buffer for fg reasons
