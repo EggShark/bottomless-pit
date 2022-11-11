@@ -7,10 +7,39 @@ pub struct Attack {
     base_hitbox: HitBox, // all hitboxes should originate at 0,0
     actual: HitBox,      // then we shift this when the attack starts,
     animation: PlayerAnimation,
-    base_damage: f32,
+    hit_data: OnHitData,
     frame_data: FrameData,
     state: AttackState,
     frame_count: i16,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct OnHitData {
+    base_damage: f32,
+    knock_down: bool,
+    knock_back: Point,
+}
+
+impl OnHitData {
+    pub fn new(base_damage: f32, knock_down: bool, knock_back: Point) -> Self {
+        Self {
+            base_damage,
+            knock_down,
+            knock_back,
+        }
+    }
+
+    pub fn get_base_damage(&self) -> f32 {
+        self.base_damage
+    }
+
+    pub fn get_knock_down(&self) -> bool {
+        self.knock_down
+    }
+
+    pub fn get_knock_back_v(&self) -> Point {
+        self.knock_back
+    }
 }
 
 #[derive(Debug)]
@@ -28,7 +57,7 @@ pub struct FrameData {
     active: i16,  // anumation + hitbox
     recovery: i16,// animation no hitbox
     on_block: i16,// how soon you can act
-    on_hit: i16,  // does not include gat + special cancle
+    on_hit: i16,  // does not include gat + special cancel
 }
 
 impl FrameData {
@@ -52,12 +81,14 @@ impl FrameData {
 impl Attack {
     pub fn new(base_hitbox: HitBox, path: &str, base_damage: f32, animation_frames: i16, frame_delay: i16, mut frame_data: FrameData, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
         let animation = PlayerAnimation::new(path, animation_frames, frame_delay, rl, thread);
+        let hit_data = OnHitData::new(base_damage, false, Point{x: 30, y: 10});
         frame_data.add_delay(frame_delay); // accounts for the animation delay
+
         Self {
             actual: base_hitbox.copy(),
             base_hitbox,
             animation,
-            base_damage,
+            hit_data,
             frame_data,
             state: AttackState::Startup,
             frame_count: 0,
@@ -109,8 +140,8 @@ impl Attack {
         false
     }
 
-    pub fn get_base_damage(&self) -> f32 {
-        self.base_damage
+    pub fn get_hit_data(&self) -> OnHitData {
+        self.hit_data
     }
 
     pub fn get_curr_hitbox(&self) -> &HitBox {

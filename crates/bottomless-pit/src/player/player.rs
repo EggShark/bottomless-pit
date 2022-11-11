@@ -4,7 +4,7 @@ use raylib::consts::KeyboardKey;
 use utils::Point;
 use animation::{PlayerAnimation, PlayerAnimations, HitBox, HitboxType};
 use input_handler::{InputBuffer, Inputs, MovmentKeys, point_to_numpad};
-use super::attack::{Attack, AttackType, FrameData};
+use super::attack::{Attack, AttackType, FrameData, OnHitData};
 
 #[derive(Debug)]
 pub struct Player {
@@ -190,12 +190,12 @@ impl Player {
         }
     }
 
-    pub fn on_hit(&mut self, attack: &Attack) -> AttackOutcome {
+    pub fn on_hit(&mut self, data: OnHitData) -> AttackOutcome {
         if self.state == PlayerState::Blocking {
             return AttackOutcome::Blocked;
         }
         // do more idk,
-        self.health -= attack.get_base_damage();
+        self.health -= data.get_base_damage();
 
         AttackOutcome::Hit
     }
