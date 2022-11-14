@@ -1,4 +1,5 @@
 use raylib::core::math::Vector2;
+use std::ops::{Add, AddAssign};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Point {
@@ -17,6 +18,23 @@ impl Point {
             }
         });
         points
+    }
+}
+
+impl Add for Point {
+    type Output = Point;
+    fn add(self, rhs: Self) -> Self::Output {
+        Point {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y
+        }
+    }
+}
+
+impl AddAssign for Point {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
     }
 }
 

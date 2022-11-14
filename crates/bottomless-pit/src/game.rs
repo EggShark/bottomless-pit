@@ -62,7 +62,7 @@ impl Game {
                 let test_hitbox = vec![Point{x: 300, y: 50}, Point{x: 500, y:50}, Point{x: 500, y: 200}, Point{x: 300, y: 200}];
                 let hit = Collide::ploy_poly(hurtbox, &test_hitbox);
                 if hit {
-                    let test_data = OnHitData::new(10.0, false, Point{x: 10, y:10});
+                    let test_data = OnHitData::new(10.0, false, Point{x: -10, y: -10});
                     p.on_hit(test_data);
                 }
             },

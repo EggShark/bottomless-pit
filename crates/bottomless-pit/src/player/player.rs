@@ -190,12 +190,19 @@ impl Player {
         }
     }
 
+    fn apply_knock_back(&mut self, force: Point) {
+        // for now do a thing
+        self.pos += force;
+        self.hurtbox.shift_point(force);
+    }
+
     pub fn on_hit(&mut self, data: OnHitData) -> AttackOutcome {
         if self.state == PlayerState::Blocking {
             return AttackOutcome::Blocked;
         }
         // do more idk,
         self.health -= data.get_base_damage();
+        self.apply_knock_back(data.get_knock_back_v());
 
         AttackOutcome::Hit
     }

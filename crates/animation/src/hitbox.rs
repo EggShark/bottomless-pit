@@ -40,6 +40,13 @@ impl HitBox {
         utils::Collide::ploy_poly(&self.polygon, &other.polygon)
     }
 
+    pub fn shift_point(&mut self, amount: Point) {
+        for point in self.polygon.iter_mut() {
+            point.x += amount.x;
+            point.y += amount.y;
+        }
+    } 
+
     pub fn shift_x(&mut self, amount: i32) {
         for point in self.polygon.iter_mut() {
             point.x = point.x + amount;
