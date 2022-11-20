@@ -12,17 +12,29 @@ pub enum MovmentKeys {
     DownKey,
 }
 
+pub enum AttackKeys {
+    SlashKey,
+    KickKey,
+    HeavySlashKey,
+}
+
 // wrapping an array for easy implmentations and custom features
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Inputs {
-    inputs: [KeyboardKey; 7],
-} // as of 10/20/22 0 = up 1 = left 2 = down 3 = right 4 = slash 5 = heavy slash 6 = kick
+    inputs: [KeyboardKey; 8],
+} 
+// as of 10/20/22 0 = up 1 = left 2 = down 3 = right 4 = slash 5 = heavy slash 6 = kick 
+// 7 = sprint
 
 impl Inputs {
-    pub fn new(inputs: [KeyboardKey; 7]) -> Self {
+    pub fn new(inputs: [KeyboardKey; 8]) -> Self {
         Self {
             inputs,
         }
+    }
+
+    pub fn is_sprint_down(&self, rl: &RaylibHandle) -> bool {
+        rl.is_key_down(self.inputs[7])
     }
 
     pub fn is_movment_key_down(&self, key: MovmentKeys, rl: &RaylibHandle) -> bool {
@@ -32,6 +44,14 @@ impl Inputs {
             MovmentKeys::DownKey => rl.is_key_down(self.inputs[2]),
             MovmentKeys::RightKey => rl.is_key_down(self.inputs[3]),
             MovmentKeys::None => false, // not sure why id ever need to check this just gonna return false
+        }
+    }
+
+    pub fn is_attack_key_pressed(&self, key: AttackKeys, rl: &RaylibHandle) -> bool {
+        match key {
+            AttackKeys::SlashKey => rl.is_key_pressed(self.inputs[4]),
+            AttackKeys::HeavySlashKey => rl.is_key_pressed(self.inputs[5]),
+            AttackKeys::KickKey => rl.is_key_pressed(self.inputs[6]),
         }
     }
 
@@ -55,7 +75,7 @@ impl Inputs {
     } 
 
     // just something to unwrap the array mainly used for settings
-    pub fn get_raw(&self) -> [KeyboardKey; 7] {
+    pub fn get_raw(&self) -> [KeyboardKey; 8] {
         self.inputs
     }
 }

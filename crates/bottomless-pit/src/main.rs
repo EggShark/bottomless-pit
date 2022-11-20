@@ -31,7 +31,7 @@ fn main() {
     
     rl.set_target_fps(30);
     rl.set_exit_key(None);
-
+    
     let mut app = App::new(settings);
 
     while !app.should_close(&rl) {

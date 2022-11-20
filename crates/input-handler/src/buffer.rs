@@ -1,5 +1,13 @@
 use utils::Point;
 use crate::inputs::MovmentKeys;
+
+pub enum InputDirection {
+    Up,
+    Down,
+    Left,
+    Right,
+}
+
 // example of number pad noation
 //  1 | 7 8 9
 //  0 | 4 5 6

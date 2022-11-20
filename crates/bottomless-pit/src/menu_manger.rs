@@ -114,7 +114,7 @@ impl MenuManager {
     }
 
     fn apply_key_binds(&self, settings: &mut Settings) {
-        let mut new_binds: [KeyboardKey; 7] = [KeyboardKey::KEY_NULL; 7];
+        let mut new_binds: [KeyboardKey; 8] = [KeyboardKey::KEY_NULL; 8];
         for i in 0..self.ui_scene.key_changers.len() {
             new_binds[i] = self.ui_scene.key_changers[i].get_key();
         }

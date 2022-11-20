@@ -58,7 +58,7 @@ impl HitBox {
             point.y = point.y + amount
         }
     }
-
+    
     pub fn get_poly(&self) -> &Vec<Point> {
         &self.polygon
     }

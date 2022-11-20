@@ -41,7 +41,7 @@ impl Game {
             None => {},
         }
 
-        let test_hitbox = vec![Point{x: 300, y: 50}, Point{x: 500, y:50}, Point{x: 500, y: 200}, Point{x: 300, y: 200}];
+        let test_hitbox = vec![Point{x: 300, y: 600}, Point{x: 500, y:600}, Point{x: 500, y: 720}, Point{x: 300, y: 720}];
         draw_poly(&test_hitbox, Color::BLUE, &mut d_handle);
     }
 
@@ -50,17 +50,23 @@ impl Game {
         self.player.as_mut()
             .unwrap()
             .update(rl, &self.keys);
-        self.player_collision_check();
+        self.player_collision_check(rl);
     }
 
     // for now just feeding it an hitbox to check
-    fn player_collision_check(&mut self) {
+    fn player_collision_check(&mut self, rl: &RaylibHandle) {
         match self.player.as_mut() {
             Some(p) => {
                 let attack = p.get_active_attack();
                 let hurtbox = p.get_hurtbox().get_poly();
-                let test_hitbox = vec![Point{x: 300, y: 50}, Point{x: 500, y:50}, Point{x: 500, y: 200}, Point{x: 300, y: 200}];
-                let hit = Collide::ploy_poly(hurtbox, &test_hitbox);
+                let test_hitbox = vec![Point{x: 300, y: 600}, Point{x: 500, y:600}, Point{x: 500, y: 720}, Point{x: 300, y: 720}];
+                let hit = {
+                    if rl.is_key_down(KeyboardKey::KEY_Q) {
+                        Collide::ploy_poly(hurtbox, &test_hitbox)
+                    } else {
+                        false
+                    }   
+                };
                 if hit {
                     let test_data = OnHitData::new(10.0, false, Point{x: -10, y: -10});
                     p.on_hit(test_data);

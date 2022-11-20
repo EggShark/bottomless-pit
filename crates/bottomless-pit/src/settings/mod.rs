@@ -65,8 +65,9 @@ impl Default for Settings {
         Self {
             resolution: Resolutions::defualt(),
             volume: 10,
-            keys: Inputs::new([KeyboardKey::KEY_W, KeyboardKey::KEY_A, KeyboardKey::KEY_S, KeyboardKey::KEY_D, KeyboardKey::KEY_I, KeyboardKey::KEY_K, KeyboardKey::KEY_J]),
-            // as of 10/20/22 0 = up 1 = left 2 = down 3 = right 4 = slash 5 = heavy slash 6 = kick
+            keys: Inputs::new([KeyboardKey::KEY_W, KeyboardKey::KEY_A, KeyboardKey::KEY_S, KeyboardKey::KEY_D, KeyboardKey::KEY_I, KeyboardKey::KEY_K, KeyboardKey::KEY_J, KeyboardKey::KEY_LEFT_SHIFT]),
+            // as of 9/18/22 0 = up 1 = left 2 = down 3 = right 4 = slash 5 = heavy slash 6 = kick
+            // 7 = sprint
         }
     }
 }
@@ -98,7 +99,7 @@ impl Settings {
     }
 
     fn load_keys(reader: &mut BufReader<File>) -> Result<Inputs, std::io::Error> {
-        let mut buffer = [KeyboardKey::KEY_NULL; 7];
+        let mut buffer = [KeyboardKey::KEY_NULL; 8];
 
         for i in 0..buffer.len() {
             let mut key_byte: [u8; 1] = [0; 1];
@@ -141,7 +142,7 @@ impl Settings {
     }
 
     fn write_keys_to_file(&self, settings: &mut File) -> io::Result<()>{
-        let mut buf: [u8; 7] = [0; 7];
+        let mut buf: [u8; 8] = [0; 8];
         let keys = self.keys.get_raw();
         for i in 0..keys.len() {
             buf[i] = rl_key_to_u8(&keys[i]);
