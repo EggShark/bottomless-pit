@@ -241,7 +241,6 @@ impl Player {
 
         let attack = self.attacks[self.attack_type.into_uszie()].as_mut().unwrap(); 
         // shouldn't fail as the state will only be this way if there is an attack there
-
         // if it returns true the attack is 'over'
         if attack.update() {
             self.state = PlayerState::Normal;
@@ -262,7 +261,7 @@ impl Player {
 
             if keys.is_attack_key_pressed(AttackKeys::KickKey, rl) {
                 self.attack_type = AttackType::Kick;
-                attack = self.attacks[AttackType::Slash.into_uszie()].as_mut()
+                attack = self.attacks[AttackType::Kick.into_uszie()].as_mut()
             }
     
             match attack {

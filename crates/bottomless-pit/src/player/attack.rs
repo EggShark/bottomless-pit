@@ -123,11 +123,12 @@ impl Attack {
         self.animation.update(1);
 
         // sets the state to the approraite state based off the frame data
-        if self.frame_count > self.frame_data.active {
+        if self.frame_count > self.frame_data.active + self.frame_data.startup {
             self.state = AttackState::Recovery
         } else if self.frame_count > self.frame_data.startup {
             self.state = AttackState::Active
         }
+
 
         // checks to see if the attack is "over"
         if self.frame_count == (self.frame_data.active + self.frame_data.recovery + self.frame_data.startup) {
