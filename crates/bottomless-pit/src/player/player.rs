@@ -1,12 +1,11 @@
 use raylib::core::drawing::RaylibDrawHandle;
 use raylib::core::{RaylibThread, RaylibHandle};
-use raylib::consts::KeyboardKey;
 use utils::Point;
 use animation::{PlayerAnimation, PlayerAnimations, HitBox, HitboxType};
 use input_handler::{AttackKeys, InputBuffer, Inputs, point_to_numpad};
-use super::attack::{Attack, AttackType, FrameData, OnHitData};
+use super::attack::{Attack, AttackType, AttackGuard, FrameData, OnHitData};
 
-const TurnAround: i32 = 640;
+const TURN_AROUND: i32 = 640;
 
 #[derive(Debug)]
 pub struct Player {
@@ -56,12 +55,12 @@ impl Player {
         let slash_hitbox_poly: Vec<Point> = vec![Point{x:75, y:75}, Point{x:200, y:75}, Point{x:200, y:200}, Point{x:75, y:200}];
         let slash_hitbox: HitBox = HitBox::new(slash_hitbox_poly, HitboxType::DamageDealing);
         let slash_frame_data = FrameData::new(1, 3, 3, -1, 2);
-        let slash = Attack::new(slash_hitbox, "assets/slash_test.png", 10.0, 7, 2, slash_frame_data, rl, thread);
+        let slash = Attack::new(slash_hitbox, AttackGuard::All, "assets/slash_test.png", 10.0, 7, 2, slash_frame_data, rl, thread);
 
         let kick_hitbox_poly: Vec<Point> = vec![Point{x:75, y:75}, Point{x:200, y:75}, Point{x:200, y:200}, Point{x:75, y:200}];
         let kick_hitbox: HitBox = HitBox::new(kick_hitbox_poly, HitboxType::DamageDealing);
         let kick_frame_data = FrameData::new(2, 2, 2, -1, 2);
-        let kick = Attack::new(kick_hitbox, "assets/kick.png", 2.0, 6, 4, kick_frame_data, rl, thread);
+        let kick = Attack::new(kick_hitbox, AttackGuard::All, "assets/kick.png", 2.0, 6, 4, kick_frame_data, rl, thread);
 
         Self {
             pos,
@@ -110,7 +109,7 @@ impl Player {
     pub fn is_blocking_n(&self) -> bool {
         // turtle and beyond 🐢
         let dir = {
-            if self.pos.x > TurnAround {
+            if self.pos.x > TURN_AROUND {
                 true // right of point
             } else {
                 false // left of point
@@ -123,9 +122,24 @@ impl Player {
         }
     }
 
+    pub fn is_blocking(&self) -> bool {
+        let dir = {
+            if self.pos.x > TURN_AROUND {
+                true // right of point
+            } else {
+                false // left of point
+            }
+        };
+        if dir {
+            is_rightwards(self.input_buffer.get(0))
+        } else {
+            is_leftwards(self.input_buffer.get(0))
+        }
+    }
+
     pub fn is_blocking_down(&self) -> bool {
         let dir = {
-            if self.pos.x > TurnAround {
+            if self.pos.x > TURN_AROUND {
                 true // right of point
             } else {
                 false // left of point
@@ -181,7 +195,7 @@ impl Player {
 
         // just checking stuff for now
         let dir = {
-            if self.pos.x > TurnAround {
+            if self.pos.x > TURN_AROUND {
                 -1
             } else {
                 1
@@ -288,10 +302,23 @@ impl Player {
         } 
     }
 
-    pub fn on_hit(&mut self, data: OnHitData) -> AttackOutcome {
-        if self.is_blocking_n() {
-            // apply on_block data
-            return AttackOutcome::Blocked;
+    pub fn on_hit(&mut self, data: OnHitData, guard: AttackGuard) -> AttackOutcome {
+        match guard {
+            AttackGuard::All => {
+                if self.is_blocking() {
+                    return AttackOutcome::Blocked;
+                }
+            },
+            AttackGuard::Low => {
+                if self.is_blocking_down() {
+                    return AttackOutcome::Blocked;
+                }
+            },
+            AttackGuard::High => {
+                if self.is_blocking_n() {
+                    return AttackOutcome::Blocked;
+                }
+            },
         }
         // do more idk,
         self.health -= data.get_base_damage();

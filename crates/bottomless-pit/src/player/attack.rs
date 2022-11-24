@@ -10,6 +10,7 @@ pub struct Attack {
     hit_data: OnHitData,
     frame_data: FrameData,
     state: AttackState,
+    guard: AttackGuard,
     frame_count: i16,
 }
 
@@ -49,6 +50,13 @@ enum AttackState {
     Recovery,
 }
 
+#[derive(Debug)]
+pub enum AttackGuard {
+    Low,
+    All,
+    High,
+}
+
 // frame data is no based on animation frames
 // we account for animation delay when creating the attack
 #[derive(Debug)]
@@ -79,7 +87,7 @@ impl FrameData {
 }
 
 impl Attack {
-    pub fn new(base_hitbox: HitBox, path: &str, base_damage: f32, animation_frames: i16, frame_delay: i16, mut frame_data: FrameData, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
+    pub fn new(base_hitbox: HitBox, guard: AttackGuard, path: &str, base_damage: f32, animation_frames: i16, frame_delay: i16, mut frame_data: FrameData, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
         let animation = PlayerAnimation::new(path, animation_frames, frame_delay, rl, thread);
         let hit_data = OnHitData::new(base_damage, false, Point{x: 30, y: 10});
         frame_data.add_delay(frame_delay); // accounts for the animation delay
@@ -91,6 +99,7 @@ impl Attack {
             hit_data,
             frame_data,
             state: AttackState::Startup,
+            guard,
             frame_count: 0,
         }
     }

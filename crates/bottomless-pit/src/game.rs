@@ -2,7 +2,7 @@ use raylib::prelude::*;
 use utils::{GameState, Point, Collide};
 use input_handler::Inputs;
 use super::player::player::Player;
-use super::player::attack::OnHitData;
+use super::player::attack::{AttackGuard, OnHitData};
 
 #[derive(Debug)]
 pub struct Game { 
@@ -67,9 +67,10 @@ impl Game {
                         false
                     }   
                 };
+
                 if hit {
                     let test_data = OnHitData::new(10.0, false, Point{x: -10, y: -10});
-                    p.on_hit(test_data);
+                    p.on_hit(test_data, AttackGuard::High);
                 }
             },
             None => {},
