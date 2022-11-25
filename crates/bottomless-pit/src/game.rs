@@ -69,8 +69,10 @@ impl Game {
                 };
 
                 if hit {
-                    let test_data = OnHitData::new(10.0, false, Point{x: -10, y: -10});
-                    p.on_hit(test_data, AttackGuard::High);
+                    let test_data = OnHitData::new(10.0, false, AttackGuard::All, Point{x: -10, y: -10});
+                    let on_block = 2;
+                    let on_hit = 3;
+                    p.on_hit(test_data, on_block, on_hit);
                 }
             },
             None => {},

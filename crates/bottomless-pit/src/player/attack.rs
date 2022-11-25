@@ -10,7 +10,6 @@ pub struct Attack {
     hit_data: OnHitData,
     frame_data: FrameData,
     state: AttackState,
-    guard: AttackGuard,
     frame_count: i16,
 }
 
@@ -18,14 +17,16 @@ pub struct Attack {
 pub struct OnHitData {
     base_damage: f32,
     knock_down: bool,
+    guard: AttackGuard,
     knock_back: Point,
 }
 
 impl OnHitData {
-    pub fn new(base_damage: f32, knock_down: bool, knock_back: Point) -> Self {
+    pub fn new(base_damage: f32, knock_down: bool, guard: AttackGuard, knock_back: Point) -> Self {
         Self {
             base_damage,
             knock_down,
+            guard,
             knock_back,
         }
     }
@@ -36,6 +37,10 @@ impl OnHitData {
 
     pub fn get_knock_down(&self) -> bool {
         self.knock_down
+    }
+
+    pub fn get_guard(&self) -> AttackGuard {
+        self.guard
     }
 
     pub fn get_knock_back_v(&self) -> Point {
@@ -50,7 +55,7 @@ enum AttackState {
     Recovery,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum AttackGuard {
     Low,
     All,
@@ -89,7 +94,7 @@ impl FrameData {
 impl Attack {
     pub fn new(base_hitbox: HitBox, guard: AttackGuard, path: &str, base_damage: f32, animation_frames: i16, frame_delay: i16, mut frame_data: FrameData, rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
         let animation = PlayerAnimation::new(path, animation_frames, frame_delay, rl, thread);
-        let hit_data = OnHitData::new(base_damage, false, Point{x: 30, y: 10});
+        let hit_data = OnHitData::new(base_damage, false, guard, Point{x: 30, y: 10});
         frame_data.add_delay(frame_delay); // accounts for the animation delay
 
         Self {
@@ -99,7 +104,6 @@ impl Attack {
             hit_data,
             frame_data,
             state: AttackState::Startup,
-            guard,
             frame_count: 0,
         }
     }

@@ -11,6 +11,7 @@ const TURN_AROUND: i32 = 640;
 pub struct Player {
     pos: Point,
     state: PlayerState,
+    stun_timer: i16,
     animation_state: PlayerAnimations,
     animations: [PlayerAnimation; 3],
     attacks: [Option<Attack>; 2],
@@ -31,7 +32,7 @@ pub enum PlayerTypes {
 pub enum PlayerState {
     Attacking,
     Normal,
-    Blocking,
+    BlockStun,
     Hurt,
     Inactionable,
 }
@@ -65,6 +66,7 @@ impl Player {
         Self {
             pos,
             state: PlayerState::Normal,
+            stun_timer: 0,
             animation_state: PlayerAnimations::Idle,
             animations,
             attacks: [Some(slash), Some(kick)],
@@ -81,10 +83,13 @@ impl Player {
         match self.state {
             PlayerState::Normal => {
                 self.draw_normal(d_handle);
-            }
+            },
+            PlayerState::BlockStun => {
+                self.draw_normal(d_handle);
+            },
             PlayerState::Attacking => {
                 self.draw_attack(d_handle);
-            }
+            },
             _ => todo!()
         }
     }
@@ -175,6 +180,12 @@ impl Player {
         self.animation_state = PlayerAnimations::Idle;
         self.attack(rl, keys);
 
+        // updates the input buffer I dont do anything about it rn
+        // input buffer will always buffer the inputs :)
+        let mb_point = keys.point_sum(rl);
+        let numpad_notation = point_to_numpad(mb_point);
+        self.input_buffer.new_input(numpad_notation);
+
         match self.state {
             PlayerState::Normal => {
                 self.normal_update(rl, keys);
@@ -182,17 +193,18 @@ impl Player {
             PlayerState::Attacking => {
                 self.update_attacking();
             },
+            PlayerState::BlockStun => {
+                self.stun_timer -= 1;
+                if self.stun_timer == 0 {
+                    self.state = PlayerState::Normal;
+                }
+            },
             _ => todo!(),
         }
         self.apply_velocity();
     }
 
     fn normal_update(&mut self, rl: &RaylibHandle, keys: &Inputs) {
-        // updates the input buffer I dont do anything about it rn
-        let mb_point = keys.point_sum(rl);
-        let numpad_notation = point_to_numpad(mb_point);
-        self.input_buffer.new_input(numpad_notation);
-
         // just checking stuff for now
         let dir = {
             if self.pos.x > TURN_AROUND {
@@ -302,20 +314,27 @@ impl Player {
         } 
     }
 
-    pub fn on_hit(&mut self, data: OnHitData, guard: AttackGuard) -> AttackOutcome {
-        match guard {
+    pub fn on_hit(&mut self, data: OnHitData, on_block: i16, on_hit: i16) -> AttackOutcome {
+        match data.get_guard() {
             AttackGuard::All => {
                 if self.is_blocking() {
+                    // add stun
+                    self.state = PlayerState::BlockStun;
+                    self.stun_timer += on_block;
                     return AttackOutcome::Blocked;
                 }
             },
             AttackGuard::Low => {
                 if self.is_blocking_down() {
+                    self.state = PlayerState::BlockStun;
+                    self.stun_timer += on_block;
                     return AttackOutcome::Blocked;
                 }
             },
             AttackGuard::High => {
                 if self.is_blocking_n() {
+                    self.state = PlayerState::BlockStun;
+                    self.stun_timer += on_block;
                     return AttackOutcome::Blocked;
                 }
             },
@@ -323,6 +342,8 @@ impl Player {
         // do more idk,
         self.health -= data.get_base_damage();
         self.vel += data.get_knock_back_v();
+
+
 
         AttackOutcome::Hit
     }
