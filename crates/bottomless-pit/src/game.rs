@@ -47,17 +47,16 @@ impl Game {
 
     // quick and dirty way to put stuff for testing
     fn ingame_update(&mut self, rl: &mut RaylibHandle) {
+        self.player_collision_check(rl);
         self.player.as_mut()
             .unwrap()
             .update(rl, &self.keys);
-        self.player_collision_check(rl);
     }
 
     // for now just feeding it an hitbox to check
     fn player_collision_check(&mut self, rl: &RaylibHandle) {
         match self.player.as_mut() {
             Some(p) => {
-                let attack = p.get_active_attack();
                 let hurtbox = p.get_hurtbox().get_poly();
                 let test_hitbox = vec![Point{x: 300, y: 600}, Point{x: 500, y:600}, Point{x: 500, y: 720}, Point{x: 300, y: 720}];
                 let hit = {

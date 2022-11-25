@@ -179,7 +179,7 @@ impl Player {
         // change the state so it is rarley kept at idle
         self.animation_state = PlayerAnimations::Idle;
         self.attack(rl, keys);
-
+        self.apply_velocity();
         // updates the input buffer I dont do anything about it rn
         // input buffer will always buffer the inputs :)
         let mb_point = keys.point_sum(rl);
@@ -201,7 +201,6 @@ impl Player {
             },
             _ => todo!(),
         }
-        self.apply_velocity();
     }
 
     fn normal_update(&mut self, rl: &RaylibHandle, keys: &Inputs) {
@@ -342,15 +341,7 @@ impl Player {
         // do more idk,
         self.health -= data.get_base_damage();
         self.vel += data.get_knock_back_v();
-
-
-
         AttackOutcome::Hit
-    }
-
-    fn change_state(&mut self, new_state: PlayerState) {
-        // do some fancy stuff later
-        self.state = new_state;
     }
 }
 
