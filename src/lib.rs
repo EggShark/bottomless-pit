@@ -1,9 +1,11 @@
+mod texture;
 use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::{WindowBuilder, Window},
 };
+
 
 struct State {
     surface: wgpu::Surface,
@@ -15,9 +17,10 @@ struct State {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     clear_color: wgpu::Color,
-    num_vertices: u32,
     num_indices: u32,
-    cur_shape: bool,
+    diffuse_bind_group: wgpu::BindGroup,
+    diffuse_texture: texture::Texture,
+    cur_tex: bool,
 }
 
 impl State {
@@ -32,7 +35,7 @@ impl State {
         let clear_color = wgpu::Color{
             r: 0.0,
             g: 0.0,
-            b: 0.0,
+            b: 255.0,
             a: 0.0
         };
 
@@ -66,9 +69,61 @@ impl State {
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
+
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(TEST_PENTAGRAM),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(TEST_INDICIES),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        let diffuse_bytes = include_bytes!("../assets/happy-tree.png");
+        let diffuse_texture = texture::Texture::from_bytes(&device, &queue, Some("diffuse_texture"), diffuse_bytes).unwrap();
+
+        let texuture_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor{
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float {filterable: true},
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                }
+            ],
+            label: Some("texture_bind_group_layout"),
+        });
+        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor{
+            layout: &texuture_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
+                }
+            ],
+            label: Some("diffuse_bind_group"),
+        });
+
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
             label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[],
+            bind_group_layouts: &[&texuture_bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -110,21 +165,8 @@ impl State {
             multiview: None,
         });
 
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(TEST_PENTAGRAM),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(TEST_INDICIES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-
-        let num_vertices = TEST_PENTAGRAM.len() as u32;
         let num_indices = TEST_INDICIES.len() as u32;
-        let cur_shape = true;
+        let cur_tex = false;
         Self {
             surface,
             device,
@@ -136,8 +178,9 @@ impl State {
             vertex_buffer,
             index_buffer,
             num_indices,
-            num_vertices,
-            cur_shape,
+            diffuse_bind_group,
+            diffuse_texture,
+            cur_tex,
         }
     }
 
@@ -159,34 +202,12 @@ impl State {
                 button: MouseButton::Left,
                 ..
             } => {
-                self.cur_shape = !self.cur_shape;
-                let mut shape = Vec::new();
-                let mut indicies = Vec::new();
-                if self.cur_shape {
-                    shape = TEST_PENTAGRAM.iter().map(|p| *p).collect::<Vec<Vertex>>();
-                    indicies = TEST_INDICIES.iter().map(|p| *p).collect::<Vec<u16>>();
+                if self.cur_tex {
+                    self.swap_texture("assets/happy-tree-cartoon.png");
                 } else {
-                    let num_vertices = 16;
-                    let angle = std::f32::consts::PI * 2.0 / num_vertices as f32;
-                    let challenge_verts = (0..num_vertices)
-                        .map(|i| {
-                            let theta = angle * i as f32;
-                            Vertex {
-                                position: [0.5 * theta.cos(), -0.5 * theta.sin(), 0.0],
-                                colour: [(1.0 + theta.cos()) / 2.0, (1.0 + theta.sin()) / 2.0, 1.0],
-                            }
-                        })
-                        .collect::<Vec<_>>();
-
-                    let num_triangles = num_vertices - 2;
-                    let challenge_indices = (1u16..num_triangles + 1)
-                        .into_iter()
-                        .flat_map(|i| vec![i + 1, i, 0])
-                        .collect::<Vec<_>>();
-                    shape = challenge_verts;
-                    indicies = challenge_indices;
+                    self.swap_texture("assets/happy-tree.png");
                 }
-                self.change_buffer(&shape, &indicies);
+                self.cur_tex = !self.cur_tex;
                 true
             },
             _ => false,
@@ -218,6 +239,7 @@ impl State {
         });
         render_pass.set_pipeline(&self.render_pipeline);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
         render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // you can only have 1 index buffer at a time
         render_pass.draw_indexed(0..self.num_indices, 0, 0..1); // draw() ignores the indices
         // render_pass.draw(0..self.num_vertices, 0..1); // tell it to draw something with x verticies and 1 instance of it
@@ -229,25 +251,50 @@ impl State {
         Ok(())
     }
 
-    fn change_buffer(&mut self, shape: &[Vertex], indicies: &[u16]) {
-        self.vertex_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(shape),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        self.index_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(indicies),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-
-        self.num_vertices = shape.len() as u32;
-        self.num_indices = indicies.len() as u32;
-    }
-
     fn set_background_colour(&mut self, colour: wgpu::Color) {
         self.clear_color = colour;
+    }
+
+    fn swap_texture(&mut self, path: &str) {
+        println!("{}", path);
+        let image = std::fs::read(path).unwrap();
+        let texture = texture::Texture::from_bytes(&self.device, &self.queue, Some(path), &image).unwrap();
+        let texuture_bind_group_layout = self.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor{
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float {filterable: true},
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                }
+            ],
+            label: Some("texture_bind_group_layout"),
+        });
+        self.diffuse_bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &texuture_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry{
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&texture.sampler),
+                }
+            ],
+            label: Some("diffuse_bind_group"),
+        });
+        self.diffuse_texture = texture;
     }
 }
 
@@ -255,7 +302,7 @@ impl State {
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex {
     position: [f32; 3],
-    colour: [f32; 3],
+    tex_coords: [f32; 2],
 }
 
 impl Vertex {
@@ -272,47 +319,26 @@ impl Vertex {
                 wgpu::VertexAttribute {
                     offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 1,
-                    format: wgpu::VertexFormat::Float32x3,
+                    format: wgpu::VertexFormat::Float32x2,
                 }
             ]
         }
     }
 }
 
-const TEST_TRIANGLE: &[Vertex] = &[
-    Vertex{position: [0.0, 0.5, 0.0], colour: [1.0, 0.0, 0.0]},
-    Vertex{position: [-0.5, -0.5, 0.0], colour: [0.0, 1.0, 0.0]},
-    Vertex{position: [0.5, -0.5, 0.0], colour: [0.0, 0.0, 1.0]},
+const TEST_PENTAGRAM: &[Vertex] = &[
+    Vertex{position: [-0.0868241, 0.49240386, 0.0], tex_coords: [0.4131759, 0.00759614]}, // A
+    Vertex{position: [-0.49513406, 0.06958647, 0.0], tex_coords: [0.0048659444, 0.43041354]}, // B
+    Vertex{position: [-0.21918549, -0.44939706, 0.0], tex_coords: [0.28081453, 0.949397]}, // C
+    Vertex{position: [0.35966998, -0.3473291, 0.0], tex_coords: [0.85967, 0.84732914]}, // D
+    Vertex{position: [0.44147372, 0.2347359, 0.0], tex_coords: [0.9414737, 0.2652641]}, // E
 ];
 
-const TEST_PENTAGRAM: &[Vertex] = &[
-    Vertex{position: [-0.0868241, 0.49240386, 0.0], colour: [0.5, 0.0, 0.5]}, // A
-    Vertex{position: [-0.49513406, 0.06958647, 0.0], colour: [0.5, 0.0, 0.5]}, // B
-    Vertex{position: [-0.21918549, -0.44939706, 0.0], colour: [0.5, 0.0, 0.5]}, // C
-    Vertex{position: [0.35966998, -0.3473291, 0.0], colour: [0.5, 0.0, 0.5]}, // D
-    Vertex{position: [0.44147372, 0.2347359, 0.0], colour: [0.5, 0.0, 0.5]}, // E
-];
 
 const TEST_INDICIES: &[u16] = &[
     0, 1, 4,
     1, 2, 4,
     2, 3, 4,
-];
-
-const COOL_SHAPE: &[Vertex] = &[
-    Vertex{position: [0.5, 0.5, 0.0], colour: [0.0, 1.0, 1.0]},
-    Vertex{position: [0.5, 1.0, 0.0], colour: [1.0, 1.0, 0.0]},
-    Vertex{position: [1.0, 1.0, 0.0], colour: [1.0, 1.0, 1.0]},
-    Vertex{position: [1.0, 0.0, 0.0], colour: [1.0, 1.0, 1.0]},
-    Vertex{position: [-1.0, 0.0, 0.0], colour: [1.0, 1.0, 1.0]},
-    Vertex{position: [-1.0, 0.5, 0.0], colour: [1.0, 1.0, 1.0]},
-];
-
-const COOL_INDICIES: &[u16] = &[
-    1, 0, 2,
-    2, 0, 3,
-    0, 5, 3,
-    3, 5, 4,
 ];
 
 pub async fn run() {
