@@ -1,4 +1,6 @@
 mod texture;
+mod camera;
+use cgmath::prelude::*;
 use wgpu::util::DeviceExt;
 use winit::{
     event::*,
@@ -6,12 +8,19 @@ use winit::{
     window::{WindowBuilder, Window},
 };
 
+const NUM_INSTANCES_PER_ROW: u32 = 10;
+const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(NUM_INSTANCES_PER_ROW as f32 * 0.5, 0.0 , NUM_INSTANCES_PER_ROW as f32 * 0.5);
 
 struct State {
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
+    camera: camera::Camera,
+    camera_controller: camera::CameraController,
+    camera_buffer: wgpu::Buffer,
+    camera_uniform: camera::CameraUniform,
+    camera_bind_group: wgpu::BindGroup,
     size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
@@ -20,6 +29,8 @@ struct State {
     num_indices: u32,
     diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: texture::Texture,
+    instances: Vec<Instance>,
+    instance_buffer: wgpu::Buffer,
     cur_tex: bool,
 }
 
@@ -63,6 +74,45 @@ impl State {
             alpha_mode: wgpu::CompositeAlphaMode::Auto,
         };
         surface.configure(&device, &config);
+
+        let camera = camera::Camera::new((0.0, 1.0, 2.0), (0.0, 0.0, 0.0), cgmath::Vector3::unit_y(), (config.width as f32/config.height as f32), 45.0, 0.1, 100.0);
+        let camera_controller = camera::CameraController::new(0.2);
+
+        let mut camera_uniform = camera::CameraUniform::new();
+        camera_uniform.update_view_proj(&camera);
+
+        let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[camera_uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ],
+            label: Some("camera_bind_group_layout"),
+        });
+
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &camera_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                }
+            ],
+            label: Some("camera_bind_group"),
+        });
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor{
             label: Some("Shader"),
@@ -123,7 +173,10 @@ impl State {
 
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
             label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[&texuture_bind_group_layout],
+            bind_group_layouts: &[
+                &texuture_bind_group_layout,
+                &camera_bind_group_layout,
+            ],
             push_constant_ranges: &[],
         });
 
@@ -133,7 +186,7 @@ impl State {
             vertex: wgpu::VertexState{
                 module: &shader,
                 entry_point: "vs_main", //specify the entry point (can be whatever as long as it exists)
-                buffers: &[Vertex::desc(),], // specfies what type of vertices we want to pass to the shader,
+                buffers: &[Vertex::desc(), InstanceRaw::desc()], // specfies what type of vertices we want to pass to the shader,
             },
             fragment: Some(wgpu::FragmentState{ // techically optional. Used to store colour data to the surface
                 module: &shader,
@@ -165,6 +218,28 @@ impl State {
             multiview: None,
         });
 
+        let instances = (0..NUM_INSTANCES_PER_ROW).flat_map(|z| {
+            (0..NUM_INSTANCES_PER_ROW).map(move |x| {
+                let position = cgmath::Vector3{x: x as f32, y: 0.0, z: z as f32} - INSTANCE_DISPLACEMENT;
+                let rotation = if position.is_zero() {
+                    cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0))
+                } else {
+                    cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
+                };
+
+                Instance {
+                    position,
+                    rotation,
+                }
+            })
+        }).collect::<Vec<Instance>>();
+        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<InstanceRaw>>();
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&instance_data),
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        });
+
         let num_indices = TEST_INDICIES.len() as u32;
         let cur_tex = false;
         Self {
@@ -172,6 +247,11 @@ impl State {
             device,
             queue,
             config,
+            camera,
+            camera_controller,
+            camera_uniform,
+            camera_buffer,
+            camera_bind_group,
             size,
             clear_color,
             render_pipeline,
@@ -180,6 +260,8 @@ impl State {
             num_indices,
             diffuse_bind_group,
             diffuse_texture,
+            instances,
+            instance_buffer,
             cur_tex,
         }
     }
@@ -196,7 +278,9 @@ impl State {
     fn input(&mut self, event: &WindowEvent) -> bool {
         // true means this function has handled it and the main loop doesnt need too
         // false measn the main loop needs to worry about it
-        match event {
+        let mut res = false;
+        res = self.camera_controller.process_events(event);
+        res = res || match event {
             WindowEvent::MouseInput {
                 state: ElementState::Pressed,
                 button: MouseButton::Left,
@@ -205,17 +289,32 @@ impl State {
                 if self.cur_tex {
                     self.swap_texture("assets/happy-tree-cartoon.png");
                 } else {
-                    self.swap_texture("assets/happy-tree.png");
+                    self.swap_texture("assets/idle.png");
                 }
                 self.cur_tex = !self.cur_tex;
                 true
             },
             _ => false,
-        }
+        };
+
+        res
     }
 
     fn update(&mut self) {
+        self.camera_controller.update_camera(&mut self.camera);
+        self.camera_uniform.update_view_proj(&self.camera);
+        self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
+        for instance in self.instances.iter_mut() {
+            let rotation_amout = cgmath::Quaternion::from_angle_y(cgmath::Rad(0.01));
+            let current = instance.rotation;
+            instance.rotation = rotation_amout * current;
+        }
 
+        let instance_data = self.instances
+            .iter()
+            .map(Instance::to_raw)
+            .collect::<Vec<InstanceRaw>>();
+        self.queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&instance_data));
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -238,10 +337,12 @@ impl State {
             depth_stencil_attachment: None,
         });
         render_pass.set_pipeline(&self.render_pipeline);
-        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
+        render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+        render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
         render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // you can only have 1 index buffer at a time
-        render_pass.draw_indexed(0..self.num_indices, 0, 0..1); // draw() ignores the indices
+        render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as u32); // draw() ignores the indices
         // render_pass.draw(0..self.num_vertices, 0..1); // tell it to draw something with x verticies and 1 instance of it
         drop(render_pass);
         
@@ -340,6 +441,58 @@ const TEST_INDICIES: &[u16] = &[
     1, 2, 4,
     2, 3, 4,
 ];
+
+struct Instance {
+    position: cgmath::Vector3<f32>,
+    rotation: cgmath::Quaternion<f32>,
+}
+
+impl Instance {
+    fn to_raw(&self) -> InstanceRaw {
+        InstanceRaw { 
+            model: (cgmath::Matrix4::from_translation(self.position) * cgmath::Matrix4::from(self.rotation)).into()
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+struct InstanceRaw {
+    model: [[f32; 4]; 4],
+}
+
+impl InstanceRaw {
+    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+        use std::mem;
+        wgpu::VertexBufferLayout{
+            array_stride: mem::size_of::<InstanceRaw>() as wgpu::BufferAddress,
+            step_mode: wgpu::VertexStepMode::Instance,
+            attributes: &[
+                wgpu::VertexAttribute {
+                    offset: 0,
+                    shader_location: 5,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+                // to a 32x4 is only the four points of the vertex not counting the fact than an instance is 4x4 so we need 4 entries
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
+                    shader_location: 6,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
+                    shader_location: 7,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32;12]>() as wgpu::BufferAddress,
+                    shader_location: 8,
+                    format: wgpu::VertexFormat::Float32x4,
+                },
+            ],
+        }
+    }
+}
 
 pub async fn run() {
     env_logger::init();
