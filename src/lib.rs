@@ -116,7 +116,7 @@ impl State {
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
-        let diffuse_bytes = include_bytes!("../assets/happy-tree.png");
+        let diffuse_bytes = include_bytes!("../assets/trans-test.png");
         let diffuse_texture = texture::Texture::from_bytes(&device, &queue, Some("diffuse_texture"), diffuse_bytes).unwrap();
         let diffuse_rect = rect::TexturedRect::new(diffuse_texture, [-0.0, 0.0], [0.5, 0.5], &device);
 
@@ -144,7 +144,7 @@ impl State {
                 entry_point: "fs_main",
                 targets: &[Some(wgpu::ColorTargetState{ // tells wgpu what colour outputs it should set up.
                     format: config.format,
-                    blend: Some(wgpu::BlendState::REPLACE), // specifies that the blending should just replace old pixel data wiht new data,
+                    blend: Some(wgpu::BlendState::ALPHA_BLENDING), // specifies that the blending should just replace old pixel data wiht new data,
                     write_mask: wgpu::ColorWrites::ALL, // writes all colours
                 })],
             }),
