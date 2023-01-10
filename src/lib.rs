@@ -269,8 +269,7 @@ struct MyRenderingStuff {
 
 impl MyRenderingStuff {
     pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
-        let white_pixel_bytes = include_bytes!("../assets/white_pixel.png");
-        let white_pixel_image = image::load_from_memory(white_pixel_bytes).unwrap();
+        let white_pixel_image = image::load_from_memory(WHITE_PIXEL).unwrap();
         let white_pixel_rgba = white_pixel_image.to_rgba8();
         let (width, height) = white_pixel_image.dimensions();
         let white_pixel_size = wgpu::Extent3d {
@@ -467,3 +466,6 @@ pub async fn run() {
         }
     });
 }
+
+// just the data for png of a white pixel didnt want it in a seperate file so here is a hard coded const!
+const WHITE_PIXEL: &[u8] = &[137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84, 8, 91, 99, 248, 15, 4, 0, 9, 251, 3, 253, 159, 31, 44, 0, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130];

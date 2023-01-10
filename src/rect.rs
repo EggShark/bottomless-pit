@@ -58,7 +58,6 @@ impl TexturedRect {
             Vertex::from_2d([pos[0] + size[0], pos[1] - size[1]], [1.0, 1.0], colour),
             Vertex::from_2d([pos[0], pos[1] - size[1]], [0.0, 1.0], colour),
         ];
-        println!("{:?}", points);
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(&points),
