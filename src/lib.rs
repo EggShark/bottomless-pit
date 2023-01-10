@@ -1,16 +1,17 @@
 mod texture;
+mod rect;
 mod camera;
-use cgmath::prelude::*;
-use texture::DrawTexturedRect;
+mod vertex;
+use rect::{DrawRectangles, TexturedRect, Rectangle};
+use texture::Texture;
+use vertex::Vertex;
+use image::GenericImageView;
 use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::{WindowBuilder, Window},
 };
-
-const NUM_INSTANCES_PER_ROW: u32 = 10;
-const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(NUM_INSTANCES_PER_ROW as f32 * 0.5, 0.0 , NUM_INSTANCES_PER_ROW as f32 * 0.5);
 
 struct State {
     surface: wgpu::Surface,
@@ -25,7 +26,9 @@ struct State {
     size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
     clear_color: wgpu::Color,
-    textured_rect: texture::TexturedRect,
+    textured_rect: TexturedRect,
+    coloured_rect: Rectangle,
+    rendering_stuff: MyRenderingStuff,
 }
 
 impl State {
@@ -115,7 +118,9 @@ impl State {
 
         let diffuse_bytes = include_bytes!("../assets/happy-tree.png");
         let diffuse_texture = texture::Texture::from_bytes(&device, &queue, Some("diffuse_texture"), diffuse_bytes).unwrap();
-        let diffuse_rect = texture::TexturedRect::new(diffuse_texture, [0.0, 0.0], [0.3, 0.3], &device);
+        let diffuse_rect = rect::TexturedRect::new(diffuse_texture, [-0.0, 0.0], [0.5, 0.5], &device);
+
+        let coloured_rect = rect::Rectangle::new([-1.0, 1.0], [1.0, 0.5], [1.0, 0.0, 0.0, 1.0], &device);
 
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
             label: Some("Render Pipeline Layout"),
@@ -164,6 +169,7 @@ impl State {
             multiview: None,
         });
 
+        let rendering_stuff = MyRenderingStuff::new(&device, &queue);
         Self {
             surface,
             device,
@@ -178,6 +184,8 @@ impl State {
             clear_color,
             render_pipeline,
             textured_rect: diffuse_rect,
+            coloured_rect,
+            rendering_stuff,
         }
     }
 
@@ -241,6 +249,7 @@ impl State {
         // render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as u32); // draw() ignores the indices
         // render_pass.draw(0..self.num_vertices, 0..1); // tell it to draw something with x verticies and 1 instance of it
         render_pass.draw_textured_rect(&self.textured_rect, &self.camera_bind_group);
+        render_pass.draw_rectangle(&self.coloured_rect, &self.rendering_stuff.white_pixel, &self.camera_bind_group);
         drop(render_pass);
         
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -254,37 +263,101 @@ impl State {
     }
 }
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct Vertex {
-    position: [f32; 3],
-    tex_coords: [f32; 2],
+struct MyRenderingStuff {
+    white_pixel: wgpu::BindGroup,
 }
 
-impl Vertex {
-    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        wgpu::VertexBufferLayout{
-            array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[
-                wgpu::VertexAttribute {
-                    offset: 0,
-                    shader_location: 0,
-                    format: wgpu::VertexFormat::Float32x3,
-                },
-                wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
-                    shader_location: 1,
-                    format: wgpu::VertexFormat::Float32x2,
-                }
-            ]
-        }
-    }
+impl MyRenderingStuff {
+    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
+        let white_pixel_bytes = include_bytes!("../assets/white_pixel.png");
+        let white_pixel_image = image::load_from_memory(white_pixel_bytes).unwrap();
+        let white_pixel_rgba = white_pixel_image.to_rgba8();
+        let (width, height) = white_pixel_image.dimensions();
+        let white_pixel_size = wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
 
-    pub fn from_2d(point: [f32; 2], tex_coords: [f32; 2]) -> Self {
+        let white_pixel_texture = device.create_texture(&wgpu::TextureDescriptor{
+            size: white_pixel_size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            label: Some("White_Pixel"),
+        });
+
+        queue.write_texture(
+            wgpu::ImageCopyTextureBase {
+                texture: &white_pixel_texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            &white_pixel_rgba,
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: std::num::NonZeroU32::new(width * 4),
+                rows_per_image: std::num::NonZeroU32::new(height),
+            },
+            white_pixel_size,
+        );
+
+        let white_pixel_view = white_pixel_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let white_pixel_sampler = device.create_sampler(&wgpu::SamplerDescriptor{
+            // what to do when given cordinates outside the textures height/width
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            // what do when give less or more than 1 pixel to sample
+            // linear interprelates between all of them nearest gives the closet colour
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float {filterable: true},
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                }
+            ],
+            label: Some("white_pixel_bind_group_layout"),
+        });
+
+        let white_pixel = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry{
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&white_pixel_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&white_pixel_sampler),
+                }
+            ],
+            label: Some("diffuse_bind_group"),
+        });
+
         Self {
-            position: [point[0], point[1], 0.0],
-            tex_coords,
+            white_pixel
         }
     }
 }
