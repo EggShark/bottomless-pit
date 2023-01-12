@@ -31,12 +31,16 @@ impl Camera {
         }
     }
 
+    pub fn build_projection_matrix(&self) -> cgmath::Matrix4<f32> {
+        cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar)
+    }
+
     pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
         // this moves the world to be at the position and roation of the camera
         // an inverse of whatever the transform matrix of the camera would be
         let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
         // this warps it so it looks like depth is real.
-        let projection = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
+        let projection = self.build_projection_matrix();
         // converts cgmaths OpenGL values to wgpus values
         OPENGL_TO_WGPU_MATRIX * projection * view
     }

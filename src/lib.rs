@@ -25,6 +25,7 @@ struct State {
     camera_bind_group: wgpu::BindGroup,
     size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
+    glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     clear_color: wgpu::Color,
     textured_rect: TexturedRect,
     coloured_rect: Rectangle,
@@ -72,7 +73,7 @@ impl State {
         };
         surface.configure(&device, &config);
 
-        let camera = camera::Camera::new((0.0, 0.0, 2.0), (0.0, 0.0, 0.0), cgmath::Vector3::unit_y(), config.width as f32/config.height as f32, 45.0, 0.1, 100.0);
+        let camera = camera::Camera::new((0.0, 0.0, 1.0), (0.0, 0.0, 0.0), cgmath::Vector3::unit_y(), config.width as f32/config.height as f32, 45.0, 0.1, 100.0);
         let camera_controller = camera::CameraController::new(0.2);
 
         let mut camera_uniform = camera::CameraUniform::new();
@@ -168,7 +169,10 @@ impl State {
             },
             multiview: None,
         });
-
+        let minecraft_mono = wgpu_glyph::ab_glyph::FontArc::try_from_slice(include_bytes!("../assets/Minecraft-Mono.ttf")).unwrap();
+        let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(minecraft_mono)
+            .build(&device, wgpu::TextureFormat::Bgra8UnormSrgb);
+        
         let rendering_stuff = MyRenderingStuff::new(&device, &queue);
         Self {
             surface,
@@ -184,6 +188,7 @@ impl State {
             clear_color,
             render_pipeline,
             textured_rect: diffuse_rect,
+            glyph_brush,
             coloured_rect,
             rendering_stuff,
         }
@@ -251,7 +256,20 @@ impl State {
         render_pass.draw_textured_rect(&self.textured_rect, &self.camera_bind_group);
         render_pass.draw_rectangle(&self.coloured_rect, &self.rendering_stuff.white_pixel, &self.camera_bind_group);
         drop(render_pass);
-        
+
+        let mut staging_belt = wgpu::util::StagingBelt::new(100);
+        self.glyph_brush.queue(wgpu_glyph::Section {
+            screen_position: (30.0, 30.0),
+            bounds: (self.size.width as f32, self.size.height as f32),
+            text: vec![wgpu_glyph::Text::new("Hello wgpu_glyph").with_color([0.0, 0.0, 0.0, 1.0]).with_scale(40.0)],
+            ..wgpu_glyph::Section::default()
+        });
+
+        let text_transform = flatten_matrix(&self.camera.build_projection_matrix());
+        self.glyph_brush.draw_queued(
+            &self.device, &mut staging_belt, &mut encoder, &view, self.size.width, self.size.height,
+        ).unwrap();
+        staging_belt.finish();
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
 
@@ -465,6 +483,10 @@ pub async fn run() {
             _ => {}
         }
     });
+}
+
+fn flatten_matrix(matrix: &cgmath::Matrix4<f32>) -> [f32; 16] {
+    [matrix.x.x, matrix.x.y, matrix.x.z, matrix.x.w, matrix.y.x, matrix.y.y, matrix.y.z, matrix.y.w, matrix.z.x, matrix.z.y, matrix.z.z, matrix.z.w, matrix.w.x, matrix.w.y, matrix.w.z, matrix.w.w]
 }
 
 // just the data for png of a white pixel didnt want it in a seperate file so here is a hard coded const!
