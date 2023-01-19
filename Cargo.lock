@@ -1583,7 +1583,8 @@ dependencies = [
 name = "text-render"
 version = "0.1.0"
 dependencies = [
- "ab_glyph",
+ "bytemuck",
+ "glyph_brush",
  "wgpu",
 ]
 
