@@ -1,6 +1,9 @@
 mod cache;
 
+use std::num::NonZeroU64;
+
 use cache::Cache;
+use glyph_brush::ab_glyph::{point, Rect};
 
 pub struct Pipeline {
     transform: wgpu::Buffer,
@@ -18,6 +21,48 @@ pub struct Pipeline {
 impl Pipeline {
     pub fn new(device: &wgpu::Device, filter_mode: wgpu::FilterMode, multisample: wgpu::MultisampleState, render_format: wgpu::TextureFormat, cache_width: u32, cache_height: u32) -> Self {
         build(device, filter_mode, multisample, render_format, cache_width, cache_height)
+    }
+
+    pub fn draw(&mut self, device: &wgpu::Device, staging_belt: &mut wgpu::util::StagingBelt, encoder: &mut wgpu::CommandEncoder, target: &wgpu::TextureView, transform: [f32; 16], region: Option<ScreenRegion>) {
+        draw(self, device, staging_belt, encoder, target, transform, region)
+    }
+
+    pub fn update_cache(&mut self, device: &wgpu::Device, staging_belt: &mut wgpu::util::StagingBelt, encoder: &mut wgpu::CommandEncoder, offset: [u16; 2], size: [u16; 2], data: &[u8]) {
+        self.cache.update(device, staging_belt, encoder, offset, size, data);
+    }
+
+    pub fn increase_cache_size(&mut self, device: &wgpu::Device, width: u32, height: u32) {
+        self.cache = Cache::new(device, width, height);
+
+        self.uniforms = create_uniforms(device, &self.uniform_layout, &self.transform, &self.sampler, &self.cache.view);
+    }
+
+    pub fn upload(&mut self, device: &wgpu::Device, staging_belt: &mut wgpu::util::StagingBelt, encoder: &mut wgpu::CommandEncoder, instances: &[Instance]) {
+        if instances.is_empty() {
+            self.current_instances = 0;
+            return;
+        }
+
+        if instances.len() > self.supported_instances {
+            self.instances = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("text-render::Pipeline instances"),
+                size: (std::mem::size_of::<Instance>() * instances.len()) as u64,
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+
+            self.supported_instances = instances.len();
+        }
+
+        let instance_bytes = bytemuck::cast_slice(instances);
+
+        if let Some(size) = NonZeroU64::new(instance_bytes.len() as u64) {
+            let mut instances_view = staging_belt.write_buffer(encoder, &self.instances, 0, size, device);
+
+            instances_view.copy_from_slice(instance_bytes);
+        }
+
+        self.current_instances = instances.len();
     }
 }
 
@@ -157,6 +202,47 @@ fn build(device: &wgpu::Device, filter_mode: wgpu::FilterMode, multisample: wgpu
     }
 }
 
+fn draw(
+    pipeline: &mut Pipeline,
+    device: &wgpu::Device,
+    staging_belt: &mut wgpu::util::StagingBelt,
+    encoder: &mut wgpu::CommandEncoder,
+    target: &wgpu::TextureView,
+    transform: [f32; 16],
+    region: Option<ScreenRegion>
+) {
+    if transform != pipeline.current_transform {
+        let mut transform_view = staging_belt.write_buffer(encoder, &pipeline.transform, 0, NonZeroU64::new(16*4).unwrap(), device);
+        transform_view.copy_from_slice(bytemuck::cast_slice(&transform));
+
+        pipeline.current_transform = transform;
+    }
+
+    let mut render_pass = 
+        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("text-render::pipeline render pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: target,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Load,
+                    store: true
+                },
+            })],
+            depth_stencil_attachment: None,
+        });
+    
+    render_pass.set_pipeline(&pipeline.raw);
+    render_pass.set_bind_group(0, &pipeline.uniforms, &[0]);
+    render_pass.set_vertex_buffer(0, pipeline.instances.slice(..));
+
+    if let Some(region) = region {
+        render_pass.set_scissor_rect(region.x, region.y, region.width, region.height);
+    }
+
+    render_pass.draw(0..4, 0..pipeline.current_instances as u32);
+}
+
 fn create_uniforms(device: &wgpu::Device, layout: &wgpu::BindGroupLayout, transform: &wgpu::Buffer, sampler: &wgpu::Sampler, cache: &wgpu::TextureView) -> wgpu::BindGroup {
     device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("text-redner::Pipeline uniforms"),
@@ -201,4 +287,58 @@ pub struct Instance {
 
 impl Instance {
     const INITIAL_AMOUNT: usize = 50_000;
+
+    pub fn from_vertex(glyph_brush::GlyphVertex {
+        mut tex_coords,
+        pixel_coords,
+        bounds,
+        extra,
+    }: glyph_brush::GlyphVertex) -> Self {
+        let gl_bounds = bounds;
+        
+        let mut gl_rect = Rect {
+            min: point(pixel_coords.min.x as f32, pixel_coords.min.y as f32),
+            max: point(pixel_coords.max.x as f32, pixel_coords.min.y as f32),
+        };
+
+        // a bunch of bounds checks
+        if gl_rect.max.x > gl_bounds.max.x {
+            let old_width = gl_rect.width();
+            gl_rect.max.x = gl_bounds.max.x;
+            tex_coords.max.x = tex_coords.min.x + tex_coords.width() * gl_rect.width() / old_width;
+        }
+
+        if gl_rect.min.x < gl_bounds.min.x {
+            let old_width = gl_rect.width();
+            gl_rect.min.x = gl_bounds.min.x;
+            tex_coords.min.x = tex_coords.max.x - tex_coords.width() * gl_rect.width() / old_width;
+        }
+
+        if gl_rect.max.y > gl_bounds.max.y {
+            let old_height = gl_rect.height();
+            gl_rect.max.y = gl_bounds.max.y;
+            tex_coords.max.y = tex_coords.min.y + tex_coords.height() * gl_rect.height() / old_height;
+        }
+
+        if gl_rect.min.y < gl_bounds.min.y {
+            let old_height = gl_rect.height();
+            gl_rect.min.y = gl_bounds.min.y;
+            tex_coords.min.y = tex_coords.max.y - tex_coords.height() * gl_rect.height() / old_height;
+        }
+
+        Self {
+            left_top: [gl_rect.min.x, gl_rect.max.y, extra.z],
+            right_bottom: [gl_rect.max.x, gl_rect.min.y],
+            tex_left_top: [tex_coords.min.x, tex_coords.max.y],
+            tex_right_bottom: [tex_coords.max.x, tex_coords.min.y],
+            color: extra.color,
+        }
+    }
+}
+
+pub struct ScreenRegion {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
 }

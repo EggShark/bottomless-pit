@@ -27,7 +27,6 @@ impl<F, H> From<glyph_brush::GlyphBrushBuilder<F, H>>
 impl GlyphBrushBuilder<(), ()> {
     /// Specifies the default font used to render glyphs.
     /// Referenced with `FontId(0)`, which is default.
-    #[inline]
     pub fn using_font<F: Font>(font: F) -> GlyphBrushBuilder<F> {
         Self::using_fonts(vec![font])
     }
