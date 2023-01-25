@@ -2,11 +2,13 @@ struct Globals {
     transform: mat4x4<f32>,
 }
 
+@group(0) @binding(0) var<uniform> globals: Globals;
+@group(0) @binding(1) var font_sampler: sampler;
+@group(0) @binding(2) var font_tex: texture_2d<f32>;
+
 struct CameraUniform {
     view_proj: mat4x4<f32>,
 }
-
-@group(0) @binding(0) var<uniform> globals: Globals;
 @group(1) @binding(0)
 var<uniform> camera: CameraUniform;
 
@@ -56,13 +58,10 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     }
 
     out.f_color = input.color;
-    out.position = globals.transform * vec4<f32>(pos, input.left_top.z, 1.0);
+    out.position = camera.view_proj * globals.transform * vec4<f32>(pos, input.left_top.z, 1.0); 
 
     return out;
 }
-
-@group(0) @binding(1) var font_sampler: sampler;
-@group(0) @binding(2) var font_tex: texture_2d<f32>;
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {

@@ -7,6 +7,7 @@ use texture::Texture;
 use vertex::Vertex;
 use image::GenericImageView;
 use wgpu::util::DeviceExt;
+use wgpu_glyph::orthographic_projection;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -259,15 +260,15 @@ impl State {
 
         let mut staging_belt = wgpu::util::StagingBelt::new(100);
         self.glyph_brush.queue(wgpu_glyph::Section {
-            screen_position: (30.0, 30.0),
+            screen_position: (1.0, 1.0),
             bounds: (self.size.width as f32, self.size.height as f32),
             text: vec![wgpu_glyph::Text::new("Hello wgpu_glyph").with_color([0.0, 0.0, 0.0, 1.0]).with_scale(40.0)],
             ..wgpu_glyph::Section::default()
         });
 
-        let text_transform = flatten_matrix(&self.camera.build_projection_matrix());
-        self.glyph_brush.draw_queued(
-            &self.device, &mut staging_belt, &mut encoder, &view, self.size.width, self.size.height,
+        
+        self.glyph_brush.draw_queued_with_transform(
+            &self.device, &mut staging_belt, &mut encoder, &view, &self.camera_bind_group, orthographic_projection(self.size.width, self.size.height),
         ).unwrap();
         staging_belt.finish();
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -485,8 +486,17 @@ pub async fn run() {
     });
 }
 
-fn flatten_matrix(matrix: &cgmath::Matrix4<f32>) -> [f32; 16] {
+fn flatten_matrix(matrix: cgmath::Matrix4<f32>) -> [f32; 16] {
     [matrix.x.x, matrix.x.y, matrix.x.z, matrix.x.w, matrix.y.x, matrix.y.y, matrix.y.z, matrix.y.w, matrix.z.x, matrix.z.y, matrix.z.z, matrix.z.w, matrix.w.x, matrix.w.y, matrix.w.z, matrix.w.w]
+}
+
+fn unflatten_matrix(array: [f32; 16]) -> cgmath::Matrix4<f32> {
+    let r1 = [array[0], array[1], array[2], array[3]];
+    let r2 = [array[4], array[5], array[6], array[7]];
+    let r3 = [array[8], array[9], array[10], array[11]];
+    let r4 = [array[12], array[13], array[14], array[15]];
+    let into = [r1, r2, r3, r4];
+    cgmath::Matrix4::from(into)
 }
 
 // just the data for png of a white pixel didnt want it in a seperate file so here is a hard coded const!
