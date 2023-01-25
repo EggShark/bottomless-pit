@@ -7,7 +7,7 @@ use texture::Texture;
 use vertex::Vertex;
 use image::GenericImageView;
 use wgpu::util::DeviceExt;
-use wgpu_glyph::orthographic_projection;
+use wgpu_glyph::{orthographic_projection, ab_glyph::Rect, Extra};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -259,17 +259,19 @@ impl State {
         drop(render_pass);
 
         let mut staging_belt = wgpu::util::StagingBelt::new(100);
-        self.glyph_brush.queue(wgpu_glyph::Section {
+        let test_section = wgpu_glyph::Section {
             screen_position: (1.0, 1.0),
             bounds: (self.size.width as f32, self.size.height as f32),
-            text: vec![wgpu_glyph::Text::new("Hello wgpu_glyph").with_color([0.0, 0.0, 0.0, 1.0]).with_scale(40.0)],
+            text: vec![wgpu_glyph::Text::new("Hello wgpu_glyph").with_scale(40.0).with_extra(Extra{color: [0.0, 0.0, 0.0, 1.0], z: -1.0})],
             ..wgpu_glyph::Section::default()
-        });
+        };
+        self.glyph_brush.queue(test_section);
 
-        
+        let text_transform = flatten_matrix(unflatten_matrix(ROTATION_180_MATRX) * unflatten_matrix(orthographic_projection(self.size.width, self.size.height)));
         self.glyph_brush.draw_queued_with_transform(
-            &self.device, &mut staging_belt, &mut encoder, &view, &self.camera_bind_group, orthographic_projection(self.size.width, self.size.height),
+            &self.device, &mut staging_belt, &mut encoder, &view, &self.camera_bind_group, text_transform,
         ).unwrap();
+
         staging_belt.finish();
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
@@ -498,6 +500,14 @@ fn unflatten_matrix(array: [f32; 16]) -> cgmath::Matrix4<f32> {
     let into = [r1, r2, r3, r4];
     cgmath::Matrix4::from(into)
 }
+
+const ROTATION_180_MATRX: [f32; 16] = [
+    1.0,  0.0,  0.0,  0.0,
+    0.0,  1.0,  0.0,  0.0,
+    0.0,  0.0,  1.0,  0.0,
+    0.0,  0.0,  0.0,  1.0,
+];
+
 
 // just the data for png of a white pixel didnt want it in a seperate file so here is a hard coded const!
 const WHITE_PIXEL: &[u8] = &[137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84, 8, 91, 99, 248, 15, 4, 0, 9, 251, 3, 253, 159, 31, 44, 0, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130];
