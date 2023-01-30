@@ -2,12 +2,15 @@ mod texture;
 mod rect;
 mod camera;
 mod vertex;
+use std::f32::consts::PI;
+
+use cgmath::Rotation3;
 use rect::{DrawRectangles, TexturedRect, Rectangle};
 use texture::Texture;
 use vertex::Vertex;
 use image::GenericImageView;
 use wgpu::util::DeviceExt;
-use wgpu_glyph::{orthographic_projection, ab_glyph::Rect, Extra};
+use wgpu_glyph::{orthographic_projection, ab_glyph::{Rect, Font, ScaleFont, Glyph}, Extra};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -262,12 +265,13 @@ impl State {
         let test_section = wgpu_glyph::Section {
             screen_position: (1.0, 1.0),
             bounds: (self.size.width as f32, self.size.height as f32),
-            text: vec![wgpu_glyph::Text::new("Hello wgpu_glyph").with_scale(40.0).with_extra(Extra{color: [0.0, 0.0, 0.0, 1.0], z: -1.0})],
-            ..wgpu_glyph::Section::default()
+            text: vec![wgpu_glyph::Text::new("Hello wgpu_glyph").with_scale(40.0).with_z(0.0).with_color([0.0, 0.0, 0.0, 1.0,])],
+            ..Default::default()
         };
         self.glyph_brush.queue(test_section);
+        
 
-        let text_transform = flatten_matrix(unflatten_matrix(ROTATION_180_MATRX) * unflatten_matrix(orthographic_projection(self.size.width, self.size.height)));
+        let text_transform = flatten_matrix(unflatten_matrix(orthographic_projection(self.size.width, self.size.height)) * unflatten_matrix(calculate_rotation_matrix(-90.0)));
         self.glyph_brush.draw_queued_with_transform(
             &self.device, &mut staging_belt, &mut encoder, &view, &self.camera_bind_group, text_transform,
         ).unwrap();
@@ -488,6 +492,16 @@ pub async fn run() {
     });
 }
 
+fn calculate_rotation_matrix(degree: f32) -> [f32; 16] {
+    let degree = degree.to_radians();
+    [
+        degree.cos(), -degree.sin(), 0.0, 0.0,
+        degree.sin(), degree.cos(), 0.0, 0.0,
+        0.0, 0.0, 1.0, 0.0,
+        0.0, 0.0, 0.0, 1.0,
+    ]
+}
+
 fn flatten_matrix(matrix: cgmath::Matrix4<f32>) -> [f32; 16] {
     [matrix.x.x, matrix.x.y, matrix.x.z, matrix.x.w, matrix.y.x, matrix.y.y, matrix.y.z, matrix.y.w, matrix.z.x, matrix.z.y, matrix.z.z, matrix.z.w, matrix.w.x, matrix.w.y, matrix.w.z, matrix.w.w]
 }
@@ -503,11 +517,17 @@ fn unflatten_matrix(array: [f32; 16]) -> cgmath::Matrix4<f32> {
 
 const ROTATION_180_MATRX: [f32; 16] = [
     1.0,  0.0,  0.0,  0.0,
-    0.0,  1.0,  0.0,  0.0,
+    0.0, -1.0,  0.0,  0.0,
     0.0,  0.0,  1.0,  0.0,
     0.0,  0.0,  0.0,  1.0,
 ];
 
+const IDENTITY_MATRIX: [f32; 16] = [
+    1.0,  0.0,  0.0,  0.0,
+    0.0,  1.0,  0.0,  0.0,
+    0.0,  0.0,  1.0,  0.0,
+    0.0,  0.0,  0.0,  1.0,
+];
 
 // just the data for png of a white pixel didnt want it in a seperate file so here is a hard coded const!
 const WHITE_PIXEL: &[u8] = &[137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 11, 73, 68, 65, 84, 8, 91, 99, 248, 15, 4, 0, 9, 251, 3, 253, 159, 31, 44, 0, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130];
