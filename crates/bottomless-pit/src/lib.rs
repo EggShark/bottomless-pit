@@ -4,17 +4,17 @@ mod camera;
 mod vertex;
 use std::f32::consts::PI;
 
-use cgmath::Rotation3;
+use cgmath::{Rotation3, Point2};
 use rect::{DrawRectangles, TexturedRect, Rectangle};
 use texture::Texture;
 use vertex::Vertex;
 use image::GenericImageView;
 use wgpu::util::DeviceExt;
-use wgpu_glyph::{orthographic_projection, ab_glyph::{Rect, Font, ScaleFont, Glyph}, Extra};
+use wgpu_glyph::{orthographic_projection, ab_glyph::{Font, ScaleFont, Glyph}, Extra, GlyphCruncher};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
-    window::{WindowBuilder, Window},
+    window::{WindowBuilder, Window}, dpi::PhysicalSize,
 };
 
 struct State {
@@ -265,13 +265,12 @@ impl State {
         let test_section = wgpu_glyph::Section {
             screen_position: (1.0, 1.0),
             bounds: (self.size.width as f32, self.size.height as f32),
-            text: vec![wgpu_glyph::Text::new("Hello wgpu_glyph").with_scale(40.0).with_z(0.0).with_color([0.0, 0.0, 0.0, 1.0,])],
+            text: vec![wgpu_glyph::Text::new("Hello Wgpu_glyph").with_scale(40.0).with_z(0.0).with_color([0.0, 0.0, 0.0, 1.0,])],
             ..Default::default()
         };
+        let text_transform = flatten_matrix(get_text_rotation_matrix(&test_section, 45.0, &mut self.glyph_brush, &self.size));
         self.glyph_brush.queue(test_section);
         
-
-        let text_transform = flatten_matrix(unflatten_matrix(orthographic_projection(self.size.width, self.size.height)) * unflatten_matrix(calculate_rotation_matrix(-90.0)));
         self.glyph_brush.draw_queued_with_transform(
             &self.device, &mut staging_belt, &mut encoder, &view, &self.camera_bind_group, text_transform,
         ).unwrap();
@@ -490,6 +489,41 @@ pub async fn run() {
             _ => {}
         }
     });
+}
+
+fn get_text_rotation_matrix(section: &wgpu_glyph::Section, degree: f32, brush: &mut wgpu_glyph::GlyphBrush<()>, size: &PhysicalSize<u32>) -> cgmath::Matrix4<f32> {
+    let measurement = brush.glyph_bounds(section).unwrap();
+    let mid = normalize_points(get_mid_point(measurement), size.width as f32, size.height as f32);
+    let rotation_matrix = unflatten_matrix(calculate_rotation_matrix(degree));
+    let translation_matrix = cgmath::Matrix4::new(
+        1.0, 0.0, mid.x, 0.0,
+        0.0, 1.0, mid.y, 0.0, 
+        0.0, 0.0, 1.0, 0.0, 
+        0.0, 0.0, 0.0, 1.0, 
+    );
+    let inverse_translation = cgmath::Matrix4::new(
+        1.0, 0.0, -mid.x, 0.0,
+        0.0, 1.0, -mid.y, 0.0, 
+        0.0, 0.0, 1.0, 0.0, 
+        0.0, 0.0, 0.0, 1.0, 
+    );
+
+    let out = translation_matrix * rotation_matrix * inverse_translation;
+    out
+
+}
+
+fn normalize_points<T: std::ops::Div<Output = T>>(point: Point2<T>, width: T, height: T) -> Point2<T> {
+    let x = point.x / width;
+    let y = point.y / height;
+    Point2 {x, y}
+}
+
+fn get_mid_point(rectangle: wgpu_glyph::ab_glyph::Rect) -> Point2<f32> {
+    let x_mid = (rectangle.min.x + rectangle.max.x) / 2.0;
+    let y_mid = (rectangle.min.y + rectangle.max.y) / 2.0;
+
+    Point2 { x: x_mid, y: y_mid}
 }
 
 fn calculate_rotation_matrix(degree: f32) -> [f32; 16] {
