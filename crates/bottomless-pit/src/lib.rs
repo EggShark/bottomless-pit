@@ -2,19 +2,18 @@ mod texture;
 mod rect;
 mod camera;
 mod vertex;
-use std::f32::consts::PI;
 
-use cgmath::{Rotation3, Point2};
+use cgmath::{Point2, Transform};
 use rect::{DrawRectangles, TexturedRect, Rectangle};
 use texture::Texture;
 use vertex::Vertex;
 use image::GenericImageView;
 use wgpu::util::DeviceExt;
-use wgpu_glyph::{orthographic_projection, ab_glyph::{Font, ScaleFont, Glyph}, Extra, GlyphCruncher};
+use wgpu_glyph::{orthographic_projection, GlyphCruncher};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
-    window::{WindowBuilder, Window}, dpi::PhysicalSize,
+    window::{WindowBuilder, Window}
 };
 
 struct State {
@@ -34,6 +33,7 @@ struct State {
     textured_rect: TexturedRect,
     coloured_rect: Rectangle,
     rendering_stuff: MyRenderingStuff,
+    counter: f32,
 }
 
 impl State {
@@ -195,6 +195,7 @@ impl State {
             glyph_brush,
             coloured_rect,
             rendering_stuff,
+            counter: 0.0,
         }
     }
 
@@ -217,6 +218,7 @@ impl State {
         self.camera_controller.update_camera(&mut self.camera);
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
+        self.counter = (self.counter + 1.0) % 360.0;
         // for instance in self.instances.iter_mut() {
         //     let rotation_amout = cgmath::Quaternion::from_angle_y(cgmath::Rad(0.01));
         //     let current = instance.rotation;
@@ -265,10 +267,10 @@ impl State {
         let test_section = wgpu_glyph::Section {
             screen_position: (1.0, 1.0),
             bounds: (self.size.width as f32, self.size.height as f32),
-            text: vec![wgpu_glyph::Text::new("Hello Wgpu_glyph").with_scale(40.0).with_z(0.0).with_color([0.0, 0.0, 0.0, 1.0,])],
+            text: vec![wgpu_glyph::Text::new("ll").with_scale(40.0).with_z(0.0).with_color([0.0, 0.0, 0.0, 1.0,])],
             ..Default::default()
         };
-        let text_transform = flatten_matrix(get_text_rotation_matrix(&test_section, 45.0, &mut self.glyph_brush, &self.size));
+        let text_transform = flatten_matrix(unflatten_matrix(orthographic_projection(self.size.width, self.size.height)) * get_text_rotation_matrix(&test_section, self.counter, &mut self.glyph_brush));
         self.glyph_brush.queue(test_section);
         
         self.glyph_brush.draw_queued_with_transform(
@@ -491,23 +493,30 @@ pub async fn run() {
     });
 }
 
-fn get_text_rotation_matrix(section: &wgpu_glyph::Section, degree: f32, brush: &mut wgpu_glyph::GlyphBrush<()>, size: &PhysicalSize<u32>) -> cgmath::Matrix4<f32> {
-    let measurement = brush.glyph_bounds(section).unwrap();
-    let mid = normalize_points(get_mid_point(measurement), size.width as f32, size.height as f32);
-    let rotation_matrix = unflatten_matrix(calculate_rotation_matrix(degree));
-    let translation_matrix = cgmath::Matrix4::new(
-        1.0, 0.0, mid.x, 0.0,
-        0.0, 1.0, mid.y, 0.0, 
-        0.0, 0.0, 1.0, 0.0, 
-        0.0, 0.0, 0.0, 1.0, 
-    );
-    let inverse_translation = cgmath::Matrix4::new(
-        1.0, 0.0, -mid.x, 0.0,
-        0.0, 1.0, -mid.y, 0.0, 
-        0.0, 0.0, 1.0, 0.0, 
-        0.0, 0.0, 0.0, 1.0, 
-    );
+fn measure_text(text: &str, brush: &mut wgpu_glyph::GlyphBrush<()>, scale: f32) -> wgpu_glyph::ab_glyph::Rect {
+    let section = wgpu_glyph::Section {
+        text: vec![wgpu_glyph::Text::new(text).with_scale(scale)],
+        screen_position: (1.0, 1.0),
+        bounds: (f32::MAX, f32::MAX),
+        ..Default::default()
+    };
+    brush.glyph_bounds(section).unwrap_or(wgpu_glyph::ab_glyph::Rect{
+        max: wgpu_glyph::ab_glyph::point(0.0,0.0),
+        min: wgpu_glyph::ab_glyph::point(0.0,0.0),
+    })
+}
 
+fn get_text_rotation_matrix(section: &wgpu_glyph::Section, degree: f32, brush: &mut wgpu_glyph::GlyphBrush<()>) -> cgmath::Matrix4<f32> {
+    let measurement = brush.glyph_bounds(section).unwrap();
+    let mid = get_mid_point(measurement);
+    let rotation_matrix = unflatten_matrix(calculate_rotation_matrix(degree));
+    let translation_matrix = cgmath::Matrix4::from_translation(cgmath::vec3(mid.x, mid.y, 0.0));
+    let inverse_translation = translation_matrix.inverse_transform().unwrap_or(unflatten_matrix(IDENTITY_MATRIX));
+    // Creates a matrix like
+    // 1 0 0 0
+    // 0 1 0 0
+    // 0 0 1 0
+    // x y z 1
     let out = translation_matrix * rotation_matrix * inverse_translation;
     out
 
@@ -548,13 +557,6 @@ fn unflatten_matrix(array: [f32; 16]) -> cgmath::Matrix4<f32> {
     let into = [r1, r2, r3, r4];
     cgmath::Matrix4::from(into)
 }
-
-const ROTATION_180_MATRX: [f32; 16] = [
-    1.0,  0.0,  0.0,  0.0,
-    0.0, -1.0,  0.0,  0.0,
-    0.0,  0.0,  1.0,  0.0,
-    0.0,  0.0,  0.0,  1.0,
-];
 
 const IDENTITY_MATRIX: [f32; 16] = [
     1.0,  0.0,  0.0,  0.0,
