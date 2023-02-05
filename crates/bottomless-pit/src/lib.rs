@@ -130,7 +130,7 @@ impl State {
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
             label: Some("Render Pipeline Layout"),
             bind_group_layouts: &[
-                diffuse_rect.get_bind_group_layout(),
+                &Texture::make_bind_group_layout(&device),
                 &camera_bind_group_layout,
             ],
             push_constant_ranges: &[],
@@ -177,7 +177,7 @@ impl State {
         let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(minecraft_mono)
             .build(&device, wgpu::TextureFormat::Bgra8UnormSrgb);
         
-        let rendering_stuff = MyRenderingStuff::new(&device, &queue);
+        let rendering_stuff = MyRenderingStuff::new(&device, &queue, &[&Texture::make_bind_group_layout(&device), &camera_bind_group_layout,], &shader, config.format);
         Self {
             surface,
             device,
@@ -259,8 +259,8 @@ impl State {
         // render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // you can only have 1 index buffer at a time
         // render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as u32); // draw() ignores the indices
         // render_pass.draw(0..self.num_vertices, 0..1); // tell it to draw something with x verticies and 1 instance of it
-        render_pass.draw_textured_rect(&self.textured_rect, &self.camera_bind_group);
-        render_pass.draw_rectangle(&self.coloured_rect, &self.rendering_stuff.white_pixel, &self.camera_bind_group);
+        render_pass.draw_textured_rect(&self.textured_rect, &self.rendering_stuff.rect_index_buffer, &self.camera_bind_group);
+        render_pass.draw_rectangle(&self.coloured_rect, &self.rendering_stuff.rect_index_buffer, &self.rendering_stuff.white_pixel, &self.camera_bind_group);
         drop(render_pass);
 
         let mut staging_belt = wgpu::util::StagingBelt::new(100);
@@ -291,10 +291,14 @@ impl State {
 
 struct MyRenderingStuff {
     white_pixel: wgpu::BindGroup,
+    rect_index_buffer: wgpu::Buffer,
+    line_pipeline: wgpu::RenderPipeline,
 }
 
 impl MyRenderingStuff {
-    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue) -> Self {
+    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue, bind_group_layouts: &[&wgpu::BindGroupLayout], shader: &wgpu::ShaderModule, texture_format: wgpu::TextureFormat) -> Self {
+        use crate::rect::RECT_INDICIES;
+
         let white_pixel_image = image::load_from_memory(WHITE_PIXEL).unwrap();
         let white_pixel_rgba = white_pixel_image.to_rgba8();
         let (width, height) = white_pixel_image.dimensions();
@@ -381,8 +385,18 @@ impl MyRenderingStuff {
             label: Some("diffuse_bind_group"),
         });
 
+        let rect_index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(RECT_INDICIES),
+            usage: wgpu::BufferUsages::INDEX,
+        });
+
+        let line_pipeline = make_pipeline(device, wgpu::PrimitiveTopology::LineList, bind_group_layouts, shader, texture_format, Some("line_renderer"));
+
         Self {
-            white_pixel
+            white_pixel,
+            rect_index_buffer,
+            line_pipeline,
         }
     }
 }
@@ -410,6 +424,15 @@ struct InstanceRaw {
 }
 
 impl InstanceRaw {
+    const IDENTITY: Self = Self {
+        model: [
+            [1.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 1.0],
+        ]
+    };
+
     fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
         use std::mem;
         wgpu::VertexBufferLayout{
@@ -491,6 +514,57 @@ pub async fn run() {
             _ => {}
         }
     });
+}
+
+fn make_pipeline(device: &wgpu::Device, topology: wgpu::PrimitiveTopology, bind_group_layouts: &[&wgpu::BindGroupLayout], shader: &wgpu::ShaderModule, texture_format: wgpu::TextureFormat, label: Option<&str>) -> wgpu::RenderPipeline {
+    let layout_label = match label {
+        Some(label) => Some(format!("{} layout", label)),
+        None => None
+    };
+
+    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: layout_label.as_deref(), // somehow converss Option<String> to Option<&str>
+        bind_group_layouts,
+        push_constant_ranges: &[],
+    });
+    
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label,
+        layout: Some(&layout),
+        vertex: wgpu::VertexState{
+            module: &shader,
+            entry_point: "vs_main", //specify the entry point (can be whatever as long as it exists)
+            buffers: &[Vertex::desc()], // specfies what type of vertices we want to pass to the shader,
+        },
+        fragment: Some(wgpu::FragmentState{ // techically optional. Used to store colour data to the surface
+            module: &shader,
+            entry_point: "fs_main",
+            targets: &[Some(wgpu::ColorTargetState{ // tells wgpu what colour outputs it should set up.
+                format: texture_format,
+                blend: Some(wgpu::BlendState::ALPHA_BLENDING), // specifies that the blending should just replace old pixel data wiht new data,
+                write_mask: wgpu::ColorWrites::ALL, // writes all colours
+            })],
+        }),
+        primitive: wgpu::PrimitiveState{
+            topology,
+            strip_index_format: None,
+            front_face: wgpu::FrontFace::Cw, // triagnle must be counter-clock wise to be considered facing forawrd
+            cull_mode: Some(wgpu::Face::Back), // all triagnles not front facing are culled
+            // setting this to anything other than fill requires Features::NON_FILL_POLYGON_MODE
+            polygon_mode: wgpu::PolygonMode::Fill,
+            // requires Features::DEPTH_CLIP_CONTROLL,
+            unclipped_depth: false,
+            // requires Features::CONSERVATIVE_RASTERIZATION,
+            conservative: false,
+        },
+        depth_stencil: None,
+        multisample: wgpu::MultisampleState{
+            count: 1, // determines how many samples the pipeline will use
+            mask: !0, // how many samples the pipeline will use (in this case all of them)
+            alpha_to_coverage_enabled: false, // something to do with AA
+        },
+        multiview: None,
+    })
 }
 
 fn measure_text(text: &str, brush: &mut wgpu_glyph::GlyphBrush<()>, scale: f32) -> wgpu_glyph::ab_glyph::Rect {

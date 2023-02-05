@@ -1,9 +1,9 @@
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
-    position: [f32; 3],
-    tex_coords: [f32; 2],
-    colour: [f32; 4], 
+    pub position: [f32; 3],
+    pub tex_coords: [f32; 2],
+    pub colour: [f32; 4], 
 }
 
 impl Vertex {
@@ -37,5 +37,13 @@ impl Vertex {
             tex_coords,
             colour,
         }
+    }
+
+    pub fn get_pos(&self) -> [f32; 3] {
+        self.position
+    }
+
+    pub fn get_pos_2d(&self) -> [f32; 2] {
+        [self.position[0], self.position[1]]
     }
 }
