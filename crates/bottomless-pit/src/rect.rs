@@ -89,7 +89,6 @@ pub struct TexturedRect {
     texture: Texture,
     points: [Vertex; 4],
     vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
 }
 
 impl TexturedRect {
@@ -107,17 +106,10 @@ impl TexturedRect {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(RECT_INDICIES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-
         Self {
             texture,
             points,
             vertex_buffer,
-            index_buffer,
         }
     }
 
