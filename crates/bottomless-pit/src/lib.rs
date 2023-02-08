@@ -2,6 +2,7 @@ mod texture;
 mod rect;
 mod camera;
 mod vertex;
+mod line;
 
 use cgmath::{Point2, Transform};
 use rect::{DrawRectangles, TexturedRect, Rectangle};
@@ -15,6 +16,7 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::{WindowBuilder, Window}
 };
+use line::{Line, DrawLines};
 
 struct State {
     surface: wgpu::Surface,
@@ -32,6 +34,7 @@ struct State {
     clear_color: wgpu::Color,
     textured_rect: TexturedRect,
     coloured_rect: Rectangle,
+    test_line: Line,
     rendering_stuff: MyRenderingStuff,
     counter: f32,
 }
@@ -118,7 +121,7 @@ impl State {
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor{
             label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),
         });
 
         let diffuse_bytes = include_bytes!("../assets/trans-test.png");
@@ -177,7 +180,8 @@ impl State {
         let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(minecraft_mono)
             .build(&device, wgpu::TextureFormat::Bgra8UnormSrgb);
         
-        let rendering_stuff = MyRenderingStuff::new(&device, &queue, &[&Texture::make_bind_group_layout(&device), &camera_bind_group_layout,], &shader, config.format);
+        let rendering_stuff = MyRenderingStuff::new(&device, &queue, &[&camera_bind_group_layout], config.format);
+        let test_line = Line::new([0.1, 0.0], [0.5, 0.0], [0.0, 0.0, 0.0, 1.0], &device);
         Self {
             surface,
             device,
@@ -195,6 +199,7 @@ impl State {
             glyph_brush,
             coloured_rect,
             rendering_stuff,
+            test_line,
             counter: 0.0,
         }
     }
@@ -261,6 +266,8 @@ impl State {
         // render_pass.draw(0..self.num_vertices, 0..1); // tell it to draw something with x verticies and 1 instance of it
         render_pass.draw_textured_rect(&self.textured_rect, &self.rendering_stuff.rect_index_buffer, &self.camera_bind_group);
         render_pass.draw_rectangle(&self.coloured_rect, &self.rendering_stuff.rect_index_buffer, &self.rendering_stuff.white_pixel, &self.camera_bind_group);
+        render_pass.set_pipeline(&self.rendering_stuff.line_pipeline);
+        render_pass.draw_line(&self.test_line, &self.camera_bind_group);
         drop(render_pass);
 
         let mut staging_belt = wgpu::util::StagingBelt::new(100);
@@ -296,7 +303,7 @@ struct MyRenderingStuff {
 }
 
 impl MyRenderingStuff {
-    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue, bind_group_layouts: &[&wgpu::BindGroupLayout], shader: &wgpu::ShaderModule, texture_format: wgpu::TextureFormat) -> Self {
+    fn new(device: &wgpu::Device, queue: &wgpu::Queue, bind_group_layouts: &[&wgpu::BindGroupLayout], texture_format: wgpu::TextureFormat) -> Self {
         use crate::rect::RECT_INDICIES;
 
         let white_pixel_image = image::load_from_memory(WHITE_PIXEL).unwrap();
@@ -391,7 +398,12 @@ impl MyRenderingStuff {
             usage: wgpu::BufferUsages::INDEX,
         });
 
-        let line_pipeline = make_pipeline(device, wgpu::PrimitiveTopology::LineList, bind_group_layouts, shader, texture_format, Some("line_renderer"));
+        let line_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/line_shader.wgsl").into()),
+        });
+
+        let line_pipeline = make_pipeline(device, wgpu::PrimitiveTopology::LineList, bind_group_layouts, &[line::LineVertex::desc()], &line_shader, texture_format, Some("line_renderer"));
 
         Self {
             white_pixel,
@@ -516,7 +528,7 @@ pub async fn run() {
     });
 }
 
-fn make_pipeline(device: &wgpu::Device, topology: wgpu::PrimitiveTopology, bind_group_layouts: &[&wgpu::BindGroupLayout], shader: &wgpu::ShaderModule, texture_format: wgpu::TextureFormat, label: Option<&str>) -> wgpu::RenderPipeline {
+fn make_pipeline(device: &wgpu::Device, topology: wgpu::PrimitiveTopology, bind_group_layouts: &[&wgpu::BindGroupLayout], vertex_buffers: &[wgpu::VertexBufferLayout], shader: &wgpu::ShaderModule, texture_format: wgpu::TextureFormat, label: Option<&str>) -> wgpu::RenderPipeline {
     let layout_label = match label {
         Some(label) => Some(format!("{} layout", label)),
         None => None
@@ -534,7 +546,7 @@ fn make_pipeline(device: &wgpu::Device, topology: wgpu::PrimitiveTopology, bind_
         vertex: wgpu::VertexState{
             module: &shader,
             entry_point: "vs_main", //specify the entry point (can be whatever as long as it exists)
-            buffers: &[Vertex::desc()], // specfies what type of vertices we want to pass to the shader,
+            buffers: vertex_buffers, // specfies what type of vertices we want to pass to the shader,
         },
         fragment: Some(wgpu::FragmentState{ // techically optional. Used to store colour data to the surface
             module: &shader,
