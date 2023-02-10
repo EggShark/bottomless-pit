@@ -3,6 +3,7 @@ mod rect;
 mod camera;
 mod vertex;
 mod line;
+mod input;
 
 use cgmath::{Point2, Transform};
 use rect::{DrawRectangles, TexturedRect, Rectangle};
@@ -216,6 +217,7 @@ impl State {
     fn input(&mut self, event: &WindowEvent) -> bool {
         // true means this function has handled it and the main loop doesnt need too
         // false measn the main loop needs to worry about it
+        println!("{:?}", event);
         self.camera_controller.process_events(event)
     }
 
