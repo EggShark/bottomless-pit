@@ -1,5 +1,58 @@
 pub(crate) struct InputHandle {
-    keyboard_index: [bool; 132],
+    previous_keyboard_state: [bool; 115],
+    current_keyboard_state: [bool; 115],
+}
+
+impl InputHandle {
+    pub(crate) fn new() -> Self {
+        Self {
+            previous_keyboard_state: [false; 115],
+            current_keyboard_state: [false; 115],
+        }
+    }
+
+    pub(crate) fn end_of_frame_refresh(&mut self) {
+        self.previous_keyboard_state = self.current_keyboard_state;
+    }
+
+    pub(crate) fn process_input(&mut self, key_code: &Option<VirtualKeyCode>, state: winit::event::ElementState) -> bool {
+        let key_bool = state == ElementState::Pressed;
+        let key: Key = match key_code {
+            Some(virtual_code) => {
+                let c = *virtual_code;
+                c.into()
+            },
+            None => return false,
+        };
+        
+        if key == Key::Unrecognized {
+            return false;
+        }
+
+        let index = key as usize;
+        self.current_keyboard_state[index] = key_bool;
+        true
+    }
+
+    pub(crate) fn is_key_down(&self, key: Key) -> bool {
+        let index = key as usize;
+        self.current_keyboard_state[index]
+    }
+
+    pub(crate) fn is_key_up(&self, key: Key) -> bool {
+        let index = key as usize;
+        !self.current_keyboard_state[index]
+    }
+
+    pub(crate) fn is_key_pressed(&self, key: Key) -> bool {
+        let index = key as usize;
+        !self.previous_keyboard_state[index] && self.current_keyboard_state[index]
+    }
+
+    pub(crate) fn is_key_released(&self, key: Key) -> bool {
+        let index = key as usize;
+        self.previous_keyboard_state[index] && !self.current_keyboard_state[index]
+    }
 }
 
 #[repr(u8)]
@@ -123,7 +176,7 @@ pub enum Key {
     Unrecognized,
 }
 
-use winit::event::VirtualKeyCode;
+use winit::event::{VirtualKeyCode, ElementState};
 impl Into<Key> for VirtualKeyCode {
     fn into(self) -> Key {
         match self {

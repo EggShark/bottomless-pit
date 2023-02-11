@@ -6,6 +6,7 @@ mod line;
 mod input;
 
 use cgmath::{Point2, Transform};
+use input::InputHandle;
 use rect::{DrawRectangles, TexturedRect, Rectangle};
 use texture::Texture;
 use vertex::Vertex;
@@ -18,6 +19,8 @@ use winit::{
     window::{WindowBuilder, Window}
 };
 use line::{Line, DrawLines};
+
+use crate::input::Key;
 
 struct State {
     surface: wgpu::Surface,
@@ -37,6 +40,7 @@ struct State {
     coloured_rect: Rectangle,
     test_line: Line,
     rendering_stuff: MyRenderingStuff,
+    input_handle: InputHandle,
     counter: f32,
 }
 
@@ -200,6 +204,7 @@ impl State {
             glyph_brush,
             coloured_rect,
             rendering_stuff,
+            input_handle: InputHandle::new(),
             test_line,
             counter: 0.0,
         }
@@ -217,8 +222,20 @@ impl State {
     fn input(&mut self, event: &WindowEvent) -> bool {
         // true means this function has handled it and the main loop doesnt need too
         // false measn the main loop needs to worry about it
-        println!("{:?}", event);
-        self.camera_controller.process_events(event)
+        let input_handler = match event {
+            WindowEvent::KeyboardInput {
+                input: KeyboardInput{
+                    virtual_keycode,
+                    state,
+                    ..
+                },
+                ..
+            } => {
+                self.input_handle.process_input(virtual_keycode, *state)
+            },
+            _ => false,
+        };
+        self.camera_controller.process_events(event) || input_handler
     }
 
     fn update(&mut self) {
@@ -226,6 +243,7 @@ impl State {
         self.camera_uniform.update_view_proj(&self.camera);
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
         self.counter = (self.counter + 1.0) % 360.0;
+        self.input_handle.end_of_frame_refresh();
         // for instance in self.instances.iter_mut() {
         //     let rotation_amout = cgmath::Quaternion::from_angle_y(cgmath::Rad(0.01));
         //     let current = instance.rotation;
@@ -489,7 +507,6 @@ pub async fn run() {
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
-                state.update();
                 match state.render() {
                     Ok(_) => {},
                     // reconfigure surface if lost
@@ -497,6 +514,7 @@ pub async fn run() {
                     Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                     Err(e) => eprintln!("{:?}", e),
                 }
+                state.update();
             }
             Event::MainEventsCleared => {
                 //RedrawRequested will only trigger once, unless we manually request it
