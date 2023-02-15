@@ -4,6 +4,7 @@ mod camera;
 mod vertex;
 mod line;
 mod input;
+mod draw_queue;
 
 use cgmath::{Point2, Transform};
 use input::InputHandle;
@@ -18,11 +19,10 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::{WindowBuilder, Window}
 };
-use line::{Line, DrawLines};
+use draw_queue::{DrawQueues, RenderItems};
+use line::{Line, DrawLines, LineVertex};
 
-use crate::input::Key;
-
-struct State {
+struct State<'a> {
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -34,6 +34,7 @@ struct State {
     camera_bind_group: wgpu::BindGroup,
     size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
+    draw_queues: DrawQueues<'a>,
     glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     clear_color: wgpu::Color,
     textured_rect: TexturedRect,
@@ -44,8 +45,8 @@ struct State {
     counter: f32,
 }
 
-impl State {
-    async fn new(window: &Window) -> Self {
+impl<'a> State<'_> {
+    fn new(window: &Window) -> Self {
         let size = window.inner_size();
         // the insance is a handle to our GPU
         // Backends all means Vulkan + Metal + DX12 (probgonna use vulkan <3)
@@ -60,20 +61,22 @@ impl State {
             a: 0.0
         };
 
-        let adapter = instance.request_adapter(&wgpu::RequestAdapterOptions {
+
+        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
             compatible_surface: Some(&surface),
             force_fallback_adapter: false,
-        }).await.unwrap();
+        })).unwrap();
 
-        let (device, queue) = adapter.request_device(
+
+        let (device, queue) = pollster::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor{
                 features: wgpu::Features::empty(),
                 limits: wgpu::Limits::default(),
                 label: None,
             },
             None,
-        ).await.unwrap();
+        )).unwrap();
 
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -200,6 +203,7 @@ impl State {
             size,
             clear_color,
             render_pipeline,
+            draw_queues: DrawQueues::new(),
             textured_rect: diffuse_rect,
             glyph_brush,
             coloured_rect,
@@ -497,12 +501,12 @@ impl InstanceRaw {
     }
 }
 
-pub async fn run() {
+pub fn run() {
     env_logger::init();
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
-    let mut state = State::new(&window).await;
+    let mut state = State::new(&window);
 
     event_loop.run(move |event, _, control_flow| {
         match event {

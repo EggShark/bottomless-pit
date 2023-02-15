@@ -74,6 +74,10 @@ impl Rectangle {
         }
     }
 
+    pub fn get_vertices(&self) -> [Vertex; 4] {
+        self.points
+    }
+
     fn create_vertex_buffer(device: &wgpu::Device, points: &[Vertex]) -> wgpu::Buffer {
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
             label: Some("Vertex Buffer"),
@@ -119,6 +123,10 @@ impl TexturedRect {
 
     pub fn get_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
         &self.texture.bind_group_layout
+    }
+
+    pub fn get_vertices(&self) -> [Vertex; 4] {
+        self.points
     }
 }
 
