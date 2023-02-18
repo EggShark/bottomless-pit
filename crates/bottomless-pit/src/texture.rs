@@ -1,6 +1,8 @@
 use image::GenericImageView;
 use crc32fast::Hasher;
 
+use crate::cache::{TextureCache, TextureIndex};
+
 pub struct Texture {
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
@@ -126,4 +128,14 @@ impl Texture {
             label: Some("texture_bind_group_layout"),
         })
     }
+}
+
+pub(crate) fn create_texture(texture_cache: &mut TextureCache, device: &wgpu::Device, queue: &wgpu::Queue, path: &str) -> TextureIndex {
+    let texture = Texture::from_path(device, queue, None, path).unwrap();
+    texture_cache.add_texture(texture)
+}
+
+pub(crate) fn create_texture_from_bytes(texture_cache: &mut TextureCache, device: &wgpu::Device, queue: &wgpu::Queue, bytes: &[u8]) -> TextureIndex {
+    let texture = Texture::from_bytes(device, queue, None, bytes).unwrap();
+    texture_cache.add_texture(texture)
 }

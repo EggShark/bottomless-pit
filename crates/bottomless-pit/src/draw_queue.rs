@@ -2,17 +2,20 @@ use wgpu::util::DeviceExt;
 
 use crate::Vertex;
 use crate::LineVertex;
+use crate::cache::TextureIndex;
 use crate::rect::Rectangle;
 use crate::rect::TexturedRect;
 
-pub(crate) struct DrawQueues<'a> {
+type CahceIndex = u32;
+
+pub(crate) struct DrawQueues {
     rect_vertices: Vec<Vertex>,
     rect_indicies: Vec<u16>,
-    rectangle_bind_group_switches: Vec<BindGroupSwitchPoint<'a>>,
+    rectangle_bind_group_switches: Vec<BindGroupSwitchPoint>,
     line_vertices: Vec<LineVertex>,
 }
 
-impl<'a> DrawQueues<'a> {
+impl DrawQueues {
     pub(crate) fn new() -> Self {
         Self {
             rect_vertices: Vec::new(),
@@ -22,7 +25,7 @@ impl<'a> DrawQueues<'a> {
         }
     }
 
-    pub(crate) fn new_with_data(rect_verts: Option<Vec<Vertex>>, rect_indicies: Option<Vec<u16>>, rectangle_bind_group_switches: Option<Vec<BindGroupSwitchPoint<'a>>>, line_vertexes: Option<Vec<LineVertex>>) -> Self {
+    pub(crate) fn new_with_data(rect_verts: Option<Vec<Vertex>>, rect_indicies: Option<Vec<u16>>, rectangle_bind_group_switches: Option<Vec<BindGroupSwitchPoint>>, line_vertexes: Option<Vec<LineVertex>>) -> Self {
         let rect_vertices = rect_verts.unwrap_or(Vec::new());
         let rect_indicies = rect_indicies.unwrap_or(Vec::new());
         let rectangle_bind_group_switches = rectangle_bind_group_switches.unwrap_or(Vec::new());
@@ -61,9 +64,9 @@ impl<'a> DrawQueues<'a> {
         self.rect_indicies.extend_from_slice(&indicies);
     }
 
-    pub(crate) fn add_textured_rectange(&mut self, rectangle: &'a TexturedRect) {
+    pub(crate) fn add_textured_rectange(&mut self, rectangle: &TexturedRect) {
         let vertices = rectangle.get_vertices();
-        let texture_bind_group = rectangle.get_bind_group();
+        let texture_bind_group = rectangle.get_texture_id();
         let number_of_rectanges = self.rect_vertices.len() as u16 % 4;
         // do index math
         let indicies = [
@@ -117,26 +120,26 @@ impl<'a> DrawQueues<'a> {
     }
 }
 
-pub(crate) struct RenderItems<'a> {
+pub(crate) struct RenderItems {
     pub(crate) rectangle_buffer: wgpu::Buffer,
     pub(crate) rectangle_index_buffer: wgpu::Buffer,
-    pub(crate) rectangle_bind_group_switches: Vec<BindGroupSwitchPoint<'a>>, 
+    pub(crate) rectangle_bind_group_switches: Vec<BindGroupSwitchPoint>, 
     pub(crate) line_buffer: wgpu::Buffer,
 }
 
-pub(crate) struct BindGroupSwitchPoint<'a> {
-    pub(crate) bind_group: BindGroups<'a>,
+pub(crate) struct BindGroupSwitchPoint {
+    pub(crate) bind_group: BindGroups,
     pub(crate) point: usize,
 }
 
-pub(crate) enum BindGroups<'a> {
+pub(crate) enum BindGroups {
     WhitePixel,
-    Custom{bind_group: &'a wgpu::BindGroup},
+    Custom{bind_group: CahceIndex},
 }
 
 // this is a really shitty implmentation of this espcially for the custom part
 // but I really only need this to check if the previous value was a WhitePixel
-impl PartialEq for BindGroups<'_> {
+impl PartialEq for BindGroups {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::WhitePixel, Self::WhitePixel) => true,

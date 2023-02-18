@@ -8,8 +8,9 @@ mod input;
 mod draw_queue;
 
 use cgmath::{Point2, Transform};
+use cache::{TextureCache, ChachedTexture, TextureIndex};
 use input::InputHandle;
-use rect::{DrawRectangles, TexturedRect, Rectangle};
+use rect::{TexturedRect, Rectangle};
 use texture::Texture;
 use vertex::Vertex;
 use image::GenericImageView;
@@ -23,7 +24,7 @@ use winit::{
 use draw_queue::{DrawQueues, RenderItems};
 use line::{Line, DrawLines, LineVertex};
 
-struct State<'a> {
+struct State {
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -35,9 +36,10 @@ struct State<'a> {
     camera_bind_group: wgpu::BindGroup,
     size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
-    draw_queues: DrawQueues<'a>,
+    draw_queues: DrawQueues,
     glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     clear_color: wgpu::Color,
+    texture_cahce: TextureCache,
     textured_rect: TexturedRect,
     coloured_rect: Rectangle,
     test_line: Line,
@@ -46,8 +48,9 @@ struct State<'a> {
     counter: f32,
 }
 
-impl<'a> State<'_> {
+impl State {
     fn new(window: &Window) -> Self {
+        let mut texture_cahce = TextureCache::new();
         let size = window.inner_size();
         // the insance is a handle to our GPU
         // Backends all means Vulkan + Metal + DX12 (probgonna use vulkan <3)
@@ -134,7 +137,7 @@ impl<'a> State<'_> {
         });
 
         let diffuse_bytes = include_bytes!("../assets/trans-test.png");
-        let diffuse_texture = texture::Texture::from_bytes(&device, &queue, Some("diffuse_texture"), diffuse_bytes).unwrap();
+        let diffuse_texture = texture::create_texture_from_bytes(&mut texture_cahce, &device, &queue, diffuse_bytes);
         let diffuse_rect = rect::TexturedRect::new(diffuse_texture, [-0.0, 0.0], [0.5, 0.5], &device);
 
         let coloured_rect = rect::Rectangle::new([-1.0, 1.0], [1.0, 0.5], [1.0, 0.0, 0.0, 1.0], &device);
@@ -206,6 +209,7 @@ impl<'a> State<'_> {
             render_pipeline,
             draw_queues: DrawQueues::new(),
             textured_rect: diffuse_rect,
+            texture_cahce,
             glyph_brush,
             coloured_rect,
             rendering_stuff,
@@ -249,6 +253,7 @@ impl<'a> State<'_> {
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
         self.counter = (self.counter + 1.0) % 360.0;
         self.input_handle.end_of_frame_refresh();
+        self.texture_cahce.chache_update();
         // for instance in self.instances.iter_mut() {
         //     let rotation_amout = cgmath::Quaternion::from_angle_y(cgmath::Rad(0.01));
         //     let current = instance.rotation;
@@ -289,8 +294,8 @@ impl<'a> State<'_> {
         // render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // you can only have 1 index buffer at a time
         // render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as u32); // draw() ignores the indices
         // render_pass.draw(0..self.num_vertices, 0..1); // tell it to draw something with x verticies and 1 instance of it
-        render_pass.draw_textured_rect(&self.textured_rect, &self.rendering_stuff.rect_index_buffer, &self.camera_bind_group);
-        render_pass.draw_rectangle(&self.coloured_rect, &self.rendering_stuff.rect_index_buffer, &self.rendering_stuff.white_pixel, &self.camera_bind_group);
+        // render_pass.draw_textured_rect(&self.textured_rect, &self.rendering_stuff.rect_index_buffer, &self.camera_bind_group);
+        // render_pass.draw_rectangle(&self.coloured_rect, &self.rendering_stuff.rect_index_buffer, &self.rendering_stuff.white_pixel, &self.camera_bind_group);
         render_pass.set_pipeline(&self.rendering_stuff.line_pipeline);
         render_pass.draw_line(&self.test_line, &self.camera_bind_group);
         drop(render_pass);
@@ -314,6 +319,16 @@ impl<'a> State<'_> {
         output.present();
 
         Ok(())
+    }
+
+    fn create_texture(&mut self, path: &str) -> TextureIndex {
+        let texture = Texture::from_path(&self.device, &self.queue, None, path).unwrap();
+        self.texture_cahce.add_texture(texture)
+    }
+
+    fn create_texture_from_bytes(&mut self, bytes: &[u8]) -> TextureIndex {
+        let texture = Texture::from_bytes(&self.device, &self.queue, None, bytes).unwrap();
+        self.texture_cahce.add_texture(texture)
     }
 
     fn set_background_colour(&mut self, colour: wgpu::Color) {
