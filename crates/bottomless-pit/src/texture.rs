@@ -1,4 +1,5 @@
 use image::GenericImageView;
+use crc32fast::Hasher;
 
 pub struct Texture {
     pub texture: wgpu::Texture,
@@ -6,15 +7,25 @@ pub struct Texture {
     pub sampler: wgpu::Sampler,
     pub(crate) bind_group: wgpu::BindGroup,
     pub(crate) bind_group_layout: wgpu::BindGroupLayout,
+    pub(crate) id: u32, //checksum used for hashing
 }
 
 impl Texture {
-    pub fn from_bytes(device: &wgpu::Device, queue: &wgpu::Queue, label: Option<&str>, bytes: &[u8]) -> Result<Self, image::ImageError>{
+    pub fn from_bytes(device: &wgpu::Device, queue: &wgpu::Queue, label: Option<&str>, bytes: &[u8]) -> Result<Self, image::ImageError> {
+        let mut hasher = Hasher::new();
+        hasher.update(bytes);
+        let checksum = hasher.finalize();
         let img = image::load_from_memory(bytes)?;
-        Ok(Self::from_image(device, queue, img, label))
+        Ok(Self::from_image(device, queue, img, label, checksum))
     }
 
-    pub fn from_image(device: &wgpu::Device, queue: &wgpu::Queue, img: image::DynamicImage, label: Option<&str>) -> Self {
+    pub fn from_path(device: &wgpu::Device, queue: &wgpu::Queue, label: Option<&str>, path: &str) -> Result<Self, image::ImageError> {
+        let bytes = std::fs::read(path).unwrap();
+        let out = Self::from_bytes(device, queue, label, &bytes)?;
+        Ok(out)
+    }
+
+    fn from_image(device: &wgpu::Device, queue: &wgpu::Queue, img: image::DynamicImage, label: Option<&str>, id: u32) -> Self {
         let diffuse_rgba = img.to_rgba8();
         let (width, height) = img.dimensions();
 
@@ -87,7 +98,8 @@ impl Texture {
             view, 
             sampler, 
             bind_group, 
-            bind_group_layout
+            bind_group_layout,
+            id,
         }
     }
 

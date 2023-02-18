@@ -4,3 +4,6 @@ members = ["crates/*"]
 
 [profile.dev.package."*"]
 opt-level = 3
+
+[profile.release.package."*"]
+opt-level = 3

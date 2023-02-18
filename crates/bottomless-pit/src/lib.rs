@@ -1,3 +1,4 @@
+mod cache;
 mod texture;
 mod rect;
 mod camera;
@@ -507,6 +508,10 @@ pub fn run() {
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
     let mut state = State::new(&window);
+    // let diffuse_bytes = include_bytes!("../assets/trans-test.png");
+    // let diffuse_texture = texture::Texture::from_bytes(&state.device, &state.queue, Some("diffuse_texture"), diffuse_bytes).unwrap();
+    // let diffuse_rect = rect::TexturedRect::new(diffuse_texture, [-0.0, 0.0], [0.5, 0.5], &state.device);
+    // state.draw_queues.add_textured_rectange(&diffuse_rect);
 
     event_loop.run(move |event, _, control_flow| {
         match event {
@@ -529,15 +534,7 @@ pub fn run() {
                 window_id,
             } if window_id == window.id() => if !state.input(event) {
                 match event {
-                    WindowEvent::CloseRequested | WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                state: ElementState::Pressed,
-                                virtual_keycode: Some(VirtualKeyCode::Escape),
-                                ..
-                            },
-                        ..
-                    } => *control_flow = ControlFlow::Exit,
+                    WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                     WindowEvent::Resized(physical_size) => {
                         state.resize(*physical_size);
                     },
