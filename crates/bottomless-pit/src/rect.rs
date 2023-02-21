@@ -90,7 +90,7 @@ impl Rectangle {
 }
 
 pub struct TexturedRect {
-    texture: TextureIndex,
+    pub texture: TextureIndex,
     points: [Vertex; 4],
     vertex_buffer: wgpu::Buffer,
 }
@@ -119,6 +119,10 @@ impl TexturedRect {
 
     pub fn get_texture_id(&self) -> u32 {
         self.texture.id
+    }
+
+    pub(crate) fn get_texutre(&self) -> &TextureIndex {
+        &self.texture
     }
 
     pub fn get_bind_group_layout(&self) -> &wgpu::BindGroupLayout {

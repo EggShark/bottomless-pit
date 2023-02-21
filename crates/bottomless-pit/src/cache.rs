@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use crate::texture::Texture;
 
+#[derive(Debug)]
 pub(crate) struct TextureCache {
     cache: HashMap<u32, ChachedTexture>,
 }
@@ -46,11 +47,52 @@ impl TextureCache {
 
         index
     }
+
+    pub fn rebuild_from_index(&mut self, index: &TextureIndex, device: &wgpu::Device) {
+        let bind_group_layout = Texture::make_bind_group_layout(device);
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry{
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&index.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&index.sampler),
+                }
+            ],
+            label: Some("diffuse_bind_group"),
+        });
+
+        let chaced_texture = ChachedTexture {
+            bind_group: bind_group,
+            time_since_used: 0
+        };
+
+        self.cache.insert(index.id, chaced_texture);
+    }
+
+    pub fn get(&self, key: &TextureIndex) -> Option<&ChachedTexture> {
+        self.cache.get(&key.id)
+    }
+
+    pub fn get_mut(&mut self, key: &TextureIndex) -> Option<&mut ChachedTexture> {
+        self.cache.get_mut(&key.id)
+    }
 }
 
+impl std::ops::Index<TextureIndex> for TextureCache {
+    type Output = ChachedTexture;
+    fn index(&self, index: TextureIndex) -> &Self::Output {
+        self.cache.get(&index.id).unwrap_or_else(|| panic!("No Texture found for id {}", index.id))
+    }
+}
+
+#[derive(Debug)]
 pub(crate) struct ChachedTexture {
     bind_group: wgpu::BindGroup,
-    time_since_used: i32,
+    pub(crate) time_since_used: i32,
 }
 
 pub struct TextureIndex {

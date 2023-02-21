@@ -22,7 +22,7 @@ use winit::{
     window::{WindowBuilder, Window}
 };
 use draw_queue::{DrawQueues, RenderItems};
-use line::{Line, DrawLines, LineVertex};
+use line::{Line, LineVertex};
 
 struct State {
     surface: wgpu::Surface,
@@ -42,7 +42,6 @@ struct State {
     texture_cahce: TextureCache,
     textured_rect: TexturedRect,
     coloured_rect: Rectangle,
-    test_line: Line,
     rendering_stuff: MyRenderingStuff,
     input_handle: InputHandle,
     counter: f32,
@@ -193,7 +192,6 @@ impl State {
             .build(&device, wgpu::TextureFormat::Bgra8UnormSrgb);
         
         let rendering_stuff = MyRenderingStuff::new(&device, &queue, &[&camera_bind_group_layout], config.format);
-        let test_line = Line::new([0.1, 0.0], [0.5, 0.0], [0.0, 0.0, 0.0, 1.0], &device);
         Self {
             surface,
             device,
@@ -214,7 +212,6 @@ impl State {
             coloured_rect,
             rendering_stuff,
             input_handle: InputHandle::new(),
-            test_line,
             counter: 0.0,
         }
     }
@@ -253,6 +250,8 @@ impl State {
         self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
         self.counter = (self.counter + 1.0) % 360.0;
         self.input_handle.end_of_frame_refresh();
+        let test_line = Line::new([0.1, 0.0], [0.5, 0.0], [0.0, 0.0, 0.0, 1.0]);
+        self.draw_queues.add_line(test_line.start, test_line.end);
         self.texture_cahce.chache_update();
         // for instance in self.instances.iter_mut() {
         //     let rotation_amout = cgmath::Quaternion::from_angle_y(cgmath::Rad(0.01));
@@ -273,6 +272,8 @@ impl State {
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor{
             label: Some("Render Encoder"),
         });
+        
+        let render_items = self.draw_queues.process_queued(&self.device);
 
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor{
             label: Some("Render Pass"),
@@ -297,7 +298,9 @@ impl State {
         // render_pass.draw_textured_rect(&self.textured_rect, &self.rendering_stuff.rect_index_buffer, &self.camera_bind_group);
         // render_pass.draw_rectangle(&self.coloured_rect, &self.rendering_stuff.rect_index_buffer, &self.rendering_stuff.white_pixel, &self.camera_bind_group);
         render_pass.set_pipeline(&self.rendering_stuff.line_pipeline);
-        render_pass.draw_line(&self.test_line, &self.camera_bind_group);
+        render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+        render_pass.set_vertex_buffer(0, render_items.line_buffer.slice(..));
+        render_pass.draw(0..render_items.number_of_line_verticies, 0..1);
         drop(render_pass);
 
         let mut staging_belt = wgpu::util::StagingBelt::new(100);
