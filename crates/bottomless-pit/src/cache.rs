@@ -89,6 +89,13 @@ impl std::ops::Index<TextureIndex> for TextureCache {
     }
 }
 
+impl std::ops::Index<u32> for TextureCache {
+    type Output = ChachedTexture;
+    fn index(&self, index: u32) -> &Self::Output {
+        self.cache.get(&index).unwrap_or_else(|| panic!("No Texture found for id {}", index))
+    }
+}
+
 #[derive(Debug)]
 pub(crate) struct ChachedTexture {
     bind_group: wgpu::BindGroup,
