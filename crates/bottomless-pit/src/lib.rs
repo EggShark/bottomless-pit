@@ -8,7 +8,7 @@ mod input;
 mod draw_queue;
 
 use cgmath::{Point2, Transform};
-use cache::{TextureCache, ChachedTexture, TextureIndex};
+use cache::{TextureCache, TextureIndex};
 use input::InputHandle;
 use rect::{TexturedRect, Rectangle};
 use texture::Texture;
@@ -21,7 +21,7 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::{WindowBuilder, Window}
 };
-use draw_queue::{DrawQueues, RenderItems, BindGroups};
+use draw_queue::{DrawQueues, BindGroups};
 use line::{Line, LineVertex};
 
 struct State {
@@ -137,7 +137,7 @@ impl State {
 
         let diffuse_bytes = include_bytes!("../assets/trans-test.png");
         let diffuse_texture = texture::create_texture_from_bytes(&mut texture_cahce, &device, &queue, diffuse_bytes);
-        let diffuse_rect = rect::TexturedRect::new(diffuse_texture, [-0.0, 0.0], [0.5, 0.5], &device);
+        let diffuse_rect = rect::TexturedRect::new(diffuse_texture, [-0.0, 0.0], [0.5, 0.5]);
 
         let coloured_rect = rect::Rectangle::new([-1.0, 1.0], [1.0, 0.5], [1.0, 0.0, 0.0, 1.0]);
 
@@ -251,9 +251,11 @@ impl State {
         self.counter = (self.counter + 1.0) % 360.0;
         self.input_handle.end_of_frame_refresh();
         let test_line = Line::new([0.1, 0.0], [0.5, 0.0], [0.0, 0.0, 0.0, 1.0]);
-        let test_rect = Rectangle::new([0.0, 0.0], [0.5, 0.5], [0.0, 0.0, 0.0, 1.0]);
+        let test_rect = Rectangle::new([-0.5, 0.0], [0.5, 0.5], [0.0, 0.0, 0.0, 1.0]);
         self.draw_queues.add_line(test_line.start, test_line.end);
+        self.draw_queues.add_textured_rectange(&mut self.texture_cahce, &self.textured_rect, &self.device);
         self.draw_queues.add_rectangle(&test_rect);
+        self.draw_queues.add_rectangle(&self.coloured_rect);
         self.texture_cahce.chache_update();
         // for instance in self.instances.iter_mut() {
         //     let rotation_amout = cgmath::Quaternion::from_angle_y(cgmath::Rad(0.01));
@@ -309,6 +311,7 @@ impl State {
                     Some(switch_point) => current_bind_group.point as u32..switch_point.point as u32,
                     None => current_bind_group.point as u32..render_items.number_of_rectangle_indicies,
                 };
+                println!("{:?}", current_bind_group);
                 println!("{:?}", draw_range);
                 render_pass.draw_indexed(draw_range, 0, 0..1); //if stuff goes wack check for base_vertex
             }
@@ -366,7 +369,6 @@ impl State {
 
 struct MyRenderingStuff {
     white_pixel: wgpu::BindGroup,
-    rect_index_buffer: wgpu::Buffer,
     line_pipeline: wgpu::RenderPipeline,
 }
 
@@ -460,12 +462,6 @@ impl MyRenderingStuff {
             label: Some("diffuse_bind_group"),
         });
 
-        let rect_index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(RECT_INDICIES),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-
         let line_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/line_shader.wgsl").into()),
@@ -475,7 +471,6 @@ impl MyRenderingStuff {
 
         Self {
             white_pixel,
-            rect_index_buffer,
             line_pipeline,
         }
     }

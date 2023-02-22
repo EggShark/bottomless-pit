@@ -1,5 +1,3 @@
-use wgpu::util::DeviceExt;
-
 pub struct Line {
     pub start: LineVertex,
     pub end: LineVertex,

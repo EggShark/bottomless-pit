@@ -39,7 +39,6 @@ impl TextureCache {
         let index = TextureIndex {
             view: texture.view,
             sampler: texture.sampler,
-            bind_group_layout: texture.bind_group_layout,
             id: texture.id,
         };
 
@@ -105,7 +104,6 @@ pub(crate) struct ChachedTexture {
 pub struct TextureIndex {
     view: wgpu::TextureView,
     sampler: wgpu::Sampler,
-    pub(crate) bind_group_layout: wgpu::BindGroupLayout,
     // the info needed to recrate the texture when necciscarry
     pub(crate) id: u32 //crc32 checksum
 }

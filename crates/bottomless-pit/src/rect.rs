@@ -1,6 +1,4 @@
-use wgpu::util::DeviceExt;
-
-use crate::{Vertex, Texture, cache::TextureIndex};
+use crate::{Vertex, cache::TextureIndex};
 
 pub const RECT_INDICIES: &[u16] = &[
     0, 1, 2,
@@ -38,7 +36,7 @@ impl Rectangle {
         }
     }
 
-    pub fn from_corners(corners: [[f32; 2]; 2], colour: [f32; 4], device: &wgpu::Device) -> Self {
+    pub fn from_corners(corners: [[f32; 2]; 2], colour: [f32; 4]) -> Self {
         let width = corners[0][0] - corners[1][0];
         let height = corners[1][1] - corners[0][1];
         
@@ -75,11 +73,10 @@ impl Rectangle {
 pub struct TexturedRect {
     pub texture: TextureIndex,
     points: [Vertex; 4],
-    vertex_buffer: wgpu::Buffer,
 }
 
 impl TexturedRect {
-    pub fn new(texture: TextureIndex, pos: [f32; 2], size: [f32; 2], device: &wgpu::Device) -> Self {
+    pub fn new(texture: TextureIndex, pos: [f32; 2], size: [f32; 2]) -> Self {
         let colour = [1.0, 1.0, 1.0, 1.0];
         let points = [
             Vertex::from_2d(pos, [0.0, 0.0], colour), 
@@ -87,16 +84,10 @@ impl TexturedRect {
             Vertex::from_2d([pos[0] + size[0], pos[1] - size[1]], [1.0, 1.0], colour),
             Vertex::from_2d([pos[0], pos[1] - size[1]], [0.0, 1.0], colour),
         ];
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(&points),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
 
         Self {
             texture,
             points,
-            vertex_buffer,
         }
     }
 
@@ -108,29 +99,7 @@ impl TexturedRect {
         &self.texture
     }
 
-    pub fn get_bind_group_layout(&self) -> &wgpu::BindGroupLayout {
-        &self.texture.bind_group_layout
-    }
-
     pub fn get_vertices(&self) -> [Vertex; 4] {
         self.points
     }
 }
-
-// impl<'a, 'b> DrawRectangles<'b> for wgpu::RenderPass<'a> where 'b: 'a, {
-//     fn draw_rectangle(&mut self, rect: &'a Rectangle, index_buffer: &'a wgpu::Buffer, white_pixel: &'a wgpu::BindGroup, camera_bind_group: &'a wgpu::BindGroup) {
-//         self.set_vertex_buffer(0, rect.vertex_buffer.slice(..));
-//         self.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-//         self.set_bind_group(0, white_pixel, &[]);
-//         self.set_bind_group(1, camera_bind_group, &[]);
-//         self.draw_indexed(0..6, 0, 0..1);
-//     }
-
-//     fn draw_textured_rect(&mut self, rect: &'b TexturedRect, index_buffer: &'a wgpu::Buffer, camera_bind_group: &'b wgpu::BindGroup) {
-//         self.set_vertex_buffer(0, rect.vertex_buffer.slice(..));
-//         self.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-//         self.set_bind_group(0, &rect.texture.bind_group, &[]);
-//         self.set_bind_group(1, camera_bind_group, &[]);
-//         self.draw_indexed(0..6, 0, 0..1);
-//     }
-// }
