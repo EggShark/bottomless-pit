@@ -21,7 +21,7 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::{WindowBuilder, Window}
 };
-use draw_queue::{DrawQueues, RenderItems};
+use draw_queue::{DrawQueues, RenderItems, BindGroups};
 use line::{Line, LineVertex};
 
 struct State {
@@ -139,7 +139,7 @@ impl State {
         let diffuse_texture = texture::create_texture_from_bytes(&mut texture_cahce, &device, &queue, diffuse_bytes);
         let diffuse_rect = rect::TexturedRect::new(diffuse_texture, [-0.0, 0.0], [0.5, 0.5], &device);
 
-        let coloured_rect = rect::Rectangle::new([-1.0, 1.0], [1.0, 0.5], [1.0, 0.0, 0.0, 1.0], &device);
+        let coloured_rect = rect::Rectangle::new([-1.0, 1.0], [1.0, 0.5], [1.0, 0.0, 0.0, 1.0]);
 
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
             label: Some("Render Pipeline Layout"),
@@ -251,7 +251,9 @@ impl State {
         self.counter = (self.counter + 1.0) % 360.0;
         self.input_handle.end_of_frame_refresh();
         let test_line = Line::new([0.1, 0.0], [0.5, 0.0], [0.0, 0.0, 0.0, 1.0]);
+        let test_rect = Rectangle::new([0.0, 0.0], [0.5, 0.5], [0.0, 0.0, 0.0, 1.0]);
         self.draw_queues.add_line(test_line.start, test_line.end);
+        self.draw_queues.add_rectangle(&test_rect);
         self.texture_cahce.chache_update();
         // for instance in self.instances.iter_mut() {
         //     let rotation_amout = cgmath::Quaternion::from_angle_y(cgmath::Rad(0.01));
@@ -287,7 +289,30 @@ impl State {
             })],
             depth_stencil_attachment: None,
         });
+        
         render_pass.set_pipeline(&self.render_pipeline);
+        render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+        if render_items.number_of_rectangle_indicies != 0 {
+            render_pass.set_vertex_buffer(0, render_items.rectangle_buffer.slice(..));
+            render_pass.set_index_buffer(render_items.rectangle_index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            let mut current_bind_group = &render_items.rectangle_bind_group_switches[0];
+            for (idx, bind_group_switch_point) in render_items.rectangle_bind_group_switches.iter().enumerate() {
+                if bind_group_switch_point.bind_group != current_bind_group.bind_group {
+                    current_bind_group = &bind_group_switch_point;
+                }
+                let bind_group = match &current_bind_group.bind_group {
+                    &BindGroups::WhitePixel => &self.rendering_stuff.white_pixel,
+                    &BindGroups::Custom {bind_group} => &self.texture_cahce[bind_group].bind_group,
+                };
+                render_pass.set_bind_group(0, bind_group, &[]);
+                let draw_range = match render_items.rectangle_bind_group_switches.get(idx + 1) {
+                    Some(switch_point) => current_bind_group.point as u32..switch_point.point as u32,
+                    None => current_bind_group.point as u32..render_items.number_of_rectangle_indicies,
+                };
+                println!("{:?}", draw_range);
+                render_pass.draw_indexed(draw_range, 0, 0..1); //if stuff goes wack check for base_vertex
+            }
+        }
         // render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
         // render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
         // render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));

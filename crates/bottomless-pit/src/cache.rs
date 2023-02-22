@@ -98,7 +98,7 @@ impl std::ops::Index<u32> for TextureCache {
 
 #[derive(Debug)]
 pub(crate) struct ChachedTexture {
-    bind_group: wgpu::BindGroup,
+    pub(crate) bind_group: wgpu::BindGroup,
     pub(crate) time_since_used: i32,
 }
 

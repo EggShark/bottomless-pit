@@ -15,7 +15,6 @@ pub(crate) struct DrawQueues {
     rect_indicies: Vec<u16>,
     rectangle_bind_group_switches: Vec<BindGroupSwitchPoint>,
     line_vertices: Vec<LineVertex>,
-    number_of_line_vertices: u32
 }
 
 impl DrawQueues {
@@ -25,7 +24,6 @@ impl DrawQueues {
             rect_indicies: Vec::new(),
             rectangle_bind_group_switches: Vec::new(),
             line_vertices: Vec::new(),
-            number_of_line_vertices: 0,
         }
     }
 
@@ -34,13 +32,11 @@ impl DrawQueues {
         let rect_indicies = rect_indicies.unwrap_or(Vec::new());
         let rectangle_bind_group_switches = rectangle_bind_group_switches.unwrap_or(Vec::new());
         let line_vertices = line_vertexes.unwrap_or(Vec::new());
-        let number_of_line_vertices = line_vertices.len() as u32;
         Self {
             rect_vertices,
             rect_indicies,
             rectangle_bind_group_switches,
             line_vertices,
-            number_of_line_vertices,
         }
     }
 
@@ -57,8 +53,12 @@ impl DrawQueues {
             0 + (4 * number_of_rectanges), 1 + (4 * number_of_rectanges), 2 + (4 * number_of_rectanges),
             3 + (4 * number_of_rectanges), 0 + (4 * number_of_rectanges), 2 + (4 * number_of_rectanges),
         ];
-
-        let last_bind_group = &self.rectangle_bind_group_switches[self.rectangle_bind_group_switches.len() - 1].bind_group;
+        let last_bind_group = if self.rectangle_bind_group_switches.is_empty() {
+            &BindGroups::WhitePixel
+        } else {
+            &self.rectangle_bind_group_switches[self.rectangle_bind_group_switches.len() - 1].bind_group
+        };
+        
         if self.rectangle_bind_group_switches.is_empty() || last_bind_group != &BindGroups::WhitePixel {
             self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
                 bind_group: BindGroups::WhitePixel,
@@ -97,10 +97,12 @@ impl DrawQueues {
     pub(crate) fn add_line(&mut self, start: LineVertex, end: LineVertex) {
         self.line_vertices.push(start);
         self.line_vertices.push(end);
-        self.number_of_line_vertices += 2;
     }
 
     pub(crate) fn process_queued(&mut self, device: &wgpu::Device) -> RenderItems {
+        let number_of_line_verticies = self.line_vertices.len() as u32;
+        let number_of_rectangle_verticies = self.rect_vertices.len() as u32;
+        let number_of_rectangle_indicies = self.rect_indicies.len() as u32;
         let rectangle_vertices = std::mem::take(&mut self.rect_vertices);
         let rectangle_indicies = std::mem::take(&mut self.rect_indicies);
         let line_verticies = std::mem::take(&mut self.line_vertices);
@@ -108,27 +110,29 @@ impl DrawQueues {
         let rectangle_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("General Buffer"),
             contents: bytemuck::cast_slice(&rectangle_vertices),
-            usage: wgpu::BufferUsages::VERTEX
+            usage: wgpu::BufferUsages::VERTEX,
         });
 
         let rectangle_index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("General Index Buffer"),
             contents: bytemuck::cast_slice(&rectangle_indicies),
-            usage: wgpu::BufferUsages::VERTEX
+            usage: wgpu::BufferUsages::INDEX,
         });
 
         let line_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Line Buffer"),
             contents: bytemuck::cast_slice(&line_verticies),
-            usage: wgpu::BufferUsages::VERTEX
+            usage: wgpu::BufferUsages::VERTEX,
         });
 
         RenderItems {
             rectangle_buffer,
             rectangle_index_buffer,
+            number_of_rectangle_verticies,
+            number_of_rectangle_indicies,
             rectangle_bind_group_switches: std::mem::take(&mut self.rectangle_bind_group_switches),
             line_buffer,
-            number_of_line_verticies: std::mem::take(&mut self.number_of_line_vertices),
+            number_of_line_verticies,
         }
     }
 }
@@ -136,6 +140,8 @@ impl DrawQueues {
 pub(crate) struct RenderItems {
     pub(crate) rectangle_buffer: wgpu::Buffer,
     pub(crate) rectangle_index_buffer: wgpu::Buffer,
+    pub(crate) number_of_rectangle_verticies: u32,
+    pub(crate) number_of_rectangle_indicies: u32,
     pub(crate) rectangle_bind_group_switches: Vec<BindGroupSwitchPoint>, 
     pub(crate) line_buffer: wgpu::Buffer,
     pub(crate) number_of_line_verticies: u32,

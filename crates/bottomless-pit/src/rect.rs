@@ -9,11 +9,10 @@ pub const RECT_INDICIES: &[u16] = &[
 
 pub struct Rectangle {
     points: [Vertex; 4],
-    vertex_buffer: wgpu::Buffer,
 }
 
 impl Rectangle {
-    pub fn new(pos: [f32; 2], size: [f32; 2], colour: [f32; 4], device: &wgpu::Device) -> Self {
+    pub fn new(pos: [f32; 2], size: [f32; 2], colour: [f32; 4]) -> Self {
         let points = [
             Vertex::from_2d(pos, [0.0, 0.0], colour), 
             Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour),
@@ -21,15 +20,12 @@ impl Rectangle {
             Vertex::from_2d([pos[0], pos[1] - size[1]], [0.0, 1.0], colour),
         ];
 
-        let vertex_buffer = Self::create_vertex_buffer(device, &points);
-
         Self {
             points,
-            vertex_buffer,
         }
     }
 
-    pub fn from_points(points: [[f32; 2]; 4], colour: [f32; 4], device: &wgpu::Device) -> Self {
+    pub fn from_points(points: [[f32; 2]; 4], colour: [f32; 4]) -> Self {
         let points = [
             Vertex::from_2d(points[0], [0.0, 0.0], colour),
             Vertex::from_2d(points[1], [1.0, 0.0], colour),
@@ -37,11 +33,8 @@ impl Rectangle {
             Vertex::from_2d(points[3], [0.0, 1.0], colour),
         ]; 
 
-        let vertex_buffer = Self::create_vertex_buffer(device, &points);
-
         Self {
             points,
-            vertex_buffer,
         }
     }
 
@@ -49,7 +42,7 @@ impl Rectangle {
         let width = corners[0][0] - corners[1][0];
         let height = corners[1][1] - corners[0][1];
         
-        Self::new(corners[0], [width, height], colour, device)
+        Self::new(corners[0], [width, height], colour)
     }
 
     pub fn get_width(&self) -> f32 {
@@ -76,16 +69,6 @@ impl Rectangle {
 
     pub fn get_vertices(&self) -> [Vertex; 4] {
         self.points
-    }
-
-    fn create_vertex_buffer(device: &wgpu::Device, points: &[Vertex]) -> wgpu::Buffer {
-        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor{
-            label: Some("Vertex Buffer"),
-            contents: bytemuck::cast_slice(&points),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
-        vertex_buffer
     }
 }
 
