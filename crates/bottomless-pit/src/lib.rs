@@ -311,9 +311,7 @@ impl State {
                     Some(switch_point) => current_bind_group.point as u32..switch_point.point as u32,
                     None => current_bind_group.point as u32..render_items.number_of_rectangle_indicies,
                 };
-                println!("{:?}", current_bind_group);
-                println!("{:?}", draw_range);
-                render_pass.draw_indexed(draw_range, 0, 0..1); //if stuff goes wack check for base_vertex
+                render_pass.draw_indexed(draw_range, 0, 0..1);
             }
         }
         // render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
@@ -540,20 +538,16 @@ impl InstanceRaw {
     }
 }
 
-pub fn run() {
+pub fn run(game: Box<dyn Game>) -> ! {
     env_logger::init();
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
     let mut state = State::new(&window);
-    // let diffuse_bytes = include_bytes!("../assets/trans-test.png");
-    // let diffuse_texture = texture::Texture::from_bytes(&state.device, &state.queue, Some("diffuse_texture"), diffuse_bytes).unwrap();
-    // let diffuse_rect = rect::TexturedRect::new(diffuse_texture, [-0.0, 0.0], [0.5, 0.5], &state.device);
-    // state.draw_queues.add_textured_rectange(&diffuse_rect);
-
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
+                game.render();
                 match state.render() {
                     Ok(_) => {},
                     // reconfigure surface if lost
@@ -561,6 +555,7 @@ pub fn run() {
                     Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                     Err(e) => eprintln!("{:?}", e),
                 }
+                game.update();
                 state.update();
             }
             Event::MainEventsCleared => {
@@ -585,6 +580,14 @@ pub fn run() {
             _ => {}
         }
     });
+}
+
+pub trait Game {
+    fn render(&self);
+    fn update(&self);
+    fn on_close(&self) {
+
+    } 
 }
 
 fn make_pipeline(device: &wgpu::Device, topology: wgpu::PrimitiveTopology, bind_group_layouts: &[&wgpu::BindGroupLayout], vertex_buffers: &[wgpu::VertexBufferLayout], shader: &wgpu::ShaderModule, texture_format: wgpu::TextureFormat, label: Option<&str>) -> wgpu::RenderPipeline {
