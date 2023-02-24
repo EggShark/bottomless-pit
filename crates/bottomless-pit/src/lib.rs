@@ -6,8 +6,10 @@ mod vertex;
 mod line;
 mod input;
 mod draw_queue;
+mod matrix_math;
+mod colour;
 
-use cgmath::{Point2, Transform};
+use cgmath::{Point2};
 use cache::{TextureCache, TextureIndex};
 use input::InputHandle;
 use rect::{TexturedRect, Rectangle};
@@ -23,6 +25,7 @@ use winit::{
 };
 use draw_queue::{DrawQueues, BindGroups};
 use line::{Line, LineVertex};
+use matrix_math::*;
 
 struct State {
     surface: wgpu::Surface,
@@ -257,17 +260,6 @@ impl State {
         self.draw_queues.add_rectangle(&test_rect);
         self.draw_queues.add_rectangle(&self.coloured_rect);
         self.texture_cahce.chache_update();
-        // for instance in self.instances.iter_mut() {
-        //     let rotation_amout = cgmath::Quaternion::from_angle_y(cgmath::Rad(0.01));
-        //     let current = instance.rotation;
-        //     instance.rotation = rotation_amout * current;
-        // }
-
-        // let instance_data = self.instances
-        //     .iter()
-        //     .map(Instance::to_raw)
-        //     .collect::<Vec<InstanceRaw>>();
-        // self.queue.write_buffer(&self.instance_buffer, 0, bytemuck::cast_slice(&instance_data));
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -314,15 +306,6 @@ impl State {
                 render_pass.draw_indexed(draw_range, 0, 0..1);
             }
         }
-        // render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-        // render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-        // render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        // render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-        // render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16); // you can only have 1 index buffer at a time
-        // render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as u32); // draw() ignores the indices
-        // render_pass.draw(0..self.num_vertices, 0..1); // tell it to draw something with x verticies and 1 instance of it
-        // render_pass.draw_textured_rect(&self.textured_rect, &self.rendering_stuff.rect_index_buffer, &self.camera_bind_group);
-        // render_pass.draw_rectangle(&self.coloured_rect, &self.rendering_stuff.rect_index_buffer, &self.rendering_stuff.white_pixel, &self.camera_bind_group);
         render_pass.set_pipeline(&self.rendering_stuff.line_pipeline);
         render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
         render_pass.set_vertex_buffer(0, render_items.line_buffer.slice(..));
@@ -372,8 +355,6 @@ struct MyRenderingStuff {
 
 impl MyRenderingStuff {
     fn new(device: &wgpu::Device, queue: &wgpu::Queue, bind_group_layouts: &[&wgpu::BindGroupLayout], texture_format: wgpu::TextureFormat) -> Self {
-        use crate::rect::RECT_INDICIES;
-
         let white_pixel_image = image::load_from_memory(WHITE_PIXEL).unwrap();
         let white_pixel_rgba = white_pixel_image.to_rgba8();
         let (width, height) = white_pixel_image.dimensions();
@@ -474,70 +455,6 @@ impl MyRenderingStuff {
     }
 }
 
-// you will serve as a reminder
-struct Instance {
-    position: cgmath::Vector3<f32>,
-    rotation: cgmath::Quaternion<f32>,
-    x_scale: f32,
-    y_scale: f32,
-}
-
-impl Instance {
-    fn to_raw(&self) -> InstanceRaw {
-        InstanceRaw { 
-            model: (cgmath::Matrix4::from_translation(self.position) * cgmath::Matrix4::from(self.rotation) * cgmath::Matrix4::from_nonuniform_scale(self.x_scale, self.y_scale, 1.0)).into()
-        }
-    }
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct InstanceRaw {
-    model: [[f32; 4]; 4],
-}
-
-impl InstanceRaw {
-    const IDENTITY: Self = Self {
-        model: [
-            [1.0, 0.0, 0.0, 0.0],
-            [0.0, 1.0, 0.0, 0.0],
-            [0.0, 0.0, 1.0, 0.0],
-            [0.0, 0.0, 0.0, 1.0],
-        ]
-    };
-
-    fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        use std::mem;
-        wgpu::VertexBufferLayout{
-            array_stride: mem::size_of::<InstanceRaw>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Instance,
-            attributes: &[
-                wgpu::VertexAttribute {
-                    offset: 0,
-                    shader_location: 5,
-                    format: wgpu::VertexFormat::Float32x4,
-                },
-                // to a 32x4 is only the four points of the vertex not counting the fact than an instance is 4x4 so we need 4 entries
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
-                    shader_location: 6,
-                    format: wgpu::VertexFormat::Float32x4,
-                },
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
-                    shader_location: 7,
-                    format: wgpu::VertexFormat::Float32x4,
-                },
-                wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32;12]>() as wgpu::BufferAddress,
-                    shader_location: 8,
-                    format: wgpu::VertexFormat::Float32x4,
-                },
-            ],
-        }
-    }
-}
-
 pub fn run(game: Box<dyn Game>) -> ! {
     env_logger::init();
     let event_loop = EventLoop::new();
@@ -590,7 +507,14 @@ pub trait Game {
     } 
 }
 
-fn make_pipeline(device: &wgpu::Device, topology: wgpu::PrimitiveTopology, bind_group_layouts: &[&wgpu::BindGroupLayout], vertex_buffers: &[wgpu::VertexBufferLayout], shader: &wgpu::ShaderModule, texture_format: wgpu::TextureFormat, label: Option<&str>) -> wgpu::RenderPipeline {
+fn make_pipeline(
+    device: &wgpu::Device, 
+    topology: wgpu::PrimitiveTopology, 
+    bind_group_layouts: &[&wgpu::BindGroupLayout], 
+    vertex_buffers: &[wgpu::VertexBufferLayout], 
+    shader: &wgpu::ShaderModule, 
+    texture_format: wgpu::TextureFormat, label: Option<&str>
+) -> wgpu::RenderPipeline {
     let layout_label = match label {
         Some(label) => Some(format!("{} layout", label)),
         None => None
@@ -639,71 +563,6 @@ fn make_pipeline(device: &wgpu::Device, topology: wgpu::PrimitiveTopology, bind_
         },
         multiview: None,
     })
-}
-
-fn measure_text(text: &str, brush: &mut wgpu_glyph::GlyphBrush<()>, scale: f32) -> wgpu_glyph::ab_glyph::Rect {
-    let section = wgpu_glyph::Section {
-        text: vec![wgpu_glyph::Text::new(text).with_scale(scale)],
-        screen_position: (1.0, 1.0),
-        bounds: (f32::MAX, f32::MAX),
-        ..Default::default()
-    };
-    brush.glyph_bounds(section).unwrap_or(wgpu_glyph::ab_glyph::Rect{
-        max: wgpu_glyph::ab_glyph::point(0.0,0.0),
-        min: wgpu_glyph::ab_glyph::point(0.0,0.0),
-    })
-}
-
-fn get_text_rotation_matrix(section: &wgpu_glyph::Section, degree: f32, brush: &mut wgpu_glyph::GlyphBrush<()>) -> cgmath::Matrix4<f32> {
-    let measurement = brush.glyph_bounds(section).unwrap();
-    let mid = get_mid_point(measurement);
-    let rotation_matrix = unflatten_matrix(calculate_rotation_matrix(degree));
-    let translation_matrix = cgmath::Matrix4::from_translation(cgmath::vec3(mid.x, mid.y, 0.0));
-    let inverse_translation = translation_matrix.inverse_transform().unwrap_or(unflatten_matrix(IDENTITY_MATRIX));
-    // Creates a matrix like
-    // 1 0 0 0
-    // 0 1 0 0
-    // 0 0 1 0
-    // x y z 1
-    let out = translation_matrix * rotation_matrix * inverse_translation;
-    out
-
-}
-
-fn normalize_points<T: std::ops::Div<Output = T>>(point: Point2<T>, width: T, height: T) -> Point2<T> {
-    let x = point.x / width;
-    let y = point.y / height;
-    Point2 {x, y}
-}
-
-fn get_mid_point(rectangle: wgpu_glyph::ab_glyph::Rect) -> Point2<f32> {
-    let x_mid = (rectangle.min.x + rectangle.max.x) / 2.0;
-    let y_mid = (rectangle.min.y + rectangle.max.y) / 2.0;
-
-    Point2 { x: x_mid, y: y_mid}
-}
-
-fn calculate_rotation_matrix(degree: f32) -> [f32; 16] {
-    let degree = degree.to_radians();
-    [
-        degree.cos(), -degree.sin(), 0.0, 0.0,
-        degree.sin(), degree.cos(), 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0,
-    ]
-}
-
-fn flatten_matrix(matrix: cgmath::Matrix4<f32>) -> [f32; 16] {
-    [matrix.x.x, matrix.x.y, matrix.x.z, matrix.x.w, matrix.y.x, matrix.y.y, matrix.y.z, matrix.y.w, matrix.z.x, matrix.z.y, matrix.z.z, matrix.z.w, matrix.w.x, matrix.w.y, matrix.w.z, matrix.w.w]
-}
-
-fn unflatten_matrix(array: [f32; 16]) -> cgmath::Matrix4<f32> {
-    let r1 = [array[0], array[1], array[2], array[3]];
-    let r2 = [array[4], array[5], array[6], array[7]];
-    let r3 = [array[8], array[9], array[10], array[11]];
-    let r4 = [array[12], array[13], array[14], array[15]];
-    let into = [r1, r2, r3, r4];
-    cgmath::Matrix4::from(into)
 }
 
 const IDENTITY_MATRIX: [f32; 16] = [
