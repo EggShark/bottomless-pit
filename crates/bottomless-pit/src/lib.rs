@@ -311,6 +311,7 @@ impl State {
                     Some(switch_point) => current_bind_group.point as u32..switch_point.point as u32,
                     None => current_bind_group.point as u32..render_items.number_of_rectangle_indicies,
                 };
+                println!("{:?}", draw_range);
                 render_pass.draw_indexed(draw_range, 0, 0..1);
             }
         }
@@ -372,7 +373,6 @@ struct MyRenderingStuff {
 
 impl MyRenderingStuff {
     fn new(device: &wgpu::Device, queue: &wgpu::Queue, bind_group_layouts: &[&wgpu::BindGroupLayout], texture_format: wgpu::TextureFormat) -> Self {
-        use crate::rect::RECT_INDICIES;
 
         let white_pixel_image = image::load_from_memory(WHITE_PIXEL).unwrap();
         let white_pixel_rgba = white_pixel_image.to_rgba8();
