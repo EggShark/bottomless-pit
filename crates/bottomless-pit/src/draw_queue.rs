@@ -5,11 +5,12 @@ use crate::LineVertex;
 use crate::cache::TextureCache;
 use crate::rect::Rectangle;
 use crate::rect::TexturedRect;
+use std::f32::consts::PI;
 
 #[derive(Debug)]
 pub(crate) struct DrawQueues {
-    rect_vertices: Vec<Vertex>,
-    rect_indicies: Vec<u16>,
+    general_vertices: Vec<Vertex>,
+    general_indicies: Vec<u16>,
     rectangle_bind_group_switches: Vec<BindGroupSwitchPoint>,
     line_vertices: Vec<LineVertex>,
 }
@@ -17,8 +18,8 @@ pub(crate) struct DrawQueues {
 impl DrawQueues {
     pub(crate) fn new() -> Self {
         Self {
-            rect_vertices: Vec::new(),
-            rect_indicies: Vec::new(),
+            general_vertices: Vec::new(),
+            general_indicies: Vec::new(),
             rectangle_bind_group_switches: Vec::new(),
             line_vertices: Vec::new(),
         }
@@ -26,8 +27,8 @@ impl DrawQueues {
 
     pub(crate) fn add_rectangle(&mut self, rectangle: &Rectangle) {
         let vertices = rectangle.get_vertices();
-        let number_of_verticies = self.rect_vertices.len() as u16;
-        let number_of_rectangles_inidices = self.rect_indicies.len();
+        let number_of_verticies = self.general_vertices.len() as u16;
+        let number_of_inidices = self.general_indicies.len();
         // do index math
         let indicies = [
             0 + number_of_verticies, 1 + number_of_verticies, 2 + number_of_verticies,
@@ -39,27 +40,27 @@ impl DrawQueues {
                 if point.bind_group != BindGroups::WhitePixel {
                     self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
                         bind_group: BindGroups::WhitePixel,
-                        point: 0 + number_of_rectangles_inidices,
+                        point: 0 + number_of_inidices,
                     });
                 }
             },
             None => {
                 self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
                     bind_group: BindGroups::WhitePixel,
-                    point: 0 + number_of_rectangles_inidices,
+                    point: 0 + number_of_inidices,
                 });
             },
         };
 
-        self.rect_vertices.extend_from_slice(&vertices);
-        self.rect_indicies.extend_from_slice(&indicies);
+        self.general_vertices.extend_from_slice(&vertices);
+        self.general_indicies.extend_from_slice(&indicies);
     }
 
     pub(crate) fn add_textured_rectange(&mut self, cache: &mut TextureCache, rectangle: &TexturedRect, device: &wgpu::Device) {
         let vertices = rectangle.get_vertices();
         let texture_bind_group = rectangle.get_texture_id();
-        let number_of_verticies = self.rect_vertices.len() as u16;
-        let number_of_rectangles_inidices = self.rect_indicies.len();
+        let number_of_verticies = self.general_vertices.len() as u16;
+        let number_of_inidices = self.general_indicies.len();
         // do index math
         let indicies = [
             0 + number_of_verticies, 1 + number_of_verticies, 2 + number_of_verticies,
@@ -76,22 +77,20 @@ impl DrawQueues {
                 if point.bind_group != (BindGroups::Custom{bind_group: texture_bind_group}) {
                     self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
                         bind_group: BindGroups::Custom {bind_group: texture_bind_group},
-                        point: 0 + number_of_rectangles_inidices,
+                        point: 0 + number_of_inidices,
                     });
                 }
             },
             None => {
                 self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
                     bind_group: BindGroups::Custom {bind_group: texture_bind_group},
-                    point: 0 + number_of_rectangles_inidices,
+                    point: 0 + number_of_inidices,
                 });
             },
         };
 
-
-
-        self.rect_vertices.extend_from_slice(&vertices);
-        self.rect_indicies.extend_from_slice(&indicies);
+        self.general_vertices.extend_from_slice(&vertices);
+        self.general_indicies.extend_from_slice(&indicies);
     }
 
     pub(crate) fn add_line(&mut self, start: LineVertex, end: LineVertex) {
@@ -99,11 +98,22 @@ impl DrawQueues {
         self.line_vertices.push(end);
     }
 
+    pub(crate) fn add_regular_n_gon(&mut self, number_of_sides: i32, radius: f32, center: (f32, f32)) {
+        if number_of_sides < 3 {
+            return; // hacky fix for now think of something better later
+        }
+
+        let points = (1..number_of_sides)
+            .map(|num| (radius * (2.0*PI*num as f32/number_of_sides as f32).cos() + center.0, radius * (2.0*PI*num as f32/number_of_sides as f32).sin() + center.1))
+            .collect::<Vec<(f32, f32)>>();
+        // do math on monday idk
+    }
+
     pub(crate) fn process_queued(&mut self, device: &wgpu::Device) -> RenderItems {
         let number_of_line_verticies = self.line_vertices.len() as u32;
-        let number_of_rectangle_indicies = self.rect_indicies.len() as u32;
-        let rectangle_vertices = std::mem::take(&mut self.rect_vertices);
-        let rectangle_indicies = std::mem::take(&mut self.rect_indicies);
+        let number_of_rectangle_indicies = self.general_indicies.len() as u32;
+        let rectangle_vertices = std::mem::take(&mut self.general_vertices);
+        let rectangle_indicies = std::mem::take(&mut self.general_indicies);
         let line_verticies = std::mem::take(&mut self.line_vertices);
 
         let rectangle_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
