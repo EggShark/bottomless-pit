@@ -26,6 +26,7 @@ use winit::{
 use draw_queue::{DrawQueues, BindGroups};
 use line::{Line, LineVertex};
 use matrix_math::*;
+use colour::Colour;
 
 struct State {
     surface: wgpu::Surface,
@@ -259,6 +260,7 @@ impl State {
         self.draw_queues.add_textured_rectange(&mut self.texture_cahce, &self.textured_rect, &self.device);
         self.draw_queues.add_rectangle(&test_rect);
         self.draw_queues.add_rectangle(&self.coloured_rect);
+        self.draw_queues.add_regular_n_gon(10, 0.3, (0.0, 0.0), Colour::White);
         self.texture_cahce.chache_update();
     }
 

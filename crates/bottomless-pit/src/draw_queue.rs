@@ -3,6 +3,7 @@ use wgpu::util::DeviceExt;
 use crate::Vertex;
 use crate::LineVertex;
 use crate::cache::TextureCache;
+use crate::colour::Colour;
 use crate::rect::Rectangle;
 use crate::rect::TexturedRect;
 use std::f32::consts::PI;
@@ -98,15 +99,43 @@ impl DrawQueues {
         self.line_vertices.push(end);
     }
 
-    pub(crate) fn add_regular_n_gon(&mut self, number_of_sides: i32, radius: f32, center: (f32, f32)) {
+    pub(crate) fn add_regular_n_gon(&mut self, number_of_sides: u16, radius: f32, center: (f32, f32), colour: Colour) {
         if number_of_sides < 3 {
             return; // hacky fix for now think of something better later
         }
+        let number_of_vertices = self.general_vertices.len() as u16;
+        let number_of_inidices = self.general_indicies.len();
 
-        let points = (1..number_of_sides)
+        let vertices = (0..number_of_sides)
             .map(|num| (radius * (2.0*PI*num as f32/number_of_sides as f32).cos() + center.0, radius * (2.0*PI*num as f32/number_of_sides as f32).sin() + center.1))
-            .collect::<Vec<(f32, f32)>>();
+            .map(|(x, y)| Vertex::from_2d([x, y], [0.0, 0.0], colour.to_raw()))
+            .collect::<Vec<Vertex>>();
         // do math on monday idk
+
+        let number_of_triangles = number_of_sides - 2;
+        let indicies = (1..number_of_triangles + 1)
+            .flat_map(|i| [number_of_vertices, i + 1 + number_of_vertices, i + number_of_vertices])
+            .collect::<Vec<u16>>();
+
+        match self.rectangle_bind_group_switches.last() {
+            Some(point) => {
+                if point.bind_group != BindGroups::WhitePixel {
+                    self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
+                        bind_group: BindGroups::WhitePixel,
+                        point: 0 + number_of_inidices,
+                    });
+                }
+            },
+            None => {
+                self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
+                    bind_group: BindGroups::WhitePixel,
+                    point: 0 + number_of_inidices,
+                });
+            },
+        };
+
+        self.general_vertices.extend_from_slice(&vertices);
+        self.general_indicies.extend_from_slice(&indicies);
     }
 
     pub(crate) fn process_queued(&mut self, device: &wgpu::Device) -> RenderItems {
