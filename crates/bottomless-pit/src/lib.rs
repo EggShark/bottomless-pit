@@ -8,6 +8,7 @@ mod input;
 mod draw_queue;
 mod matrix_math;
 mod colour;
+mod text;
 
 use cgmath::{Point2};
 use cache::{TextureCache, TextureIndex};
@@ -17,7 +18,7 @@ use texture::Texture;
 use vertex::Vertex;
 use image::GenericImageView;
 use wgpu::util::DeviceExt;
-use wgpu_glyph::{orthographic_projection, GlyphCruncher};
+use wgpu_glyph::orthographic_projection;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -261,6 +262,11 @@ impl State {
         self.draw_queues.add_rectangle(&test_rect);
         self.draw_queues.add_rectangle(&self.coloured_rect);
         self.draw_queues.add_regular_n_gon(10, 0.3, (0.0, 0.0), Colour::White);
+        let static_text = text::create_text("Hello!", 40.0, cgmath::Point2::new(300.0, 300.0), Colour::Orange);
+        self.draw_queues.add_text(static_text);
+        let text_transformation = text::make_flat_text_rotation_matrix("Hello Draw_Queues", 13.0, self.counter, &mut self.glyph_brush);
+        let rotating_text = text::create_text_with_transform("Hello Draw_Queues", 13.0, cgmath::Point2::new(0.0, 0.0), Colour::Black, text_transformation, (100.0, 100.0));
+        self.draw_queues.add_transfromed_text(rotating_text);
         self.texture_cahce.chache_update();
     }
 
@@ -272,6 +278,16 @@ impl State {
         });
         
         let render_items = self.draw_queues.process_queued(&self.device);
+
+        let text_sections = render_items.text
+            .iter()
+            .map(|text| wgpu_glyph::Section{
+                screen_position: (text.position.x, text.position.y),
+                bounds: (self.size.width as f32, self.size.height as f32),
+                text: vec![wgpu_glyph::Text::new(&text.text).with_color(text.colour.to_raw())],
+                ..Default::default()
+            })
+            .collect::<Vec<wgpu_glyph::Section>>();
 
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor{
             label: Some("Render Pass"),
@@ -315,19 +331,28 @@ impl State {
         render_pass.draw(0..render_items.number_of_line_verticies, 0..1);
         drop(render_pass);
 
-        let mut staging_belt = wgpu::util::StagingBelt::new(100);
-        let test_section = wgpu_glyph::Section {
-            screen_position: (1.0, 1.0),
-            bounds: (self.size.width as f32, self.size.height as f32),
-            text: vec![wgpu_glyph::Text::new("ll").with_scale(40.0).with_z(0.0).with_color([0.0, 0.0, 0.0, 1.0,])],
-            ..Default::default()
-        };
-        let text_transform = flatten_matrix(unflatten_matrix(orthographic_projection(self.size.width, self.size.height)) * get_text_rotation_matrix(&test_section, self.counter, &mut self.glyph_brush));
-        self.glyph_brush.queue(test_section);
-        
-        self.glyph_brush.draw_queued_with_transform(
-            &self.device, &mut staging_belt, &mut encoder, &view, &self.camera_bind_group, text_transform,
-        ).unwrap();
+        let mut staging_belt = wgpu::util::StagingBelt::new(1024);
+        //let text_transform = flatten_matrix(unflatten_matrix(orthographic_projection(self.size.width, self.size.height)) * get_text_rotation_matrix(&test_section, self.counter, &mut self.glyph_brush));
+
+        render_items.transformed_text.iter()
+            .map(|text| (wgpu_glyph::Section{
+                screen_position: (text.position.x, text.position.y),
+                bounds: (self.size.width as f32, self.size.height as f32),
+                text: vec![wgpu_glyph::Text::new(&text.text).with_color(text.colour.to_raw())],
+                ..Default::default()
+                }, text.transformation))
+            .for_each(|(section, transform)| {
+                let text_transform = unflatten_matrix(transform);
+                let ortho = unflatten_matrix(orthographic_projection(self.size.width, self.size.height));
+                let transform = flatten_matrix(ortho * text_transform);
+                self.glyph_brush.queue(section);
+                self.glyph_brush.draw_queued_with_transform(
+                    &self.device, &mut staging_belt, &mut encoder, &view, &self.camera_bind_group, transform,
+                ).unwrap();
+            });
+
+            text_sections.into_iter().for_each(|s| self.glyph_brush.queue(s));
+            self.glyph_brush.draw_queued(&self.device, &mut staging_belt, &mut encoder, &view, &self.camera_bind_group, self.size.width, self.size.height).unwrap();
 
         staging_belt.finish();
         self.queue.submit(std::iter::once(encoder.finish()));

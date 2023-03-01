@@ -6,6 +6,7 @@ use crate::cache::TextureCache;
 use crate::colour::Colour;
 use crate::rect::Rectangle;
 use crate::rect::TexturedRect;
+use crate::text::{Text, TransformedText};
 use std::f32::consts::PI;
 
 #[derive(Debug)]
@@ -13,6 +14,8 @@ pub(crate) struct DrawQueues {
     general_vertices: Vec<Vertex>,
     general_indicies: Vec<u16>,
     rectangle_bind_group_switches: Vec<BindGroupSwitchPoint>,
+    text: Vec<Text>,
+    transformed_text: Vec<TransformedText>,
     line_vertices: Vec<LineVertex>,
 }
 
@@ -22,6 +25,8 @@ impl DrawQueues {
             general_vertices: Vec::new(),
             general_indicies: Vec::new(),
             rectangle_bind_group_switches: Vec::new(),
+            text: Vec::new(),
+            transformed_text: Vec::new(),
             line_vertices: Vec::new(),
         }
     }
@@ -138,12 +143,22 @@ impl DrawQueues {
         self.general_indicies.extend_from_slice(&indicies);
     }
 
+    pub(crate) fn add_text(&mut self, text: Text) {
+        self.text.push(text);
+    }
+
+    pub(crate) fn add_transfromed_text(&mut self, text: TransformedText) {
+        self.transformed_text.push(text);
+    }
+
     pub(crate) fn process_queued(&mut self, device: &wgpu::Device) -> RenderItems {
         let number_of_line_verticies = self.line_vertices.len() as u32;
         let number_of_rectangle_indicies = self.general_indicies.len() as u32;
         let rectangle_vertices = std::mem::take(&mut self.general_vertices);
         let rectangle_indicies = std::mem::take(&mut self.general_indicies);
         let line_verticies = std::mem::take(&mut self.line_vertices);
+        let text = std::mem::take(&mut self.text);
+        let transformed_text = std::mem::take(&mut self.transformed_text);
 
         let rectangle_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("General Buffer"),
@@ -170,6 +185,8 @@ impl DrawQueues {
             rectangle_bind_group_switches: std::mem::take(&mut self.rectangle_bind_group_switches),
             line_buffer,
             number_of_line_verticies,
+            text,
+            transformed_text,
         }
     }
 }
@@ -181,6 +198,8 @@ pub(crate) struct RenderItems {
     pub(crate) rectangle_bind_group_switches: Vec<BindGroupSwitchPoint>, 
     pub(crate) line_buffer: wgpu::Buffer,
     pub(crate) number_of_line_verticies: u32,
+    pub(crate) text: Vec<Text>,
+    pub(crate) transformed_text: Vec<TransformedText>,
 }
 
 #[derive(Debug, PartialEq)]

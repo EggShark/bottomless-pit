@@ -1,22 +1,4 @@
-use cgmath::Transform;
-use wgpu_glyph::GlyphCruncher;
 use crate::{IDENTITY_MATRIX, Point2};
-
-pub(crate) fn get_text_rotation_matrix(section: &wgpu_glyph::Section, degree: f32, brush: &mut wgpu_glyph::GlyphBrush<()>) -> cgmath::Matrix4<f32> {
-    let measurement = brush.glyph_bounds(section).unwrap();
-    let mid = get_mid_point(measurement);
-    let rotation_matrix = unflatten_matrix(calculate_rotation_matrix(degree));
-    let translation_matrix = cgmath::Matrix4::from_translation(cgmath::vec3(mid.x, mid.y, 0.0));
-    let inverse_translation = translation_matrix.inverse_transform().unwrap_or(unflatten_matrix(IDENTITY_MATRIX));
-    // Creates a matrix like
-    // 1 0 0 0
-    // 0 1 0 0
-    // 0 0 1 0
-    // x y z 1
-    let out = translation_matrix * rotation_matrix * inverse_translation;
-    out
-
-}
 
 pub(crate) fn normalize_points<T: std::ops::Div<Output = T>>(point: Point2<T>, width: T, height: T) -> Point2<T> {
     let x = point.x / width;
