@@ -10,7 +10,7 @@ bytemuck = {version = "1.12.3", features = ["derive"]}
 env_logger = "0.10.0"
 log = "0.4.17"
 pollster = "0.2.5"
-wgpu = "0.14.2"
+wgpu = "0.15"
 winit = "0.27.5"
 cgmath = "0.18.0"
 wgpu_glyph = {path = "../wgpu_glyph"}

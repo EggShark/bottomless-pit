@@ -64,10 +64,14 @@ impl State {
             wgpu::Backends::all()
         };
 
-        let instance = wgpu::Instance::new(backend);
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor{ 
+            backends: backend, 
+            dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
+        });
         let surface = unsafe {
             instance.create_surface(window)
-        };
+        }.unwrap();
+
         let clear_color = wgpu::Color{
             r: 0.0,
             g: 0.0,
@@ -92,13 +96,21 @@ impl State {
             None,
         )).unwrap();
 
+        let surface_capabilities = surface.get_capabilities(&adapter);
+        let surface_format = surface_capabilities.formats.iter()
+            .copied()
+            .filter(|f| f.describe().srgb)
+            .next()
+            .unwrap_or(surface_capabilities.formats[0]);
+
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface.get_supported_formats(&adapter)[0],
+            format: surface_format,
             width: size.width,
             height: size.height,
-            present_mode: wgpu::PresentMode::Fifo,
-            alpha_mode: wgpu::CompositeAlphaMode::Opaque,
+            present_mode: surface_capabilities.present_modes[0],
+            alpha_mode: surface_capabilities.alpha_modes[0],
+            view_formats: vec![],
         };
         surface.configure(&device, &config);
 
@@ -404,6 +416,7 @@ impl MyRenderingStuff {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            view_formats: &[],
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             label: Some("White_Pixel"),
         });
