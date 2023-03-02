@@ -54,10 +54,10 @@ pub(crate) fn measure_text(text: &str, brush: &mut wgpu_glyph::GlyphBrush<()>, s
     })
 }
 
-pub(crate) fn get_text_rotation_matrix(text: &str, scale: f32, degree: f32, brush: &mut wgpu_glyph::GlyphBrush<()>) -> cgmath::Matrix4<f32> {
+pub(crate) fn get_text_rotation_matrix(text: &str, position: (f32, f32), scale: f32, degree: f32, brush: &mut wgpu_glyph::GlyphBrush<()>) -> cgmath::Matrix4<f32> {
     let section = wgpu_glyph::Section {
         bounds: (f32::MAX, f32::MAX),
-        screen_position: (0.0, 0.0),
+        screen_position: position,
         text: vec![wgpu_glyph::Text::new(text).with_scale(scale)],
         ..Default::default()
     };
@@ -75,6 +75,6 @@ pub(crate) fn get_text_rotation_matrix(text: &str, scale: f32, degree: f32, brus
     out
 }
 
-pub(crate) fn make_flat_text_rotation_matrix(text: &str, scale: f32, degree: f32, brush: &mut wgpu_glyph::GlyphBrush<()>) -> [f32; 16] {
-    matrix_math::flatten_matrix(get_text_rotation_matrix(text, scale, degree, brush))
+pub(crate) fn make_flat_text_rotation_matrix(text: &str, position: (f32, f32), scale: f32, degree: f32, brush: &mut wgpu_glyph::GlyphBrush<()>) -> [f32; 16] {
+    matrix_math::flatten_matrix(get_text_rotation_matrix(text, position, scale, degree, brush))
 }

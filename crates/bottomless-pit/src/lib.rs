@@ -58,7 +58,13 @@ impl State {
         let size = window.inner_size();
         // the insance is a handle to our GPU
         // Backends all means Vulkan + Metal + DX12 (probgonna use vulkan <3)
-        let instance = wgpu::Instance::new(wgpu::Backends::all());
+        let backend = if cfg!(target_os = "windows") {
+            wgpu::Backends::DX12 // text rendering gets angry on vulkan
+        } else {
+            wgpu::Backends::all()
+        };
+
+        let instance = wgpu::Instance::new(backend);
         let surface = unsafe {
             instance.create_surface(window)
         };
@@ -264,8 +270,8 @@ impl State {
         self.draw_queues.add_regular_n_gon(10, 0.3, (0.0, 0.0), Colour::White);
         let static_text = text::create_text("Hello!", 40.0, cgmath::Point2::new(300.0, 300.0), Colour::Orange);
         self.draw_queues.add_text(static_text);
-        let text_transformation = text::make_flat_text_rotation_matrix("Hello Draw_Queues", 13.0, self.counter, &mut self.glyph_brush);
-        let rotating_text = text::create_text_with_transform("Hello Draw_Queues", 13.0, cgmath::Point2::new(0.0, 0.0), Colour::Black, text_transformation, (100.0, 100.0));
+        let text_transformation = text::make_flat_text_rotation_matrix("Hello Draw_Queues", (60.0, 60.0), 13.0, self.counter, &mut self.glyph_brush);
+        let rotating_text = text::create_text_with_transform("Hello Draw_Queues", 13.0, cgmath::Point2::new(60.0, 60.0), Colour::Black, text_transformation, (100.0, 100.0));
         self.draw_queues.add_transfromed_text(rotating_text);
         self.texture_cahce.chache_update();
     }
