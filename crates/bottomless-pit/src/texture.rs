@@ -22,7 +22,7 @@ impl Texture {
     }
 
     pub fn from_path(device: &wgpu::Device, queue: &wgpu::Queue, label: Option<&str>, path: &str) -> Result<Self, image::ImageError> {
-        let bytes = std::fs::read(path).unwrap();
+        let bytes = std::fs::read(path)?;
         let out = Self::from_bytes(device, queue, label, &bytes)?;
         Ok(out)
     }

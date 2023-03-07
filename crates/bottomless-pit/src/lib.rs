@@ -9,6 +9,8 @@ mod draw_queue;
 mod matrix_math;
 mod colour;
 mod text;
+mod engine_handle;
+mod render;
 
 use cgmath::{Point2};
 use cache::{TextureCache, TextureIndex};
