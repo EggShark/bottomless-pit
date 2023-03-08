@@ -12,7 +12,7 @@ use crate::input::Key;
 use crate::texture::{Texture, create_texture};
 use crate::vectors::Vec2;
 
-struct Engine {
+pub struct Engine {
     renderer: Render,
     draw_queues: DrawQueues,
     device: wgpu::Device,
@@ -20,6 +20,7 @@ struct Engine {
     input_handle: InputHandle,
     texture_cahce: TextureCache,
     window: Window,
+    cursor_visibility: bool,
 }
 
 
@@ -75,14 +76,6 @@ impl Engine {
         }
     }
 
-    pub fn toggle_fullscreen(&self) {
-        if self.is_window_fullscreen() {
-            self.window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
-        } else {
-            self.window.set_fullscreen(None);
-        }
-    }
-
     pub fn maximize_window(&self) {
         self.window.set_maximized(true);
     }
@@ -117,6 +110,32 @@ impl Engine {
             Ok(v) => Some((v.x, v.y).into()),
             Err(_) => None,
         }
+    }
+
+    pub fn get_window_size(&self) -> Vec2<u32> {
+        self.window.inner_size().into()
+    }
+
+    pub fn get_window_scale_factor(&self) -> f64 {
+        self.window.scale_factor()
+    }
+
+    pub fn toggle_fullscreen(&self) {
+        if self.is_window_fullscreen() {
+            self.window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+        } else {
+            self.window.set_fullscreen(None);
+        }
+    }
+
+    pub fn hide_cursor(&mut self) {
+        self.window.set_cursor_visible(false);
+        self.cursor_visibility = false;
+    }
+
+    pub fn show_cursor(&mut self) {
+        self.window.set_cursor_visible(true);
+        self.cursor_visibility = true;
     }
 }
 

@@ -13,6 +13,7 @@ mod engine_handle;
 mod render;
 mod vectors;
 
+pub use engine_handle::Engine;
 use cgmath::{Point2};
 use cache::{TextureCache, TextureIndex};
 use input::InputHandle;
@@ -514,7 +515,7 @@ pub fn run(game: Box<dyn Game>) -> ! {
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
-                game.render();
+                //game.render();
                 match state.render() {
                     Ok(_) => {},
                     // reconfigure surface if lost
@@ -522,7 +523,7 @@ pub fn run(game: Box<dyn Game>) -> ! {
                     Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                     Err(e) => eprintln!("{:?}", e),
                 }
-                game.update();
+                //game.update();
                 state.update();
             }
             Event::MainEventsCleared => {
@@ -551,7 +552,7 @@ pub fn run(game: Box<dyn Game>) -> ! {
 
 pub trait Game {
     fn render(&self);
-    fn update(&self);
+    fn update(&self, engine_handle: &mut Engine);
     fn on_close(&self) {
 
     } 
