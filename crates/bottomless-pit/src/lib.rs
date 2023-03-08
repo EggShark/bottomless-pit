@@ -11,6 +11,7 @@ mod colour;
 mod text;
 mod engine_handle;
 mod render;
+mod vectors;
 
 use cgmath::{Point2};
 use cache::{TextureCache, TextureIndex};

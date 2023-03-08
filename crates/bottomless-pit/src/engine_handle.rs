@@ -10,6 +10,7 @@ use crate::cache::TextureIndex;
 use crate::render::Render;
 use crate::input::Key;
 use crate::texture::{Texture, create_texture};
+use crate::vectors::Vec2;
 
 struct Engine {
     renderer: Render,
@@ -109,6 +110,13 @@ impl Engine {
 
     pub fn set_window_min_size(&self, width: f32, height: f32) {
         self.window.set_min_inner_size(Some(winit::dpi::PhysicalSize::new(width, height)));
+    }
+
+    pub fn get_window_position(&self) -> Option<Vec2<i32>>{
+        match self.window.outer_position() {
+            Ok(v) => Some((v.x, v.y).into()),
+            Err(_) => None,
+        }
     }
 }
 
