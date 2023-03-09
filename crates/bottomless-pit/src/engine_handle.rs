@@ -7,13 +7,13 @@ use crate::DrawQueues;
 use crate::TextureCache;
 use crate::InputHandle;
 use crate::cache::TextureIndex;
-use crate::render::Render;
+use crate::render::Renderer;
 use crate::input::Key;
 use crate::texture::{Texture, create_texture};
 use crate::vectors::Vec2;
 
 pub struct Engine {
-    renderer: Render,
+    renderer: Renderer,
     draw_queues: DrawQueues,
     device: wgpu::Device,
     queue: wgpu::Queue,
