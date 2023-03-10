@@ -1,4 +1,7 @@
 use winit::event::{WindowEvent, KeyboardInput, ElementState, VirtualKeyCode};
+use wgpu::util::DeviceExt;
+
+use crate::engine_handle::DeviceQueue;
 
 pub struct Camera {
     eye: cgmath::Point3<f32>,
@@ -8,6 +11,9 @@ pub struct Camera {
     fovy: f32,
     znear: f32,
     zfar: f32,
+    pub(crate) uniform: CameraUniform,
+    pub(crate) buffer: wgpu::Buffer,
+    pub(crate) bind_group: wgpu::BindGroup,
 }
 
 #[rustfmt::skip]
@@ -19,7 +25,42 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
 );
 
 impl Camera {
-    pub fn new(eye: (f32, f32, f32), target: (f32, f32, f32), up: cgmath::Vector3<f32>, aspect_ratio: f32, fovy: f32, znear: f32, zfar: f32) -> Self {
+    pub fn new(eye: (f32, f32, f32), target: (f32, f32, f32), up: cgmath::Vector3<f32>, aspect_ratio: f32, fovy: f32, znear: f32, zfar: f32, device: &wgpu::Device) -> Self {
+        let uniform = CameraUniform::new();
+
+        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[uniform]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+        
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ],
+            label: Some("camera_bind_group_layout"),
+        });
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buffer.as_entire_binding(),
+                }
+            ],
+            label: Some("camera_bind_group"),
+        });
+
         Self {
             eye: eye.into(),
             target: target.into(),
@@ -27,7 +68,10 @@ impl Camera {
             aspect: aspect_ratio,
             fovy,
             znear,
-            zfar
+            zfar,
+            uniform,
+            buffer,
+            bind_group,
         }
     }
 
@@ -43,6 +87,33 @@ impl Camera {
         let projection = self.build_projection_matrix();
         // converts cgmaths OpenGL values to wgpus values
         OPENGL_TO_WGPU_MATRIX * projection * view
+    }
+
+    pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
+        self.aspect = new_size.width as f32 / new_size.height as f32;
+    }
+
+    pub fn update(&mut self, queue: &wgpu::Queue) {
+        self.uniform.update_view_proj(self.build_view_projection_matrix());
+        queue.write_buffer(&self.buffer, 0, bytemuck::cast_slice(&[self.uniform]));
+    }
+
+    pub fn make_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ],
+            label: Some("camera_bind_group_layout"),
+        })
     }
 }
 
@@ -60,8 +131,16 @@ impl CameraUniform {
         }
     }
 
-    pub fn update_view_proj(&mut self, camera: &Camera) {
-        self.view_proj = camera.build_view_projection_matrix().into();
+    pub fn update_view_proj(&mut self, new_matrix: cgmath::Matrix4<f32>) {
+        self.view_proj = new_matrix.into();
+    }
+}
+
+impl Into<CameraUniform> for cgmath::Matrix4<f32> {
+    fn into(self) -> CameraUniform {
+        CameraUniform {
+            view_proj: self.into()
+        }
     }
 }
 

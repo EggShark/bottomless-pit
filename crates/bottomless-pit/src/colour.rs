@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum Colour {
     White,
     Black,
@@ -38,6 +38,18 @@ impl Colour {
         let g = (colour_values - b) / 0x100 % 0x100;
         let r = (colour_values - g) / 0x10000;
         Ok(Self::Rgba([r as f32 / 255.0, g as f32 / 255.0, b as f32/ 255.0, 1.0]))
+    }
+}
+
+impl Into<wgpu::Color> for Colour {
+    fn into(self) -> wgpu::Color {
+        let raw = self.to_raw();
+        wgpu::Color {
+            r: raw[0] as f64, 
+            g: raw[1] as f64, 
+            b: raw[2] as f64, 
+            a: raw[3] as f64,
+        }
     }
 }
 

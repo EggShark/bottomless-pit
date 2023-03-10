@@ -1,4 +1,5 @@
 use crate::{IDENTITY_MATRIX, Point2};
+pub use wgpu_glyph::orthographic_projection;
 
 pub(crate) fn normalize_points<T: std::ops::Div<Output = T>>(point: Point2<T>, width: T, height: T) -> Point2<T> {
     let x = point.x / width;

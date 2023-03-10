@@ -14,6 +14,7 @@ mod render;
 mod vectors;
 
 pub use engine_handle::Engine;
+use engine_handle::DeviceQueue;
 use cgmath::{Point2};
 use cache::{TextureCache, TextureIndex};
 use input::InputHandle;
@@ -35,14 +36,10 @@ use colour::Colour;
 
 struct State {
     surface: wgpu::Surface,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
+    wgpu_things: DeviceQueue,
     config: wgpu::SurfaceConfiguration,
     camera: camera::Camera,
     camera_controller: camera::CameraController,
-    camera_buffer: wgpu::Buffer,
-    camera_uniform: camera::CameraUniform,
-    camera_bind_group: wgpu::BindGroup,
     size: winit::dpi::PhysicalSize<u32>,
     render_pipeline: wgpu::RenderPipeline,
     draw_queues: DrawQueues,
@@ -72,6 +69,7 @@ impl State {
             backends: backend, 
             dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
         });
+
         let surface = unsafe {
             instance.create_surface(window)
         }.unwrap();
@@ -82,7 +80,6 @@ impl State {
             b: 255.0,
             a: 0.0
         };
-
 
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
@@ -100,6 +97,11 @@ impl State {
             None,
         )).unwrap();
 
+        let wgpu_things = DeviceQueue {
+            device,
+            queue
+        };
+
         let surface_capabilities = surface.get_capabilities(&adapter);
         let surface_format = surface_capabilities.formats.iter()
             .copied()
@@ -116,68 +118,33 @@ impl State {
             alpha_mode: surface_capabilities.alpha_modes[0],
             view_formats: vec![],
         };
-        surface.configure(&device, &config);
+        surface.configure(&wgpu_things.device, &config);
 
-        let camera = camera::Camera::new((0.0, 0.0, 1.0), (0.0, 0.0, 0.0), cgmath::Vector3::unit_y(), config.width as f32/config.height as f32, 45.0, 0.1, 100.0);
+        let camera = camera::Camera::new((0.0, 0.0, 1.0), (0.0, 0.0, 0.0), cgmath::Vector3::unit_y(), config.width as f32/config.height as f32, 45.0, 0.1, 100.0, &wgpu_things.device);
         let camera_controller = camera::CameraController::new(0.2);
+        let camera_bind_group_layout = camera::Camera::make_bind_group_layout(&wgpu_things.device);
 
-        let mut camera_uniform = camera::CameraUniform::new();
-        camera_uniform.update_view_proj(&camera);
-
-        let camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(&[camera_uniform]),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-
-        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }
-            ],
-            label: Some("camera_bind_group_layout"),
-        });
-
-        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &camera_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: camera_buffer.as_entire_binding(),
-                }
-            ],
-            label: Some("camera_bind_group"),
-        });
-
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor{
+        let shader = wgpu_things.device.create_shader_module(wgpu::ShaderModuleDescriptor{
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),
         });
 
         let diffuse_bytes = include_bytes!("../assets/trans-test.png");
-        let diffuse_texture = texture::create_texture_from_bytes(&mut texture_cahce, &device, &queue, diffuse_bytes);
+        let diffuse_texture = texture::create_texture_from_bytes(&mut texture_cahce, &wgpu_things, diffuse_bytes);
         let diffuse_rect = rect::TexturedRect::new(diffuse_texture, [-0.0, 0.0], [0.5, 0.5]);
 
         let coloured_rect = rect::Rectangle::new([-1.0, 1.0], [1.0, 0.5], [1.0, 0.0, 0.0, 1.0]);
 
-        let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
+        let render_pipeline_layout = wgpu_things.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
             label: Some("Render Pipeline Layout"),
             bind_group_layouts: &[
-                &Texture::make_bind_group_layout(&device),
+                &Texture::make_bind_group_layout(&wgpu_things.device),
                 &camera_bind_group_layout,
             ],
             push_constant_ranges: &[],
         });
 
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor{
+        let render_pipeline = wgpu_things.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor{
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState{
@@ -216,19 +183,15 @@ impl State {
         });
         let minecraft_mono = wgpu_glyph::ab_glyph::FontArc::try_from_slice(include_bytes!("../assets/Minecraft-Mono.ttf")).unwrap();
         let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(minecraft_mono)
-            .build(&device, wgpu::TextureFormat::Bgra8UnormSrgb);
+            .build(&wgpu_things.device, wgpu::TextureFormat::Bgra8UnormSrgb);
         
-        let rendering_stuff = MyRenderingStuff::new(&device, &queue, &[&camera_bind_group_layout], config.format);
+        let rendering_stuff = MyRenderingStuff::new(&wgpu_things, &[&camera_bind_group_layout], config.format);
         Self {
             surface,
-            device,
-            queue,
+            wgpu_things,
             config,
             camera,
             camera_controller,
-            camera_uniform,
-            camera_buffer,
-            camera_bind_group,
             size,
             clear_color,
             render_pipeline,
@@ -248,7 +211,7 @@ impl State {
             self.size = new_size;
             self.config.width = new_size.width;
             self.config.height = new_size.height;
-            self.surface.configure(&self.device, &self.config);
+            self.surface.configure(&self.wgpu_things.device, &self.config);
         }
     }
 
@@ -273,14 +236,13 @@ impl State {
 
     fn update(&mut self) {
         self.camera_controller.update_camera(&mut self.camera);
-        self.camera_uniform.update_view_proj(&self.camera);
-        self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
+        self.camera.update(&self.wgpu_things.queue);
         self.counter = (self.counter + 1.0) % 360.0;
         self.input_handle.end_of_frame_refresh();
         let test_line = Line::new([0.1, 0.0], [0.5, 0.0], [0.0, 0.0, 0.0, 1.0]);
         let test_rect = Rectangle::new([-0.5, 0.0], [0.5, 0.5], [0.0, 0.0, 0.0, 1.0]);
         self.draw_queues.add_line(test_line.start, test_line.end);
-        self.draw_queues.add_textured_rectange(&mut self.texture_cahce, &self.textured_rect, &self.device);
+        self.draw_queues.add_textured_rectange(&mut self.texture_cahce, &self.textured_rect, &self.wgpu_things.device);
         self.draw_queues.add_rectangle(&test_rect);
         self.draw_queues.add_rectangle(&self.coloured_rect);
         self.draw_queues.add_regular_n_gon(10, 0.3, (0.0, 0.0), Colour::White);
@@ -295,11 +257,11 @@ impl State {
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let output = self.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor{
+        let mut encoder = self.wgpu_things.device.create_command_encoder(&wgpu::CommandEncoderDescriptor{
             label: Some("Render Encoder"),
         });
         
-        let render_items = self.draw_queues.process_queued(&self.device);
+        let render_items = self.draw_queues.process_queued(&self.wgpu_things.device);
 
         let text_sections = render_items.text
             .iter()
@@ -325,7 +287,7 @@ impl State {
         });
         
         render_pass.set_pipeline(&self.render_pipeline);
-        render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+        render_pass.set_bind_group(1, &self.camera.bind_group, &[]);
         if render_items.number_of_rectangle_indicies != 0 {
             render_pass.set_vertex_buffer(0, render_items.rectangle_buffer.slice(..));
             render_pass.set_index_buffer(render_items.rectangle_index_buffer.slice(..), wgpu::IndexFormat::Uint16);
@@ -348,7 +310,7 @@ impl State {
             }
         }
         render_pass.set_pipeline(&self.rendering_stuff.line_pipeline);
-        render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+        render_pass.set_bind_group(0, &self.camera.bind_group, &[]);
         render_pass.set_vertex_buffer(0, render_items.line_buffer.slice(..));
         render_pass.draw(0..render_items.number_of_line_verticies, 0..1);
         drop(render_pass);
@@ -369,32 +331,18 @@ impl State {
                 let transform = flatten_matrix(ortho * text_transform);
                 self.glyph_brush.queue(section);
                 self.glyph_brush.draw_queued_with_transform(
-                    &self.device, &mut staging_belt, &mut encoder, &view, &self.camera_bind_group, transform,
+                    &self.wgpu_things.device, &mut staging_belt, &mut encoder, &view, &self.camera.bind_group, transform,
                 ).unwrap();
             });
 
             text_sections.into_iter().for_each(|s| self.glyph_brush.queue(s));
-            self.glyph_brush.draw_queued(&self.device, &mut staging_belt, &mut encoder, &view, &self.camera_bind_group, self.size.width, self.size.height).unwrap();
+            self.glyph_brush.draw_queued(&self.wgpu_things.device, &mut staging_belt, &mut encoder, &view, &self.camera.bind_group, self.size.width, self.size.height).unwrap();
 
         staging_belt.finish();
-        self.queue.submit(std::iter::once(encoder.finish()));
+        self.wgpu_things.queue.submit(std::iter::once(encoder.finish()));
         output.present();
 
         Ok(())
-    }
-
-    fn create_texture(&mut self, path: &str) -> TextureIndex {
-        let texture = Texture::from_path(&self.device, &self.queue, None, path).unwrap();
-        self.texture_cahce.add_texture(texture)
-    }
-
-    fn create_texture_from_bytes(&mut self, bytes: &[u8]) -> TextureIndex {
-        let texture = Texture::from_bytes(&self.device, &self.queue, None, bytes).unwrap();
-        self.texture_cahce.add_texture(texture)
-    }
-
-    fn set_background_colour(&mut self, colour: wgpu::Color) {
-        self.clear_color = colour;
     }
 }
 
@@ -404,7 +352,7 @@ struct MyRenderingStuff {
 }
 
 impl MyRenderingStuff {
-    fn new(device: &wgpu::Device, queue: &wgpu::Queue, bind_group_layouts: &[&wgpu::BindGroupLayout], texture_format: wgpu::TextureFormat) -> Self {
+    fn new(wgpu_things: &DeviceQueue, bind_group_layouts: &[&wgpu::BindGroupLayout], texture_format: wgpu::TextureFormat) -> Self {
         let white_pixel_image = image::load_from_memory(WHITE_PIXEL).unwrap();
         let white_pixel_rgba = white_pixel_image.to_rgba8();
         let (width, height) = white_pixel_image.dimensions();
@@ -414,7 +362,7 @@ impl MyRenderingStuff {
             depth_or_array_layers: 1,
         };
 
-        let white_pixel_texture = device.create_texture(&wgpu::TextureDescriptor{
+        let white_pixel_texture = wgpu_things.device.create_texture(&wgpu::TextureDescriptor{
             size: white_pixel_size,
             mip_level_count: 1,
             sample_count: 1,
@@ -425,7 +373,7 @@ impl MyRenderingStuff {
             label: Some("White_Pixel"),
         });
 
-        queue.write_texture(
+        wgpu_things.queue.write_texture(
             wgpu::ImageCopyTextureBase {
                 texture: &white_pixel_texture,
                 mip_level: 0,
@@ -442,7 +390,7 @@ impl MyRenderingStuff {
         );
 
         let white_pixel_view = white_pixel_texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let white_pixel_sampler = device.create_sampler(&wgpu::SamplerDescriptor{
+        let white_pixel_sampler = wgpu_things.device.create_sampler(&wgpu::SamplerDescriptor{
             // what to do when given cordinates outside the textures height/width
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
@@ -455,7 +403,7 @@ impl MyRenderingStuff {
             ..Default::default()
         });
 
-        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let bind_group_layout = wgpu_things.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
@@ -477,7 +425,7 @@ impl MyRenderingStuff {
             label: Some("white_pixel_bind_group_layout"),
         });
 
-        let white_pixel = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let white_pixel = wgpu_things.device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &bind_group_layout,
             entries: &[
                 wgpu::BindGroupEntry{
@@ -492,12 +440,12 @@ impl MyRenderingStuff {
             label: Some("diffuse_bind_group"),
         });
 
-        let line_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let line_shader = wgpu_things.device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/line_shader.wgsl").into()),
         });
 
-        let line_pipeline = make_pipeline(device, wgpu::PrimitiveTopology::LineList, bind_group_layouts, &[line::LineVertex::desc()], &line_shader, texture_format, Some("line_renderer"));
+        let line_pipeline = make_pipeline(&wgpu_things.device, wgpu::PrimitiveTopology::LineList, bind_group_layouts, &[line::LineVertex::desc()], &line_shader, texture_format, Some("line_renderer"));
 
         Self {
             white_pixel,

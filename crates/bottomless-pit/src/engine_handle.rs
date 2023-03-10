@@ -11,27 +11,28 @@ use crate::render::Renderer;
 use crate::input::Key;
 use crate::texture::{Texture, create_texture};
 use crate::vectors::Vec2;
+use crate::camera::CameraController;
 
 pub struct Engine {
     renderer: Renderer,
     draw_queues: DrawQueues,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
+    wgpu_things: DeviceQueue,
     input_handle: InputHandle,
     texture_cahce: TextureCache,
     window: Window,
     cursor_visibility: bool,
+    camera_controller: CameraController,
 }
 
 
 impl Engine {
     pub fn create_texture(&mut self, path: &str) -> TextureIndex {
-        create_texture(&mut self.texture_cahce, &self.device, &self.queue, path)
+        create_texture(&mut self.texture_cahce, &self.wgpu_things, path)
     }
 
     pub fn create_many_textures(&mut self, paths: &[&str]) -> Vec<TextureIndex> {
         let textures = paths.par_iter()
-            .map(|path| Texture::from_path(&self.device, &self.queue, None, path).unwrap())
+            .map(|path| Texture::from_path(&self.wgpu_things, None, path).unwrap())
             .collect::<Vec<Texture>>();
 
         textures.into_iter().map(|texture| self.texture_cahce.add_texture(texture)).collect::<Vec<TextureIndex>>()
@@ -167,3 +168,9 @@ impl std::fmt::Display for IconError {
 }
 
 impl std::error::Error for IconError {}
+
+// just made to avoid data clumps
+pub(crate) struct DeviceQueue {
+    pub(crate) device: wgpu::Device,
+    pub(crate) queue: wgpu::Queue,
+}
