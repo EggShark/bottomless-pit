@@ -1,11 +1,15 @@
 use crate::DrawQueues;
+use crate::cache::TextureIndex;
+use crate::colour;
 use crate::engine_handle::DeviceQueue;
+use crate::LineVertex;
 use crate::vectors::Vec2;
 use crate::colour::Colour; 
 use crate::cache::TextureCache;
 use crate::camera::Camera;
 use crate::BindGroups;
 use crate::matrix_math::*;
+use crate::rect::Rectangle;
 
 pub(crate) struct Renderer {
     //add stuff later
@@ -16,9 +20,27 @@ pub(crate) struct Renderer {
     pipelines: RenderPipelines,
     camera: Camera,
     clear_colour: Colour,
+    pub(crate) wgpu_things: DeviceQueue, // its very cringe storing this here and not in engine however texture chace requires it
+    pub(crate) texture_cahce: TextureCache,
 }
 
 impl Renderer {
+    pub fn draw_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, colour: Colour) {
+        let rectangle = Rectangle::new(position, [width, hieght], colour.to_raw());
+        self.draw_queues.add_rectangle(&rectangle);
+    }
+
+    pub fn draw_textured_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, texture: &TextureIndex) {
+        let rectangle = Rectangle::new(position, [width, hieght], Colour::White.to_raw());
+        self.draw_queues.add_textured_rectange(&mut self.texture_cahce, &rectangle, texture, &self.wgpu_things.device);
+    }
+
+    pub fn draw_line(&mut self, start_point: Vec2<f32>, end_point: Vec2<f32>, colour: Colour) {
+        let start = LineVertex::new(start_point.to_raw(), colour.to_raw());
+        let end = LineVertex::new(end_point.to_raw(), colour.to_raw());
+        self.draw_queues.add_line(start, end) 
+    } 
+
     pub(crate) fn render(&mut self, wgpu_things: &DeviceQueue, size: Vec2<u32>, cache: TextureCache) -> Result<(), wgpu::SurfaceError>{
         let output = self.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());

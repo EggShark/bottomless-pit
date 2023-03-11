@@ -1,10 +1,10 @@
-use crate::{IDENTITY_MATRIX, Point2};
+use crate::{IDENTITY_MATRIX, Point2, Vec2};
 pub use wgpu_glyph::orthographic_projection;
 
-pub(crate) fn normalize_points<T: std::ops::Div<Output = T>>(point: Point2<T>, width: T, height: T) -> Point2<T> {
+pub(crate) fn normalize_points<T: std::ops::Div<Output = T>>(point: Vec2<T>, width: T, height: T) -> Vec2<T> {
     let x = point.x / width;
     let y = point.y / height;
-    Point2 {x, y}
+    Vec2{x, y}
 }
 
 pub(crate) fn get_mid_point(rectangle: wgpu_glyph::ab_glyph::Rect) -> Point2<f32> {

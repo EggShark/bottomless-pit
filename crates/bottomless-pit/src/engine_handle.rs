@@ -15,10 +15,7 @@ use crate::camera::CameraController;
 
 pub struct Engine {
     renderer: Renderer,
-    draw_queues: DrawQueues,
-    wgpu_things: DeviceQueue,
     input_handle: InputHandle,
-    texture_cahce: TextureCache,
     window: Window,
     cursor_visibility: bool,
     camera_controller: CameraController,
@@ -27,15 +24,15 @@ pub struct Engine {
 
 impl Engine {
     pub fn create_texture(&mut self, path: &str) -> TextureIndex {
-        create_texture(&mut self.texture_cahce, &self.wgpu_things, path)
+        create_texture(&mut self.renderer.texture_cahce, &self.renderer.wgpu_things, path)
     }
 
     pub fn create_many_textures(&mut self, paths: &[&str]) -> Vec<TextureIndex> {
         let textures = paths.par_iter()
-            .map(|path| Texture::from_path(&self.wgpu_things, None, path).unwrap())
+            .map(|path| Texture::from_path(&self.renderer.wgpu_things, None, path).unwrap())
             .collect::<Vec<Texture>>();
 
-        textures.into_iter().map(|texture| self.texture_cahce.add_texture(texture)).collect::<Vec<TextureIndex>>()
+        textures.into_iter().map(|texture| self.renderer.texture_cahce.add_texture(texture)).collect::<Vec<TextureIndex>>()
     }
 
     pub fn is_key_down(&self, key: Key) -> bool {

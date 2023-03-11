@@ -3,9 +3,9 @@ use wgpu::util::DeviceExt;
 use crate::Vertex;
 use crate::LineVertex;
 use crate::cache::TextureCache;
+use crate::cache::TextureIndex;
 use crate::colour::Colour;
 use crate::rect::Rectangle;
-use crate::rect::TexturedRect;
 use crate::text::{Text, TransformedText};
 use std::f32::consts::PI;
 
@@ -62,9 +62,9 @@ impl DrawQueues {
         self.general_indicies.extend_from_slice(&indicies);
     }
 
-    pub(crate) fn add_textured_rectange(&mut self, cache: &mut TextureCache, rectangle: &TexturedRect, device: &wgpu::Device) {
+    pub(crate) fn add_textured_rectange(&mut self, cache: &mut TextureCache, rectangle: &Rectangle, texture: &TextureIndex, device: &wgpu::Device) {
         let vertices = rectangle.get_vertices();
-        let texture_bind_group = rectangle.get_texture_id();
+        let texture_bind_group = texture.id;
         let number_of_verticies = self.general_vertices.len() as u16;
         let number_of_inidices = self.general_indicies.len();
         // do index math
@@ -73,9 +73,9 @@ impl DrawQueues {
             3 + number_of_verticies, 0 + number_of_verticies, 2 + number_of_verticies,
         ];
 
-        match cache.get_mut(&rectangle.texture) {
+        match cache.get_mut(&texture) {
             Some(item) => item.time_since_used = 0,
-            None => cache.rebuild_from_index(&rectangle.texture, device),
+            None => cache.rebuild_from_index(&texture, device),
         }
 
         match self.rectangle_bind_group_switches.last() {

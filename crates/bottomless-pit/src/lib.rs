@@ -3,7 +3,6 @@ mod texture;
 mod rect;
 mod camera;
 mod vertex;
-mod line;
 mod input;
 mod draw_queue;
 mod matrix_math;
@@ -14,13 +13,16 @@ mod render;
 mod vectors;
 
 pub use engine_handle::Engine;
+pub use vectors::{Vec2, Vec3};
+pub use matrix_math::*;
+pub use colour::Colour;
 use engine_handle::DeviceQueue;
 use cgmath::{Point2};
 use cache::{TextureCache, TextureIndex};
 use input::InputHandle;
-use rect::{TexturedRect, Rectangle};
+use rect::Rectangle;
 use texture::Texture;
-use vertex::Vertex;
+use vertex::{Vertex, LineVertex};
 use image::GenericImageView;
 use wgpu::util::DeviceExt;
 use wgpu_glyph::orthographic_projection;
@@ -30,9 +32,7 @@ use winit::{
     window::{WindowBuilder, Window}
 };
 use draw_queue::{DrawQueues, BindGroups};
-use line::{Line, LineVertex};
-use matrix_math::*;
-use colour::Colour;
+
 
 struct State {
     surface: wgpu::Surface,
@@ -46,7 +46,8 @@ struct State {
     glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     clear_color: wgpu::Color,
     texture_cahce: TextureCache,
-    textured_rect: TexturedRect,
+    textured_rect: Rectangle,
+    texutre: TextureIndex,
     coloured_rect: Rectangle,
     rendering_stuff: MyRenderingStuff,
     input_handle: InputHandle,
@@ -131,9 +132,9 @@ impl State {
 
         let diffuse_bytes = include_bytes!("../assets/trans-test.png");
         let diffuse_texture = texture::create_texture_from_bytes(&mut texture_cahce, &wgpu_things, diffuse_bytes);
-        let diffuse_rect = rect::TexturedRect::new(diffuse_texture, [-0.0, 0.0], [0.5, 0.5]);
+        let diffuse_rect = Rectangle::new(Vec2::new(0.0, 0.0), [0.5, 0.5], Colour::White.to_raw());
 
-        let coloured_rect = rect::Rectangle::new([-1.0, 1.0], [1.0, 0.5], [1.0, 0.0, 0.0, 1.0]);
+        let coloured_rect = rect::Rectangle::new(Vec2::new(-1.0, 1.0), [1.0, 0.5], [1.0, 0.0, 0.0, 1.0]);
 
         let render_pipeline_layout = wgpu_things.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
             label: Some("Render Pipeline Layout"),
@@ -197,6 +198,7 @@ impl State {
             render_pipeline,
             draw_queues: DrawQueues::new(),
             textured_rect: diffuse_rect,
+            texutre: diffuse_texture,
             texture_cahce,
             glyph_brush,
             coloured_rect,
@@ -239,12 +241,13 @@ impl State {
         self.camera.update(&self.wgpu_things.queue);
         self.counter = (self.counter + 1.0) % 360.0;
         self.input_handle.end_of_frame_refresh();
-        let test_line = Line::new([0.1, 0.0], [0.5, 0.0], [0.0, 0.0, 0.0, 1.0]);
-        let test_rect = Rectangle::new([-0.5, 0.0], [0.5, 0.5], [0.0, 0.0, 0.0, 1.0]);
-        self.draw_queues.add_line(test_line.start, test_line.end);
-        self.draw_queues.add_textured_rectange(&mut self.texture_cahce, &self.textured_rect, &self.wgpu_things.device);
+        let test_rect = Rectangle::new(Vec2::new(-0.5, 0.0), [0.5, 0.5], [0.0, 0.0, 0.0, 1.0]);
+        let test_line_start = LineVertex::new([0.0, 0.0], [0.0, 0.0, 0.0, 1.0]);
+        let test_line_end = LineVertex::new([0.5, 0.0], [0.0, 0.0, 0.0, 1.0]);
+        self.draw_queues.add_line(test_line_start, test_line_end);
         self.draw_queues.add_rectangle(&test_rect);
         self.draw_queues.add_rectangle(&self.coloured_rect);
+        self.draw_queues.add_textured_rectange(&mut self.texture_cahce, &self.textured_rect, &self.texutre, &self.wgpu_things.device);
         self.draw_queues.add_regular_n_gon(10, 0.3, (0.0, 0.0), Colour::White);
         let static_text = text::create_text("Hello!", 40.0, cgmath::Point2::new(300.0, 300.0), Colour::Orange);
         self.draw_queues.add_text(static_text);
@@ -445,7 +448,7 @@ impl MyRenderingStuff {
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/line_shader.wgsl").into()),
         });
 
-        let line_pipeline = make_pipeline(&wgpu_things.device, wgpu::PrimitiveTopology::LineList, bind_group_layouts, &[line::LineVertex::desc()], &line_shader, texture_format, Some("line_renderer"));
+        let line_pipeline = make_pipeline(&wgpu_things.device, wgpu::PrimitiveTopology::LineList, bind_group_layouts, &[LineVertex::desc()], &line_shader, texture_format, Some("line_renderer"));
 
         Self {
             white_pixel,
