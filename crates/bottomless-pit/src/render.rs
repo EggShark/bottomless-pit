@@ -18,7 +18,6 @@ pub(crate) struct Renderer {
     draw_queues: DrawQueues,
     glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     pipelines: RenderPipelines,
-    camera: Camera,
     clear_colour: Colour,
     pub(crate) wgpu_things: DeviceQueue, // its very cringe storing this here and not in engine however texture chace requires it
     pub(crate) texture_cahce: TextureCache,
@@ -41,7 +40,7 @@ impl Renderer {
         self.draw_queues.add_line(start, end) 
     } 
 
-    pub(crate) fn render(&mut self, wgpu_things: &DeviceQueue, size: Vec2<u32>, cache: TextureCache) -> Result<(), wgpu::SurfaceError>{
+    pub(crate) fn render(&mut self, wgpu_things: &DeviceQueue, size: Vec2<u32>, camera: &wgpu::BindGroup) -> Result<(), wgpu::SurfaceError>{
         let output = self.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
         let mut encoder = wgpu_things.device.create_command_encoder(&wgpu::CommandEncoderDescriptor{
@@ -74,7 +73,7 @@ impl Renderer {
         });
         
         render_pass.set_pipeline(&self.pipelines.polygon_pipline);
-        render_pass.set_bind_group(1, &self.camera.bind_group, &[]);
+        render_pass.set_bind_group(1, camera, &[]);
         if render_items.number_of_rectangle_indicies != 0 {
             render_pass.set_vertex_buffer(0, render_items.rectangle_buffer.slice(..));
             render_pass.set_index_buffer(render_items.rectangle_index_buffer.slice(..), wgpu::IndexFormat::Uint16);
@@ -85,7 +84,7 @@ impl Renderer {
                 }
                 let bind_group = match &current_bind_group.bind_group {
                     &BindGroups::WhitePixel => &self.white_pixel,
-                    &BindGroups::Custom {bind_group} => &cache[bind_group].bind_group,
+                    &BindGroups::Custom {bind_group} => &self.texture_cahce[bind_group].bind_group,
                 };
                 render_pass.set_bind_group(0, bind_group, &[]);
                 let draw_range = match render_items.rectangle_bind_group_switches.get(idx + 1) {
@@ -97,7 +96,7 @@ impl Renderer {
             }
         }
         render_pass.set_pipeline(&self.pipelines.line_pipeline);
-        render_pass.set_bind_group(0, &self.camera.bind_group, &[]);
+        render_pass.set_bind_group(0, camera, &[]);
         render_pass.set_vertex_buffer(0, render_items.line_buffer.slice(..));
         render_pass.draw(0..render_items.number_of_line_verticies, 0..1);
         drop(render_pass);
@@ -118,12 +117,12 @@ impl Renderer {
                 let transform = flatten_matrix(ortho * text_transform);
                 self.glyph_brush.queue(section);
                 self.glyph_brush.draw_queued_with_transform(
-                    &wgpu_things.device, &mut staging_belt, &mut encoder, &view, &self.camera.bind_group, transform,
+                    &wgpu_things.device, &mut staging_belt, &mut encoder, &view, &camera, transform,
                 ).unwrap();
             });
 
             text_sections.into_iter().for_each(|s| self.glyph_brush.queue(s));
-            self.glyph_brush.draw_queued(&wgpu_things.device, &mut staging_belt, &mut encoder, &view, &self.camera.bind_group, size.x, size.y).unwrap();
+            self.glyph_brush.draw_queued(&wgpu_things.device, &mut staging_belt, &mut encoder, &view, camera, size.x, size.y).unwrap();
 
         staging_belt.finish();
         wgpu_things.queue.submit(std::iter::once(encoder.finish()));

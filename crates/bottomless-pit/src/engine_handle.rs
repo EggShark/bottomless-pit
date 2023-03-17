@@ -3,6 +3,7 @@ use rayon::prelude::*;
 use winit::window::BadIcon;
 use winit::window::Window;
 
+use crate::Colour;
 use crate::DrawQueues;
 use crate::TextureCache;
 use crate::InputHandle;
@@ -11,14 +12,16 @@ use crate::render::Renderer;
 use crate::input::Key;
 use crate::texture::{Texture, create_texture};
 use crate::vectors::Vec2;
-use crate::camera::CameraController;
+use crate::camera::{Camera, CameraController};
 
 pub struct Engine {
     renderer: Renderer,
     input_handle: InputHandle,
     window: Window,
     cursor_visibility: bool,
-    camera_controller: CameraController,
+    camera_matrix: [f32; 16],
+    camera_bind_group: wgpu::BindGroup,
+    camera_buffer: wgpu::Buffer,
 }
 
 
@@ -134,6 +137,28 @@ impl Engine {
     pub fn show_cursor(&mut self) {
         self.window.set_cursor_visible(true);
         self.cursor_visibility = true;
+    }
+
+    pub fn change_camera_matrix(&mut self, matrix: [f32; 16]) {
+        self.camera_matrix = matrix;
+        self.renderer.wgpu_things.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_matrix]));
+    }
+}
+
+pub struct EngineBuilder {
+    resolution: (u32, u32),
+    full_screen: bool,
+    target_fps: u32,
+    close_key: Option<Key>,
+    clear_colour: Colour,
+    window_icon: winit::window::Icon,
+    window_title: String,
+    resizable: bool,
+}
+
+impl EngineBuilder {
+    pub fn build(self) -> Engine {
+        todo!()
     }
 }
 
