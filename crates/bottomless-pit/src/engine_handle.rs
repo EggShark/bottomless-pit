@@ -26,6 +26,10 @@ pub struct Engine {
 
 
 impl Engine {
+    fn new(winodw_builder: winit::window::WindowBuilder) -> Self {
+        todo!()
+    }
+
     pub fn create_texture(&mut self, path: &str) -> TextureIndex {
         create_texture(&mut self.renderer.texture_cahce, &self.renderer.wgpu_things, path)
     }
@@ -151,13 +155,135 @@ pub struct EngineBuilder {
     target_fps: u32,
     close_key: Option<Key>,
     clear_colour: Colour,
-    window_icon: winit::window::Icon,
+    window_icon: Option<winit::window::Icon>,
     window_title: String,
     resizable: bool,
 }
 
 impl EngineBuilder {
+    pub fn new() -> Self {
+        Self {
+            resolution: (600, 600),
+            full_screen: false,
+            target_fps: 30,
+            close_key: None,
+            clear_colour: Colour::Black,
+            window_icon: None,
+            window_title: "".into(),
+            resizable: true
+        }
+    }
+
+    pub fn with_resolution(self, resolution: (u32, u32)) -> Self {
+        Self {
+            resolution,
+            full_screen: self.full_screen,
+            target_fps: self.target_fps,
+            close_key: self.close_key,
+            clear_colour: self.clear_colour,
+            window_icon: self.window_icon,
+            window_title: self.window_title,
+            resizable: self.resizable,
+        }
+    }
+
+    pub fn fullscreen(self) -> Self {
+        Self {
+            resolution: self.resolution,
+            full_screen: true,
+            target_fps: self.target_fps,
+            close_key: self.close_key,
+            clear_colour: self.clear_colour,
+            window_icon: self.window_icon,
+            window_title: self.window_title,
+            resizable: self.resizable,
+        }
+    }
+
+    pub fn set_target_fps(self, fps: u32) -> Self {
+        Self {
+            resolution: self.resolution,
+            full_screen: self.full_screen,
+            target_fps: fps,
+            close_key: self.close_key,
+            clear_colour: self.clear_colour,
+            window_icon: self.window_icon,
+            window_title: self.window_title,
+            resizable: self.resizable,
+        }
+    }
+
+    pub fn set_close_key(self, key: Key) -> Self {
+        Self {
+            resolution: self.resolution,
+            full_screen: self.full_screen,
+            target_fps: self.target_fps,
+            close_key: Some(key),
+            clear_colour: self.clear_colour,
+            window_icon: self.window_icon,
+            window_title: self.window_title,
+            resizable: self.resizable,
+        }
+    }
+
+    pub fn set_clear_colour(self, colour: Colour) -> Self {
+        Self {
+            resolution: self.resolution,
+            full_screen: self.full_screen,
+            target_fps: self.target_fps,
+            close_key: self.close_key,
+            clear_colour: colour,
+            window_icon: self.window_icon,
+            window_title: self.window_title,
+            resizable: self.resizable,
+        }
+    }
+
+    pub fn set_window_title(self, title: &str) -> Self {
+        Self {
+            resolution: self.resolution,
+            full_screen: self.full_screen,
+            target_fps: self.target_fps,
+            close_key: self.close_key,
+            clear_colour: self.clear_colour,
+            window_icon: self.window_icon,
+            window_title: title.into(),
+            resizable: self.resizable,
+        }
+    }
+
+    pub fn set_window_icon(self, icon: winit::window::Icon) -> Self {
+        Self {
+            resolution: self.resolution,
+            full_screen: self.full_screen,
+            target_fps: self.target_fps,
+            close_key: self.close_key,
+            clear_colour: self.clear_colour,
+            window_icon: Some(icon),
+            window_title: self.window_title,
+            resizable: self.resizable,
+        }
+    }
+
+    pub fn unresizable(self) -> Self {
+        Self {
+            resolution: self.resolution,
+            full_screen: self.full_screen,
+            target_fps: self.target_fps,
+            close_key: self.close_key,
+            clear_colour: self.clear_colour,
+            window_icon: self.window_icon,
+            window_title: self.window_title,
+            resizable: false,
+        }
+    }
+
     pub fn build(self) -> Engine {
+        let window_builder = winit::window::WindowBuilder::new()
+            .with_title(self.window_title)
+            .with_inner_size(winit::dpi::PhysicalSize::new(self.resolution.0, self.resolution.1))
+            .with_resizable(self.resizable)
+            .with_window_icon(self.window_icon);
         todo!()
     }
 }
