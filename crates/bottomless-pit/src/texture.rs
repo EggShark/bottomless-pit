@@ -2,7 +2,7 @@ use image::GenericImageView;
 use crc32fast::Hasher;
 
 use crate::cache::{TextureCache, TextureIndex};
-use crate::engine_handle::DeviceQueue;
+use crate::engine_handle::WgpuClump;
 
 pub(crate) struct Texture {
     pub texture: wgpu::Texture,
@@ -14,7 +14,7 @@ pub(crate) struct Texture {
 }
 
 impl Texture {
-    pub fn from_bytes(wgpu_things: &DeviceQueue, label: Option<&str>, bytes: &[u8]) -> Result<Self, image::ImageError> {
+    pub fn from_bytes(wgpu_things: &WgpuClump, label: Option<&str>, bytes: &[u8]) -> Result<Self, image::ImageError> {
         let mut hasher = Hasher::new();
         hasher.update(bytes);
         let checksum = hasher.finalize();
@@ -22,13 +22,13 @@ impl Texture {
         Ok(Self::from_image(wgpu_things, img, label, checksum))
     }
 
-    pub fn from_path(wgpu_things: &DeviceQueue, label: Option<&str>, path: &str) -> Result<Self, image::ImageError> {
+    pub fn from_path(wgpu_things: &WgpuClump, label: Option<&str>, path: &str) -> Result<Self, image::ImageError> {
         let bytes = std::fs::read(path)?;
         let out = Self::from_bytes(wgpu_things, label, &bytes)?;
         Ok(out)
     }
 
-    fn from_image(wgpu_things: &DeviceQueue, img: image::DynamicImage, label: Option<&str>, id: u32) -> Self {
+    fn from_image(wgpu_things: &WgpuClump, img: image::DynamicImage, label: Option<&str>, id: u32) -> Self {
         let diffuse_rgba = img.to_rgba8();
         let (width, height) = img.dimensions();
 
@@ -133,12 +133,12 @@ impl Texture {
     }
 }
 
-pub(crate) fn create_texture(texture_cache: &mut TextureCache, wgpu_things: &DeviceQueue, path: &str) -> TextureIndex {
+pub(crate) fn create_texture(texture_cache: &mut TextureCache, wgpu_things: &WgpuClump, path: &str) -> TextureIndex {
     let texture = Texture::from_path(wgpu_things, None, path).unwrap();
     texture_cache.add_texture(texture)
 }
 
-pub(crate) fn create_texture_from_bytes(texture_cache: &mut TextureCache, wgpu_things: &DeviceQueue, bytes: &[u8]) -> TextureIndex {
+pub(crate) fn create_texture_from_bytes(texture_cache: &mut TextureCache, wgpu_things: &WgpuClump, bytes: &[u8]) -> TextureIndex {
     let texture = Texture::from_bytes(wgpu_things, None, bytes).unwrap();
     texture_cache.add_texture(texture)
 }

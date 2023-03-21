@@ -12,11 +12,11 @@ mod engine_handle;
 mod render;
 mod vectors;
 
-pub use engine_handle::Engine;
+pub use engine_handle::{Engine, EngineBuilder, BuildError};
 pub use vectors::{Vec2, Vec3};
 pub use matrix_math::*;
 pub use colour::Colour;
-use engine_handle::DeviceQueue;
+use engine_handle::WgpuClump;
 use cgmath::{Point2};
 use cache::{TextureCache, TextureIndex};
 use input::InputHandle;
@@ -36,7 +36,7 @@ use draw_queue::{DrawQueues, BindGroups};
 
 struct State {
     surface: wgpu::Surface,
-    wgpu_things: DeviceQueue,
+    wgpu_things: WgpuClump,
     config: wgpu::SurfaceConfiguration,
     camera: camera::Camera,
     camera_controller: camera::CameraController,
@@ -98,7 +98,7 @@ impl State {
             None,
         )).unwrap();
 
-        let wgpu_things = DeviceQueue {
+        let wgpu_things = WgpuClump {
             device,
             queue
         };
@@ -355,7 +355,7 @@ struct MyRenderingStuff {
 }
 
 impl MyRenderingStuff {
-    fn new(wgpu_things: &DeviceQueue, bind_group_layouts: &[&wgpu::BindGroupLayout], texture_format: wgpu::TextureFormat) -> Self {
+    fn new(wgpu_things: &WgpuClump, bind_group_layouts: &[&wgpu::BindGroupLayout], texture_format: wgpu::TextureFormat) -> Self {
         let white_pixel_image = image::load_from_memory(WHITE_PIXEL).unwrap();
         let white_pixel_rgba = white_pixel_image.to_rgba8();
         let (width, height) = white_pixel_image.dimensions();

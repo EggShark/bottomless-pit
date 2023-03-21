@@ -1,9 +1,12 @@
 use image::{ImageError, GenericImageView};
 use rayon::prelude::*;
-use winit::window::BadIcon;
-use winit::window::Window;
+use wgpu::util::DeviceExt;
+use wgpu::{CreateSurfaceError, RequestDeviceError};
+use winit::event_loop::EventLoop;
+use winit::window::{BadIcon, Window};
+use winit::error::OsError;
 
-use crate::Colour;
+use crate::{Colour, IDENTITY_MATRIX};
 use crate::DrawQueues;
 use crate::TextureCache;
 use crate::InputHandle;
@@ -26,20 +29,115 @@ pub struct Engine {
 
 
 impl Engine {
-    fn new(winodw_builder: winit::window::WindowBuilder) -> Self {
-        todo!()
+    fn new(builder: EngineBuilder) -> Result<Self, BuildError> {
+        let cursor_visibility = true;
+        let input_handle = InputHandle::new();
+
+        let event_loop = EventLoop::new();
+        let window_builder = winit::window::WindowBuilder::new()
+            .with_title(builder.window_title)
+            .with_inner_size(winit::dpi::PhysicalSize::new(builder.resolution.0, builder.resolution.1))
+            .with_resizable(builder.resizable)
+            .with_window_icon(builder.window_icon);
+        let window = window_builder.build(&event_loop)?;
+
+        let backend = if cfg!(target_os = "windows") {
+            wgpu::Backends::DX12 // text rendering gets angry on vulkan
+        } else {
+            wgpu::Backends::all()
+        };
+
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor{ 
+            backends: backend, 
+            dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
+        });
+
+        let surface = unsafe {
+            instance.create_surface(&window)
+        }?;
+
+        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+            power_preference: wgpu::PowerPreference::default(),
+            compatible_surface: Some(&surface),
+            force_fallback_adapter: false,
+        }));
+
+        let adapter = match adapter {
+            Some(a) => Ok(a),
+            None => Err(BuildError::FailedToCreateAdapter)
+        }?;
+
+        let (device, queue) = pollster::block_on(adapter.request_device(
+            &wgpu::DeviceDescriptor{
+                features: wgpu::Features::empty(),
+                limits: wgpu::Limits::default(),
+                label: None,
+            },
+            None,
+        ))?;
+
+        let wgpu_clump = WgpuClump {
+            device,
+            queue,
+        };
+
+        let camera_matrix = IDENTITY_MATRIX;
+        let camera_buffer = wgpu_clump.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[camera_matrix]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+        
+        let camera_bind_group_layout = wgpu_clump.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ],
+            label: Some("camera_bind_group_layout"),
+        });
+
+        let camera_bind_group = wgpu_clump.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &camera_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                }
+            ],
+            label: Some("camera_bind_group"),
+        });
+
+        let renderer = Renderer::new(wgpu_clump, surface, &adapter, window.inner_size(), &camera_bind_group_layout, builder.clear_colour);
+        Ok(Self {
+            renderer,
+            input_handle,
+            window,
+            cursor_visibility,
+            camera_matrix,
+            camera_bind_group,
+            camera_buffer,
+        })
+        
     }
 
     pub fn create_texture(&mut self, path: &str) -> TextureIndex {
-        create_texture(&mut self.renderer.texture_cahce, &self.renderer.wgpu_things, path)
+        create_texture(&mut self.renderer.texture_cache, &self.renderer.wgpu_clump, path)
     }
 
     pub fn create_many_textures(&mut self, paths: &[&str]) -> Vec<TextureIndex> {
         let textures = paths.par_iter()
-            .map(|path| Texture::from_path(&self.renderer.wgpu_things, None, path).unwrap())
+            .map(|path| Texture::from_path(&self.renderer.wgpu_clump, None, path).unwrap())
             .collect::<Vec<Texture>>();
 
-        textures.into_iter().map(|texture| self.renderer.texture_cahce.add_texture(texture)).collect::<Vec<TextureIndex>>()
+        textures.into_iter().map(|texture| self.renderer.texture_cache.add_texture(texture)).collect::<Vec<TextureIndex>>()
     }
 
     pub fn is_key_down(&self, key: Key) -> bool {
@@ -145,7 +243,7 @@ impl Engine {
 
     pub fn change_camera_matrix(&mut self, matrix: [f32; 16]) {
         self.camera_matrix = matrix;
-        self.renderer.wgpu_things.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_matrix]));
+        self.renderer.wgpu_clump.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_matrix]));
     }
 }
 
@@ -278,15 +376,37 @@ impl EngineBuilder {
         }
     }
 
-    pub fn build(self) -> Engine {
-        let window_builder = winit::window::WindowBuilder::new()
-            .with_title(self.window_title)
-            .with_inner_size(winit::dpi::PhysicalSize::new(self.resolution.0, self.resolution.1))
-            .with_resizable(self.resizable)
-            .with_window_icon(self.window_icon);
-        todo!()
+    pub fn build(self) -> Result<Engine, BuildError> {        
+        Engine::new(self)
     }
 }
+
+#[derive(Debug)]
+pub enum BuildError {
+    WindowOsError(OsError),
+    CreateSurfaceError(CreateSurfaceError),
+    FailedToCreateAdapter,
+    RequestDeviceError(RequestDeviceError),
+}
+
+impl From<OsError> for BuildError {
+    fn from(value: OsError) -> Self {
+        Self::WindowOsError(value)
+    }
+}
+
+impl From<CreateSurfaceError> for BuildError {
+    fn from(value: CreateSurfaceError) -> Self {
+        Self::CreateSurfaceError(value)
+    }
+}
+
+impl From<RequestDeviceError> for BuildError {
+    fn from(value: RequestDeviceError) -> Self {
+        Self::RequestDeviceError(value)
+    }
+}
+//impl std::error::Error for BuildError {}
 
 #[derive(Debug)]
 pub enum IconError {
@@ -318,7 +438,7 @@ impl std::fmt::Display for IconError {
 impl std::error::Error for IconError {}
 
 // just made to avoid data clumps
-pub(crate) struct DeviceQueue {
+pub(crate) struct WgpuClump {
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
 }

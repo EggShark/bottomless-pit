@@ -1,8 +1,6 @@
 use winit::event::{WindowEvent, KeyboardInput, ElementState, VirtualKeyCode};
 use wgpu::util::DeviceExt;
 
-use crate::engine_handle::DeviceQueue;
-
 pub struct Camera {
     eye: cgmath::Point3<f32>,
     target: cgmath::Point3<f32>,

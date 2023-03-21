@@ -1,8 +1,14 @@
-use state::{run, Engine};
+use state::{run, Engine, EngineBuilder, Colour};
 
 fn main() {
+    let engine = EngineBuilder::new()
+        .set_clear_colour(Colour::Blue)
+        .fullscreen()
+        .build()
+        .unwrap();
+
     let s = TestUnit;
-    run(Box::new(s));
+    //run(Box::new(s));
 }
 
 struct TestUnit;
