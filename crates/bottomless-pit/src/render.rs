@@ -13,7 +13,7 @@ use crate::rect::Rectangle;
 use image::GenericImageView;
 use winit::dpi::PhysicalSize;
 
-pub(crate) struct Renderer {
+pub struct Renderer {
     //add stuff later
     white_pixel: wgpu::BindGroup,
     draw_queues: DrawQueues,

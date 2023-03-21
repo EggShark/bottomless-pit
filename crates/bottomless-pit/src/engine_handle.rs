@@ -25,7 +25,7 @@ pub struct Engine {
     size: Vec2<u32>,
     config: wgpu::SurfaceConfiguration,
     surface: wgpu::Surface,
-    event_loop: EventLoop<()>,
+    event_loop: Option<EventLoop<()>>,
     cursor_visibility: bool,
     camera_matrix: [f32; 16],
     camera_bind_group: wgpu::BindGroup,
@@ -147,7 +147,7 @@ impl Engine {
             surface,
             config,
             size,
-            event_loop,
+            event_loop: Some(event_loop),
             cursor_visibility,
             camera_matrix,
             camera_bind_group,
@@ -274,45 +274,46 @@ impl Engine {
         self.renderer.wgpu_clump.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_matrix]));
     }
 
-    pub fn run(mut self, game: Box<dyn Game>) -> () {
-        // self.event_loop.run(move |event, _, control_flow| {
-        //     match event {
-        //         Event::RedrawRequested(window_id) if window_id == self.window.id() => {
-        //             //game.render();
-        //             match self.renderer.render(self.window.inner_size().into(), &self.camera_bind_group, &self.surface) {
-        //                 Ok(_) => {},
-        //                 // reconfigure surface if lost
-        //                 Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
-        //                 Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-        //                 Err(e) => eprintln!("{:?}", e),
-        //             }
-        //             //game.update();
-        //             self.update();
-        //         }
-        //         Event::MainEventsCleared => {
-        //             //RedrawRequested will only trigger once, unless we manually request it
-        //             self.window.request_redraw();
-        //         }
-        //         Event::WindowEvent {
-        //             ref event,
-        //             window_id,
-        //         } if window_id == self.window.id() => if !self.input(event) {
-        //             match event {
-        //                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-        //                 WindowEvent::Resized(physical_size) => {
-        //                     let s = *physical_size;
-        //                     self.resize(s.into());
-        //                 },
-        //                 WindowEvent::ScaleFactorChanged{new_inner_size, ..} => {
-        //                     let s = **new_inner_size;
-        //                     self.resize(s.into());
-        //                 }
-        //                 _ => {}
-        //             }
-        //         },
-        //         _ => {}
-        //     }
-        // });
+    pub fn run(mut self, mut game: Box<dyn Game>) -> () {
+        let event_loop = self.event_loop.take().unwrap(); //should never panic
+        event_loop.run(move |event, _, control_flow| {
+            match event {
+                Event::RedrawRequested(window_id) if window_id == self.window.id() => {
+                    game.render(&mut self.renderer);
+                    match self.renderer.render(self.window.inner_size().into(), &self.camera_bind_group, &self.surface) {
+                        Ok(_) => {},
+                        // reconfigure surface if lost
+                        Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
+                        Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+                        Err(e) => eprintln!("{:?}", e),
+                    }
+                    game.update(&mut self);
+                    self.update();
+                }
+                Event::MainEventsCleared => {
+                    //RedrawRequested will only trigger once, unless we manually request it
+                    self.window.request_redraw();
+                }
+                Event::WindowEvent {
+                    ref event,
+                    window_id,
+                } if window_id == self.window.id() => if !self.input(event) {
+                    match event {
+                        WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                        WindowEvent::Resized(physical_size) => {
+                            let s = *physical_size;
+                            self.resize(s.into());
+                        },
+                        WindowEvent::ScaleFactorChanged{new_inner_size, ..} => {
+                            let s = **new_inner_size;
+                            self.resize(s.into());
+                        }
+                        _ => {}
+                    }
+                },
+                _ => {}
+            }
+        });
     }
 
     fn update(&mut self) {
@@ -320,7 +321,7 @@ impl Engine {
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
-        true
+        false
     }
 
     fn resize(&mut self, new_size: Vec2<u32>) {

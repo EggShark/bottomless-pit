@@ -13,6 +13,7 @@ mod render;
 mod vectors;
 
 pub use engine_handle::{Engine, EngineBuilder, BuildError};
+pub use render::Renderer;
 pub use vectors::{Vec2, Vec3};
 pub use matrix_math::*;
 pub use colour::Colour;
@@ -502,8 +503,8 @@ pub fn run(game: Box<dyn Game>) -> ! {
 }
 
 pub trait Game {
-    fn render(&self);
-    fn update(&self, engine_handle: &mut Engine);
+    fn render(&self, render_handle: &mut Renderer);
+    fn update(&mut self, engine_handle: &mut Engine);
     fn on_close(&self) {
 
     } 
