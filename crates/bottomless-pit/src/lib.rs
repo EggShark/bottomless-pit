@@ -17,6 +17,7 @@ pub use render::Renderer;
 pub use vectors::{Vec2, Vec3};
 pub use matrix_math::*;
 pub use colour::Colour;
+pub use input::Key;
 use engine_handle::WgpuClump;
 use cgmath::{Point2};
 use cache::{TextureCache, TextureIndex};

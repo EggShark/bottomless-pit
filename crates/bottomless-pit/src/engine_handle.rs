@@ -317,11 +317,24 @@ impl Engine {
     }
 
     fn update(&mut self) {
-
+        self.renderer.texture_cache.chache_update();
+        self.input_handle.end_of_frame_refresh();
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
-        false
+        match event {
+            WindowEvent::KeyboardInput {
+                input: KeyboardInput{
+                    virtual_keycode,
+                    state,
+                    ..
+                },
+                ..
+            } => {
+                self.input_handle.process_input(virtual_keycode, *state)
+            },
+            _ => false,
+        }
     }
 
     fn resize(&mut self, new_size: Vec2<u32>) {

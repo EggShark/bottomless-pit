@@ -208,7 +208,6 @@ impl Renderer {
                     Some(switch_point) => current_bind_group.point as u32..switch_point.point as u32,
                     None => current_bind_group.point as u32..render_items.number_of_rectangle_indicies,
                 };
-                println!("{:?}", draw_range);
                 render_pass.draw_indexed(draw_range, 0, 0..1);
             }
         }
