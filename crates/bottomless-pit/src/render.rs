@@ -15,7 +15,6 @@ use winit::dpi::PhysicalSize;
 
 pub(crate) struct Renderer {
     //add stuff later
-    surface: wgpu::Surface,
     white_pixel: wgpu::BindGroup,
     draw_queues: DrawQueues,
     glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
@@ -28,11 +27,12 @@ pub(crate) struct Renderer {
 impl Renderer {
     pub(crate) fn new(
         wgpu_clump: WgpuClump, 
-        surface: wgpu::Surface, 
+        surface: &wgpu::Surface, 
         adapter: &wgpu::Adapter, 
         size: PhysicalSize<u32>, 
         camera_bind_group_layout: &wgpu::BindGroupLayout,
         clear_colour: Colour,
+        texture_format: wgpu::TextureFormat,
     ) -> Self {
         let texture_cache = TextureCache::new();
         let draw_queues = DrawQueues::new();
@@ -41,25 +41,6 @@ impl Renderer {
         let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(minecraft_mono)
             .build(&wgpu_clump.device, wgpu::TextureFormat::Bgra8UnormSrgb);
         
-        let surface_capabilities = surface.get_capabilities(&adapter);
-        let surface_format = surface_capabilities.formats.iter()
-            .copied()
-            .filter(|f| f.describe().srgb)
-            .next()
-            .unwrap_or(surface_capabilities.formats[0]);
-
-        let config = wgpu::SurfaceConfiguration {
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            format: surface_format,
-            width: size.width,
-            height: size.height,
-            present_mode: surface_capabilities.present_modes[0],
-            alpha_mode: surface_capabilities.alpha_modes[0],
-            view_formats: vec![],
-        };
-        surface.configure(&wgpu_clump.device, &config);
-
-
         let white_pixel_image = image::load_from_memory(WHITE_PIXEL).unwrap();
         let white_pixel_rgba = white_pixel_image.to_rgba8();
         let (width, height) = white_pixel_image.dimensions();
@@ -147,10 +128,9 @@ impl Renderer {
             label: Some("diffuse_bind_group"),
         });
 
-        let pipelines = RenderPipelines::new(&wgpu_clump, camera_bind_group_layout, config.format);
+        let pipelines = RenderPipelines::new(&wgpu_clump, camera_bind_group_layout, texture_format);
 
         Self {
-            surface,
             white_pixel,
             draw_queues,
             glyph_brush,
@@ -177,8 +157,8 @@ impl Renderer {
         self.draw_queues.add_line(start, end) 
     } 
 
-    pub(crate) fn render(&mut self, size: Vec2<u32>, camera: &wgpu::BindGroup) -> Result<(), wgpu::SurfaceError>{
-        let output = self.surface.get_current_texture()?;
+    pub(crate) fn render(&mut self, size: Vec2<u32>, camera: &wgpu::BindGroup, surface: &wgpu::Surface) -> Result<(), wgpu::SurfaceError>{
+        let output = surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
         let mut encoder = self.wgpu_clump.device.create_command_encoder(&wgpu::CommandEncoderDescriptor{
             label: Some("Render Encoder"),

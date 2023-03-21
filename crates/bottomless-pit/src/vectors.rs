@@ -38,6 +38,12 @@ impl<T> Into<Vec2<T>> for winit::dpi::PhysicalSize<T> {
     }
 }
 
+impl<T> Into<winit::dpi::PhysicalSize<T>> for Vec2<T> {
+    fn into(self) -> winit::dpi::PhysicalSize<T> {
+        winit::dpi::PhysicalSize{width: self.x, height: self.y}
+    }
+}
+
 impl<T> Into<Vec2<T>> for cgmath::Vector2<T> {
     fn into(self) -> Vec2<T> {
         Vec2{x: self.x, y: self.y}

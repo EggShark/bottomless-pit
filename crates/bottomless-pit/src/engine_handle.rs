@@ -2,11 +2,12 @@ use image::{ImageError, GenericImageView};
 use rayon::prelude::*;
 use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
-use winit::event_loop::EventLoop;
+use winit::event::*;
+use winit::event_loop::{EventLoop, ControlFlow};
 use winit::window::{BadIcon, Window};
 use winit::error::OsError;
 
-use crate::{Colour, IDENTITY_MATRIX};
+use crate::{Colour, IDENTITY_MATRIX, Game};
 use crate::DrawQueues;
 use crate::TextureCache;
 use crate::InputHandle;
@@ -21,6 +22,10 @@ pub struct Engine {
     renderer: Renderer,
     input_handle: InputHandle,
     window: Window,
+    size: Vec2<u32>,
+    config: wgpu::SurfaceConfiguration,
+    surface: wgpu::Surface,
+    event_loop: EventLoop<()>,
     cursor_visibility: bool,
     camera_matrix: [f32; 16],
     camera_bind_group: wgpu::BindGroup,
@@ -32,6 +37,7 @@ impl Engine {
     fn new(builder: EngineBuilder) -> Result<Self, BuildError> {
         let cursor_visibility = true;
         let input_handle = InputHandle::new();
+        let size: Vec2<u32> = builder.resolution.into();
 
         let event_loop = EventLoop::new();
         let window_builder = winit::window::WindowBuilder::new()
@@ -81,6 +87,24 @@ impl Engine {
             queue,
         };
 
+        let surface_capabilities = surface.get_capabilities(&adapter);
+        let surface_format = surface_capabilities.formats.iter()
+            .copied()
+            .filter(|f| f.describe().srgb)
+            .next()
+            .unwrap_or(surface_capabilities.formats[0]);
+
+        let config = wgpu::SurfaceConfiguration {
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            format: surface_format,
+            width: size.x,
+            height: size.y,
+            present_mode: surface_capabilities.present_modes[0],
+            alpha_mode: surface_capabilities.alpha_modes[0],
+            view_formats: vec![],
+        };
+        surface.configure(&wgpu_clump.device, &config);
+
         let camera_matrix = IDENTITY_MATRIX;
         let camera_buffer = wgpu_clump.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
@@ -115,11 +139,15 @@ impl Engine {
             label: Some("camera_bind_group"),
         });
 
-        let renderer = Renderer::new(wgpu_clump, surface, &adapter, window.inner_size(), &camera_bind_group_layout, builder.clear_colour);
+        let renderer = Renderer::new(wgpu_clump, &surface, &adapter, window.inner_size(), &camera_bind_group_layout, builder.clear_colour, config.format);
         Ok(Self {
             renderer,
             input_handle,
             window,
+            surface,
+            config,
+            size,
+            event_loop,
             cursor_visibility,
             camera_matrix,
             camera_bind_group,
@@ -216,7 +244,7 @@ impl Engine {
     }
 
     pub fn get_window_size(&self) -> Vec2<u32> {
-        self.window.inner_size().into()
+        self.size
     }
 
     pub fn get_window_scale_factor(&self) -> f64 {
@@ -244,6 +272,63 @@ impl Engine {
     pub fn change_camera_matrix(&mut self, matrix: [f32; 16]) {
         self.camera_matrix = matrix;
         self.renderer.wgpu_clump.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_matrix]));
+    }
+
+    pub fn run(mut self, game: Box<dyn Game>) -> () {
+        // self.event_loop.run(move |event, _, control_flow| {
+        //     match event {
+        //         Event::RedrawRequested(window_id) if window_id == self.window.id() => {
+        //             //game.render();
+        //             match self.renderer.render(self.window.inner_size().into(), &self.camera_bind_group, &self.surface) {
+        //                 Ok(_) => {},
+        //                 // reconfigure surface if lost
+        //                 Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
+        //                 Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+        //                 Err(e) => eprintln!("{:?}", e),
+        //             }
+        //             //game.update();
+        //             self.update();
+        //         }
+        //         Event::MainEventsCleared => {
+        //             //RedrawRequested will only trigger once, unless we manually request it
+        //             self.window.request_redraw();
+        //         }
+        //         Event::WindowEvent {
+        //             ref event,
+        //             window_id,
+        //         } if window_id == self.window.id() => if !self.input(event) {
+        //             match event {
+        //                 WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+        //                 WindowEvent::Resized(physical_size) => {
+        //                     let s = *physical_size;
+        //                     self.resize(s.into());
+        //                 },
+        //                 WindowEvent::ScaleFactorChanged{new_inner_size, ..} => {
+        //                     let s = **new_inner_size;
+        //                     self.resize(s.into());
+        //                 }
+        //                 _ => {}
+        //             }
+        //         },
+        //         _ => {}
+        //     }
+        // });
+    }
+
+    fn update(&mut self) {
+
+    }
+
+    fn input(&mut self, event: &WindowEvent) -> bool {
+        true
+    }
+
+    fn resize(&mut self, new_size: Vec2<u32>) {
+        if new_size.x > 0 && new_size.y > 0 {
+            self.config.width = new_size.x;
+            self.config.height = new_size.y;
+            self.surface.configure(&self.renderer.wgpu_clump.device, &self.config);
+        }
     }
 }
 

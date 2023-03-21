@@ -1,13 +1,14 @@
 use state::{run, Engine, EngineBuilder, Colour};
 
 fn main() {
+    let s = TestUnit;
     let engine = EngineBuilder::new()
         .set_clear_colour(Colour::Blue)
         .fullscreen()
         .build()
-        .unwrap();
+        .unwrap()
+        .run(Box::new(s));
 
-    let s = TestUnit;
     //run(Box::new(s));
 }
 
