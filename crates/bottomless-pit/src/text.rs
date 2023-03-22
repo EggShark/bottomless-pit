@@ -1,41 +1,21 @@
-use crate::{Colour, IDENTITY_MATRIX, matrix_math};
-use cgmath::{Point2, Transform};
-use wgpu_glyph::{GlyphBrush, GlyphCruncher};
+use crate::{Colour, IDENTITY_MATRIX, matrix_math, Vec2};
+use cgmath::{Transform};
+use wgpu_glyph::GlyphCruncher;
 use crate::matrix_math::*;
 
 #[derive(Debug)]
 pub(crate) struct Text {
     pub(crate) text: String,
     pub(crate) scale: f32,
-    pub(crate) position: Point2<f32>,
+    pub(crate) position: Vec2<f32>,
     pub(crate) colour: Colour,
-}
-
-pub(crate) fn create_text(text: &str, scale: f32, position: Point2<f32>, colour: Colour) -> Text {
-    Text {
-        text: text.into(),
-        scale,
-        position,
-        colour,
-    }
-}
-
-pub(crate) fn create_text_with_transform(text: &str, scale: f32, position: Point2<f32>, colour: Colour, transformation: [f32; 16], bounds: (f32, f32)) -> TransformedText {
-    TransformedText {
-        text: text.into(),
-        scale,
-        position,
-        colour,
-        bounds,
-        transformation,
-    }
 }
 
 #[derive(Debug)]
 pub(crate) struct TransformedText {
     pub(crate) text: String,
     pub(crate) scale: f32,
-    pub(crate) position: Point2<f32>,
+    pub(crate) position: Vec2<f32>,
     pub(crate) colour: Colour,
     pub(crate) bounds: (f32, f32),
     pub(crate) transformation: [f32; 16]

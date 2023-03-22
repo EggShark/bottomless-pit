@@ -2,8 +2,8 @@ use wgpu::util::DeviceExt;
 
 use crate::Vertex;
 use crate::LineVertex;
-use crate::cache::TextureCache;
-use crate::cache::TextureIndex;
+use crate::TextureCache;
+use crate::TextureIndex;
 use crate::colour::Colour;
 use crate::rect::Rectangle;
 use crate::text::{Text, TransformedText};

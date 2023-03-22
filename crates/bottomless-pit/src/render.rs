@@ -1,14 +1,14 @@
-use crate::DrawQueues;
-use crate::cache::TextureIndex;
+use crate::{DrawQueues, TextureCache, TextureIndex};
+use crate::text::Text;
 use crate::{LineVertex, WHITE_PIXEL, Texture, Vertex};
 use crate::engine_handle::WgpuClump;
 use crate::vectors::Vec2;
 use crate::colour::Colour; 
-use crate::cache::TextureCache;
-use crate::camera::Camera;
 use crate::BindGroups;
 use crate::matrix_math::*;
 use crate::rect::Rectangle;
+use crate::vertex::line_vert_pixels_to_screenspace;
+use wgpu_glyph::orthographic_projection;
 
 use image::GenericImageView;
 use winit::dpi::PhysicalSize;
@@ -21,6 +21,7 @@ pub struct Renderer {
     pipelines: RenderPipelines,
     clear_colour: Colour,
     pub(crate) wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
+    pub(crate) size: Vec2<u32>, // goes here bc normilzing stuff
     pub(crate) texture_cache: TextureCache,
 }
 
@@ -37,7 +38,7 @@ impl Renderer {
         let texture_cache = TextureCache::new();
         let draw_queues = DrawQueues::new();
 
-        let minecraft_mono = wgpu_glyph::ab_glyph::FontArc::try_from_slice(include_bytes!("../assets/Minecraft-Mono.ttf")).unwrap();
+        let minecraft_mono = wgpu_glyph::ab_glyph::FontArc::try_from_slice(include_bytes!("../assets/Monocraft.ttf")).unwrap();
         let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(minecraft_mono)
             .build(&wgpu_clump.device, wgpu::TextureFormat::Bgra8UnormSrgb);
         
@@ -137,12 +138,13 @@ impl Renderer {
             pipelines,
             clear_colour,
             wgpu_clump,
+            size: size.into(),
             texture_cache,
         }
     }
 
     pub fn draw_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, colour: Colour) {
-        let rectangle = Rectangle::new(position, [width, hieght], colour.to_raw());
+        let rectangle = Rectangle::from_pixels(position, [width, hieght], colour.to_raw(), self.size);
         self.draw_queues.add_rectangle(&rectangle);
     }
 
@@ -152,10 +154,20 @@ impl Renderer {
     }
 
     pub fn draw_line(&mut self, start_point: Vec2<f32>, end_point: Vec2<f32>, colour: Colour) {
-        let start = LineVertex::new(start_point.to_raw(), colour.to_raw());
-        let end = LineVertex::new(end_point.to_raw(), colour.to_raw());
+        let start = line_vert_pixels_to_screenspace(LineVertex::new(start_point.to_raw(), colour.to_raw()), self.size);
+        let end = line_vert_pixels_to_screenspace(LineVertex::new(end_point.to_raw(), colour.to_raw()), self.size);
         self.draw_queues.add_line(start, end) 
     } 
+
+    pub fn draw_text(&mut self, text: &str, position: Vec2<f32>, scale: f32, colour: Colour) {
+        let text = Text {
+            text: text.into(),
+            position,
+            scale,
+            colour
+        };
+        self.draw_queues.add_text(text)
+    }
 
     pub(crate) fn render(&mut self, size: Vec2<u32>, camera: &wgpu::BindGroup, surface: &wgpu::Surface) -> Result<(), wgpu::SurfaceError>{
         let output = surface.get_current_texture()?;
@@ -255,20 +267,6 @@ pub(crate) struct RenderPipelines {
 
 impl RenderPipelines {
     pub fn new(wgpu_clump: &WgpuClump, camera_bind_group_layout: &wgpu::BindGroupLayout, texture_format: wgpu::TextureFormat) -> Self {
-        let polygon_shader = wgpu_clump.device.create_shader_module(wgpu::ShaderModuleDescriptor{
-            label: Some("Shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),
-        });
-
-        let render_pipeline_layout = wgpu_clump.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor{
-            label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[
-                &Texture::make_bind_group_layout(&wgpu_clump.device),
-                camera_bind_group_layout,
-            ],
-            push_constant_ranges: &[],
-        });
-
         let generic_shader = wgpu_clump.device.create_shader_module(wgpu::ShaderModuleDescriptor{
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),

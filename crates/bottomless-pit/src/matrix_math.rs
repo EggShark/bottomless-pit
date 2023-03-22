@@ -1,7 +1,6 @@
-use crate::{IDENTITY_MATRIX, Point2, Vec2};
-pub use wgpu_glyph::orthographic_projection;
+use crate::Vec2;
 
-pub(crate) fn normalize_points<T: std::ops::Div<Output = T>>(point: Vec2<T>, width: T, height: T) -> Vec2<T> {
+pub fn normalize_points<T: std::ops::Div<Output = T>>(point: Vec2<T>, width: T, height: T) -> Vec2<T> {
     let x = point.x / width;
     let y = point.y / height;
     Vec2{x, y}
@@ -14,7 +13,7 @@ pub(crate) fn get_mid_point(rectangle: wgpu_glyph::ab_glyph::Rect) -> Vec2<f32> 
     Vec2{ x: x_mid, y: y_mid}
 }
 
-pub(crate) fn calculate_rotation_matrix(degree: f32) -> [f32; 16] {
+pub fn calculate_rotation_matrix(degree: f32) -> [f32; 16] {
     let degree = degree.to_radians();
     [
         degree.cos(), -degree.sin(), 0.0, 0.0,

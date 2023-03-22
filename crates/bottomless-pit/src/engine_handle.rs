@@ -8,21 +8,17 @@ use winit::window::{BadIcon, Window};
 use winit::error::OsError;
 
 use crate::{Colour, IDENTITY_MATRIX, Game};
-use crate::DrawQueues;
-use crate::TextureCache;
 use crate::InputHandle;
-use crate::cache::TextureIndex;
+use crate::TextureIndex;
 use crate::render::Renderer;
 use crate::input::Key;
 use crate::texture::{Texture, create_texture};
 use crate::vectors::Vec2;
-use crate::camera::{Camera, CameraController};
 
 pub struct Engine {
     renderer: Renderer,
     input_handle: InputHandle,
     window: Window,
-    size: Vec2<u32>,
     config: wgpu::SurfaceConfiguration,
     surface: wgpu::Surface,
     event_loop: Option<EventLoop<()>>,
@@ -45,6 +41,13 @@ impl Engine {
             .with_inner_size(winit::dpi::PhysicalSize::new(builder.resolution.0, builder.resolution.1))
             .with_resizable(builder.resizable)
             .with_window_icon(builder.window_icon);
+
+        let window_builder = if builder.full_screen {
+            window_builder.with_fullscreen(Some(winit::window::Fullscreen::Borderless(None)))
+        } else {
+            window_builder
+        };
+
         let window = window_builder.build(&event_loop)?;
 
         let backend = if cfg!(target_os = "windows") {
@@ -146,7 +149,6 @@ impl Engine {
             window,
             surface,
             config,
-            size,
             event_loop: Some(event_loop),
             cursor_visibility,
             camera_matrix,
@@ -244,7 +246,7 @@ impl Engine {
     }
 
     pub fn get_window_size(&self) -> Vec2<u32> {
-        self.size
+        self.renderer.size
     }
 
     pub fn get_window_scale_factor(&self) -> f64 {
@@ -283,7 +285,7 @@ impl Engine {
                     match self.renderer.render(self.window.inner_size().into(), &self.camera_bind_group, &self.surface) {
                         Ok(_) => {},
                         // reconfigure surface if lost
-                        Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
+                        Err(wgpu::SurfaceError::Lost) => self.resize(self.renderer.size),
                         Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                         Err(e) => eprintln!("{:?}", e),
                     }
@@ -322,6 +324,7 @@ impl Engine {
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
+        println!("{:?}", event);
         match event {
             WindowEvent::KeyboardInput {
                 input: KeyboardInput{
@@ -342,6 +345,7 @@ impl Engine {
             self.config.width = new_size.x;
             self.config.height = new_size.y;
             self.surface.configure(&self.renderer.wgpu_clump.device, &self.config);
+            self.renderer.size = new_size;
         }
     }
 }
