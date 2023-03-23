@@ -15,7 +15,7 @@ pub use render::Renderer;
 pub use vectors::{Vec2, Vec3};
 pub use matrix_math::*;
 pub use colour::Colour;
-pub use input::Key;
+pub use input::{Key, MouseKey};
 pub use texture::TextureIndex;
 use input::InputHandle;
 use texture::{Texture, TextureCache};

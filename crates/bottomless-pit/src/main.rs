@@ -1,4 +1,4 @@
-use state::{Engine, EngineBuilder, Colour, Renderer, Vec2, Key};
+use state::{Engine, EngineBuilder, Colour, Renderer, Vec2, Key, MouseKey};
 
 fn main() {
     let s = TestUnit;
@@ -17,9 +17,16 @@ impl state::Game for TestUnit {
         render_handle.draw_rectangle(Vec2{x: 0.0, y: 0.0}, 100.0, 200.0, Colour::Purple);
         render_handle.draw_text("hello world 0", Vec2{x: 0.0, y: 0.0}, 40.0, Colour::White);
     }
+
     fn update(&mut self, engine_handle: &mut Engine) {
         if engine_handle.is_key_released(Key::A) {
             println!("input");
         }
+
+        if engine_handle.is_mouse_key_released(MouseKey::Middle) {
+            println!("no cliking :(")
+        }
+
+        println!("{:?}", engine_handle.get_mouse_position());
     }
 }

@@ -11,7 +11,7 @@ use crate::{Colour, IDENTITY_MATRIX, Game};
 use crate::InputHandle;
 use crate::TextureIndex;
 use crate::render::Renderer;
-use crate::input::Key;
+use crate::input::{Key, MouseKey};
 use crate::texture::{Texture, create_texture};
 use crate::vectors::Vec2;
 
@@ -186,6 +186,26 @@ impl Engine {
         self.input_handle.is_key_released(key)
     }
 
+    pub fn is_mouse_key_down(&self, key: MouseKey) -> bool {
+        self.input_handle.is_mouse_key_down(key)
+    }
+
+    pub fn is_mouse_key_up(&self, key: MouseKey) -> bool {
+        self.input_handle.is_mouse_key_up(key)
+    }
+
+    pub fn is_mouse_key_pressed(&self, key: MouseKey) -> bool {
+        self.input_handle.is_mouse_key_pressed(key)
+    }
+
+    pub fn is_mouse_key_released(&self, key: MouseKey) -> bool {
+        self.input_handle.is_mouse_key_released(key)
+    }
+
+    pub fn get_mouse_position(&self) -> Vec2<f32> {
+        self.input_handle.get_mouse_position()
+    }
+
     pub fn window_has_focus(&self) -> bool {
         self.window.has_focus()
     }
@@ -324,20 +344,7 @@ impl Engine {
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
-        println!("{:?}", event);
-        match event {
-            WindowEvent::KeyboardInput {
-                input: KeyboardInput{
-                    virtual_keycode,
-                    state,
-                    ..
-                },
-                ..
-            } => {
-                self.input_handle.process_input(virtual_keycode, *state)
-            },
-            _ => false,
-        }
+        self.input_handle.process_input(event)
     }
 
     fn resize(&mut self, new_size: Vec2<u32>) {

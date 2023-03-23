@@ -1,6 +1,13 @@
+use winit::event::{VirtualKeyCode, ElementState, WindowEvent, KeyboardInput, MouseButton};
+
+use crate::Vec2;
+
 pub(crate) struct InputHandle {
     previous_keyboard_state: [bool; 115],
     current_keyboard_state: [bool; 115],
+    previous_mouse_state: [bool; 4],
+    current_mouse_state: [bool; 4],
+    mouse_position: Vec2<f32>,
 }
 
 impl InputHandle {
@@ -8,14 +15,54 @@ impl InputHandle {
         Self {
             previous_keyboard_state: [false; 115],
             current_keyboard_state: [false; 115],
+            previous_mouse_state: [false; 4],
+            current_mouse_state: [false; 4],
+            mouse_position: Vec2{x: 0.0, y:0.0}
         }
     }
 
     pub(crate) fn end_of_frame_refresh(&mut self) {
         self.previous_keyboard_state = self.current_keyboard_state;
+        self.previous_mouse_state = self.current_mouse_state;
     }
 
-    pub(crate) fn process_input(&mut self, key_code: &Option<VirtualKeyCode>, state: winit::event::ElementState) -> bool {
+    pub(crate) fn process_input(&mut self, event: &WindowEvent) -> bool {
+        match event {
+            WindowEvent::KeyboardInput {
+                input: KeyboardInput {
+                    virtual_keycode,
+                    state,
+                    ..
+                },
+                ..
+            } => self.process_keyboard_input(virtual_keycode, *state),
+            WindowEvent::MouseInput {
+                state,
+                button,
+                ..
+            } => self.process_mouse_input(*state, *button),
+            WindowEvent::CursorMoved {
+                position, 
+                ..
+            } => {
+                let pos = Vec2{x: position.x as f32, y: position.y as f32};
+                self.mouse_position = pos;
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn process_mouse_input(&mut self, state: ElementState, button: MouseButton) -> bool {
+        let key_bool = state == ElementState::Pressed;
+        let key: MouseKey = button.into();
+        let idx: usize = key as usize;
+
+        self.current_mouse_state[idx] = key_bool;
+        true
+    }
+
+    fn process_keyboard_input(&mut self, key_code: &Option<VirtualKeyCode>, state: winit::event::ElementState) -> bool {
         let key_bool = state == ElementState::Pressed;
         let key: Key = match key_code {
             Some(virtual_code) => {
@@ -52,6 +99,50 @@ impl InputHandle {
     pub(crate) fn is_key_released(&self, key: Key) -> bool {
         let index = key as usize;
         self.previous_keyboard_state[index] && !self.current_keyboard_state[index]
+    }
+
+    pub(crate) fn is_mouse_key_down(&self, key: MouseKey) -> bool {
+        let index = key as usize;
+        self.current_mouse_state[index]
+    }
+
+    pub(crate) fn is_mouse_key_up(&self, key: MouseKey) -> bool {
+        let index = key as usize;
+        !self.current_keyboard_state[index]
+    }
+
+    pub(crate) fn is_mouse_key_pressed(&self, key: MouseKey) -> bool {
+        let index = key as usize;
+        !self.previous_mouse_state[index] && self.current_mouse_state[index]
+    }
+
+    pub(crate) fn is_mouse_key_released(&self, key: MouseKey) -> bool {
+        let index = key as usize;
+        self.previous_mouse_state[index] && !self.current_mouse_state[index]
+    }
+
+    pub(crate) fn get_mouse_position(&self) -> Vec2<f32> {
+        self.mouse_position
+    }
+}
+
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MouseKey {
+    Left,
+    Right,
+    Middle,
+    Other,
+}
+
+impl Into<MouseKey> for MouseButton {
+    fn into(self) -> MouseKey {
+        match self {
+            MouseButton::Left => MouseKey::Left,
+            MouseButton::Right => MouseKey::Right,
+            MouseButton::Middle => MouseKey::Middle,
+            MouseButton::Other(_) => MouseKey::Other,
+        }
     }
 }
 
@@ -176,7 +267,6 @@ pub enum Key {
     Unrecognized,
 }
 
-use winit::event::{VirtualKeyCode, ElementState};
 impl Into<Key> for VirtualKeyCode {
     fn into(self) -> Key {
         match self {
