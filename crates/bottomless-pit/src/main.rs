@@ -4,6 +4,7 @@ fn main() {
     let s = TestUnit;
     EngineBuilder::new()
         .set_clear_colour(Colour::Blue)
+        .set_close_key(Key::Q)
         .build()
         .unwrap()
         .run(Box::new(s));
@@ -27,6 +28,6 @@ impl state::Game for TestUnit {
             println!("no cliking :(")
         }
 
-        println!("{:?}", engine_handle.get_mouse_position());
+        //println!("{:?}", engine_handle.get_mouse_position());
     }
 }

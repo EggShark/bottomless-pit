@@ -26,6 +26,8 @@ pub struct Engine {
     camera_matrix: [f32; 16],
     camera_bind_group: wgpu::BindGroup,
     camera_buffer: wgpu::Buffer,
+    should_close: bool,
+    close_key: Option<Key>,
 }
 
 
@@ -154,6 +156,8 @@ impl Engine {
             camera_matrix,
             camera_bind_group,
             camera_buffer,
+            should_close: false,
+            close_key: builder.close_key,
         })
         
     }
@@ -311,6 +315,9 @@ impl Engine {
                     }
                     game.update(&mut self);
                     self.update();
+                    if self.should_close {
+                        *control_flow = ControlFlow::Exit;
+                    }
                 }
                 Event::MainEventsCleared => {
                     //RedrawRequested will only trigger once, unless we manually request it
@@ -341,9 +348,15 @@ impl Engine {
     fn update(&mut self) {
         self.renderer.texture_cache.chache_update();
         self.input_handle.end_of_frame_refresh();
+        if let Some(key) = self.close_key {
+            if self.input_handle.is_key_down(key) {
+                self.should_close = true;
+            }
+        }
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
+        println!("{:?}", event);
         self.input_handle.process_input(event)
     }
 
