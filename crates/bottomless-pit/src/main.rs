@@ -7,7 +7,7 @@ fn main() {
         .set_close_key(Key::Q)
         .build()
         .unwrap()
-        .run(Box::new(s));
+        .run(s);
 }
 
 struct TestUnit;

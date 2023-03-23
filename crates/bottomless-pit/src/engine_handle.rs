@@ -300,7 +300,7 @@ impl Engine {
         self.renderer.wgpu_clump.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_matrix]));
     }
 
-    pub fn run(mut self, mut game: Box<dyn Game>) -> () {
+    pub fn run<T: 'static>(mut self, mut game: T) -> ! where T: Game {
         let event_loop = self.event_loop.take().unwrap(); //should never panic
         event_loop.run(move |event, _, control_flow| {
             match event {
