@@ -8,7 +8,7 @@ use crate::BindGroups;
 use crate::matrix_math::*;
 use crate::rect::Rectangle;
 use crate::vertex::line_vert_pixels_to_screenspace;
-use wgpu_glyph::orthographic_projection;
+use wgpu_glyph::{orthographic_projection, Layout};
 
 use image::GenericImageView;
 use winit::dpi::PhysicalSize;
@@ -149,8 +149,16 @@ impl Renderer {
     }
 
     pub fn draw_textured_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, texture: &TextureIndex) {
-        let rectangle = Rectangle::new(position, [width, hieght], Colour::White.to_raw());
+        let rectangle = Rectangle::from_pixels(position, [width, hieght], Colour::White.to_raw(), self.size);
         self.draw_queues.add_textured_rectange(&mut self.texture_cache, &rectangle, texture, &self.wgpu_clump.device);
+    }
+
+    pub fn draw_textured_rectangle_with_uv(&mut self, position: Vec2<f32>, width: f32, hieght: f32, texture: &TextureIndex, uv_position: Vec2<f32>, uv_width: f32, uv_height: f32) {
+        let uv_position = normalize_points(uv_position, texture.size.x, texture.size.y);
+        let uv_width = uv_width / texture.size.x;
+        let uv_height = uv_height / texture.size.y;
+        let rectangle = Rectangle::from_pixels_with_uv(position, [width, hieght], Colour::White.to_raw(), self.size, uv_position, Vec2{x: uv_width, y: uv_height});
+        self.draw_queues.add_textured_rectange(&mut self.texture_cache, &rectangle, texture, &self.wgpu_clump.device)
     }
 
     pub fn draw_line(&mut self, start_point: Vec2<f32>, end_point: Vec2<f32>, colour: Colour) {
@@ -184,7 +192,7 @@ impl Renderer {
                 screen_position: (text.position.x, text.position.y),
                 bounds: (size.x as f32, size.y as f32),
                 text: vec![wgpu_glyph::Text::new(&text.text).with_scale(text.scale).with_color(text.colour.to_raw())],
-                ..Default::default()
+                layout: Layout::default_single_line().line_breaker(wgpu_glyph::BuiltInLineBreaker::AnyCharLineBreaker),
             })
             .collect::<Vec<wgpu_glyph::Section>>();
 
@@ -237,7 +245,7 @@ impl Renderer {
                 screen_position: (text.position.x, text.position.y),
                 bounds: (size.x as f32, size.y as f32),
                 text: vec![wgpu_glyph::Text::new(&text.text).with_scale(text.scale).with_color(text.colour.to_raw())],
-                ..Default::default()
+                layout: Layout::default_single_line().line_breaker(wgpu_glyph::BuiltInLineBreaker::AnyCharLineBreaker),
                 }, text.transformation))
             .for_each(|(section, transform)| {
                 let text_transform = unflatten_matrix(transform);

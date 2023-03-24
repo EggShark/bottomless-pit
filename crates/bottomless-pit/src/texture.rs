@@ -1,6 +1,9 @@
-use image::GenericImageView;
+use image::{GenericImageView, ImageError};
 use crc32fast::Hasher;
 use std::collections::HashMap;
+use std::fmt::Display;
+use std::io::Error;
+use crate::Vec2;
 use crate::engine_handle::WgpuClump;
 
 pub(crate) struct Texture {
@@ -10,10 +13,11 @@ pub(crate) struct Texture {
     pub(crate) bind_group: wgpu::BindGroup,
     pub(crate) bind_group_layout: wgpu::BindGroupLayout,
     pub(crate) id: u32, //checksum used for hashing
+    pub(crate) size: Vec2<f32>,
 }
 
 impl Texture {
-    pub fn from_bytes(wgpu_things: &WgpuClump, label: Option<&str>, bytes: &[u8]) -> Result<Self, image::ImageError> {
+    pub fn from_bytes(wgpu_things: &WgpuClump, label: Option<&str>, bytes: &[u8]) -> Result<Self, TextureError> {
         let mut hasher = Hasher::new();
         hasher.update(bytes);
         let checksum = hasher.finalize();
@@ -21,7 +25,7 @@ impl Texture {
         Ok(Self::from_image(wgpu_things, img, label, checksum))
     }
 
-    pub fn from_path(wgpu_things: &WgpuClump, label: Option<&str>, path: &str) -> Result<Self, image::ImageError> {
+    pub fn from_path(wgpu_things: &WgpuClump, label: Option<&str>, path: &str) -> Result<Self, TextureError> {
         let bytes = std::fs::read(path)?;
         let out = Self::from_bytes(wgpu_things, label, &bytes)?;
         Ok(out)
@@ -97,6 +101,8 @@ impl Texture {
             label: Some("diffuse_bind_group"),
         });
 
+        let size = Vec2{x: width as f32, y: height as f32};
+
         Self {
             texture, 
             view, 
@@ -104,6 +110,7 @@ impl Texture {
             bind_group, 
             bind_group_layout,
             id,
+            size,
         }
     }
 
@@ -132,14 +139,43 @@ impl Texture {
     }
 }
 
-pub(crate) fn create_texture(texture_cache: &mut TextureCache, wgpu_things: &WgpuClump, path: &str) -> TextureIndex {
-    let texture = Texture::from_path(wgpu_things, None, path).unwrap();
-    texture_cache.add_texture(texture)
+#[derive(Debug)]
+pub enum TextureError {
+    IoError(Error),
+    ImageError(ImageError),
 }
 
-pub(crate) fn create_texture_from_bytes(texture_cache: &mut TextureCache, wgpu_things: &WgpuClump, bytes: &[u8]) -> TextureIndex {
-    let texture = Texture::from_bytes(wgpu_things, None, bytes).unwrap();
-    texture_cache.add_texture(texture)
+impl From<Error> for TextureError {
+    fn from(value: Error) -> TextureError {
+        Self::IoError(value)
+    }
+}
+
+impl From<ImageError> for TextureError {
+    fn from(value: ImageError) -> Self {
+        Self::ImageError(value)
+    }
+}
+
+impl std::error::Error for TextureError {}
+
+impl Display for TextureError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::IoError(e) => write!(f, "{}", e),
+            Self::ImageError(e) => write!(f, "{}", e)
+        }
+    }
+}
+
+pub(crate) fn create_texture(texture_cache: &mut TextureCache, wgpu_things: &WgpuClump, path: &str) -> Result<TextureIndex, TextureError> {
+    let texture = Texture::from_path(wgpu_things, None, path)?;
+    Ok(texture_cache.add_texture(texture))
+}
+
+pub(crate) fn create_texture_from_bytes(texture_cache: &mut TextureCache, wgpu_things: &WgpuClump, bytes: &[u8]) -> Result<TextureIndex, TextureError> {
+    let texture = Texture::from_bytes(wgpu_things, None, bytes)?;
+    Ok(texture_cache.add_texture(texture))
 }
 
 #[derive(Debug)]
@@ -180,6 +216,7 @@ impl TextureCache {
             view: texture.view,
             sampler: texture.sampler,
             id: texture.id,
+            size: texture.size,
         };
 
         self.cache.insert(texture.id, chaced_texture);
@@ -242,8 +279,9 @@ pub(crate) struct ChachedTexture {
 }
 
 pub struct TextureIndex {
+    // the info needed to recrate the texture when necciscarry
     view: wgpu::TextureView,
     sampler: wgpu::Sampler,
-    // the info needed to recrate the texture when necciscarry
-    pub(crate) id: u32 //crc32 checksum
+    pub(crate) id: u32, //crc32 checksum
+    pub size: Vec2<f32>,
 }

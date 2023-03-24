@@ -1,5 +1,4 @@
 use image::{ImageError, GenericImageView};
-use rayon::prelude::*;
 use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
 use winit::event::*;
@@ -12,7 +11,7 @@ use crate::InputHandle;
 use crate::TextureIndex;
 use crate::render::Renderer;
 use crate::input::{Key, MouseKey};
-use crate::texture::{Texture, create_texture};
+use crate::texture::{Texture, create_texture, TextureError};
 use crate::vectors::Vec2;
 
 pub struct Engine {
@@ -162,16 +161,8 @@ impl Engine {
         
     }
 
-    pub fn create_texture(&mut self, path: &str) -> TextureIndex {
+    pub fn create_texture(&mut self, path: &str) -> Result<TextureIndex, TextureError> {
         create_texture(&mut self.renderer.texture_cache, &self.renderer.wgpu_clump, path)
-    }
-
-    pub fn create_many_textures(&mut self, paths: &[&str]) -> Vec<TextureIndex> {
-        let textures = paths.par_iter()
-            .map(|path| Texture::from_path(&self.renderer.wgpu_clump, None, path).unwrap())
-            .collect::<Vec<Texture>>();
-
-        textures.into_iter().map(|texture| self.renderer.texture_cache.add_texture(texture)).collect::<Vec<TextureIndex>>()
     }
 
     pub fn is_key_down(&self, key: Key) -> bool {
@@ -356,7 +347,6 @@ impl Engine {
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
-        println!("{:?}", event);
         self.input_handle.process_input(event)
     }
 

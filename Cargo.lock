@@ -1880,7 +1880,6 @@ dependencies = [
  "image",
  "log",
  "pollster",
- "rayon",
  "wgpu",
  "wgpu_glyph",
  "winit 0.28.2",
