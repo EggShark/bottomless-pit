@@ -1,4 +1,5 @@
-#[derive(Copy, Clone, Debug)]
+/// An enum to represent RGBA colours (spelled properly)
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Colour {
     White,
     Black,
@@ -15,6 +16,7 @@ pub enum Colour {
 }
 
 impl Colour {
+    /// Converts the colour into a raw `[f32' 4]` representation of the colour
     pub fn to_raw(&self) -> [f32; 4] {
         match self {
             Self::White => [1.0, 1.0, 1.0, 1.0],
@@ -32,6 +34,7 @@ impl Colour {
         }
     }
 
+    /// Attempts to take a hex string and make a colour from it
     pub fn from_hex(hex_str: &str) -> Result<Colour, std::num::ParseIntError> {
         let colour_values = i32::from_str_radix(hex_str, 16)?;
         let b = colour_values % 0x100;

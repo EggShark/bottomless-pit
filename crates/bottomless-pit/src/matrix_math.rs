@@ -1,5 +1,6 @@
 use crate::Vec2;
 
+/// Helper function to normalize 2D points
 pub fn normalize_points<T: std::ops::Div<Output = T>>(point: Vec2<T>, width: T, height: T) -> Vec2<T> {
     let x = point.x / width;
     let y = point.y / height;
@@ -13,6 +14,7 @@ pub(crate) fn get_mid_point(rectangle: wgpu_glyph::ab_glyph::Rect) -> Vec2<f32> 
     Vec2{ x: x_mid, y: y_mid}
 }
 
+/// Helper function to make a 2d rotation matrix
 pub fn calculate_rotation_matrix(degree: f32) -> [f32; 16] {
     let degree = degree.to_radians();
     [

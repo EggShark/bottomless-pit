@@ -210,6 +210,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "bottomless-pit"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "cgmath",
+ "crc32fast",
+ "env_logger 0.10.0",
+ "image",
+ "log",
+ "pollster",
+ "wgpu",
+ "wgpu_glyph",
+ "winit 0.28.2",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1867,22 +1883,6 @@ checksum = "246bfa38fe3db3f1dfc8ca5a2cdeb7348c78be2112740cc0ec8ef18b6d94f830"
 dependencies = [
  "bitflags",
  "num-traits",
-]
-
-[[package]]
-name = "state"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "cgmath",
- "crc32fast",
- "env_logger 0.10.0",
- "image",
- "log",
- "pollster",
- "wgpu",
- "wgpu_glyph",
- "winit 0.28.2",
 ]
 
 [[package]]

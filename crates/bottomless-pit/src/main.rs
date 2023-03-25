@@ -1,4 +1,4 @@
-use state::{Engine, EngineBuilder, Colour, Renderer, Vec2, Key, MouseKey, TextureIndex};
+use bottomless_pit::{Engine, EngineBuilder, Colour, Renderer, Vec2, Key, MouseKey, TextureIndex, Game};
 
 fn main() {
     let mut engine = EngineBuilder::new()
@@ -24,7 +24,7 @@ impl TestStruct {
     }
 }
 
-impl state::Game for TestStruct {
+impl Game for TestStruct {
     fn render(&self, render_handle: &mut Renderer) {
         render_handle.draw_line(Vec2{x: 0.0, y: 0.0}, Vec2{x: 200.0, y: 200.0}, Colour::Black);
         render_handle.draw_rectangle(Vec2{x: 0.0, y: 0.0}, 100.0, 200.0, Colour::Purple);

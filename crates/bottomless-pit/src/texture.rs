@@ -278,6 +278,7 @@ pub(crate) struct ChachedTexture {
     pub(crate) time_since_used: i32,
 }
 
+/// A texture, but more specifically a index into a cahce that stores all the textures
 pub struct TextureIndex {
     // the info needed to recrate the texture when necciscarry
     view: wgpu::TextureView,

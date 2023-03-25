@@ -14,6 +14,7 @@ use crate::input::{Key, MouseKey};
 use crate::texture::{Texture, create_texture, TextureError};
 use crate::vectors::Vec2;
 
+/// The thing that makes the computer go
 pub struct Engine {
     renderer: Renderer,
     input_handle: InputHandle,
@@ -161,54 +162,67 @@ impl Engine {
         
     }
 
+    /// Attempts to create a texture
     pub fn create_texture(&mut self, path: &str) -> Result<TextureIndex, TextureError> {
         create_texture(&mut self.renderer.texture_cache, &self.renderer.wgpu_clump, path)
     }
 
+    /// Checks if a key is down
     pub fn is_key_down(&self, key: Key) -> bool {
         self.input_handle.is_key_down(key)
     }
 
+    /// Checks if a key is up
     pub fn is_key_up(&self, key: Key) -> bool {
         self.input_handle.is_key_up(key)
     }
 
+    /// Only returns `true` on the frame where the key is first pressed down
     pub fn is_key_pressed(&self, key: Key) -> bool {
         self.input_handle.is_key_pressed(key)
     }
 
+    /// Only returns `true` on the frame where the key first returns back up
     pub fn is_key_released(&self, key: Key) -> bool {
         self.input_handle.is_key_released(key)
     }
 
+    /// Checks if a mouse key is down
     pub fn is_mouse_key_down(&self, key: MouseKey) -> bool {
         self.input_handle.is_mouse_key_down(key)
     }
 
+    /// Checks if a mouse key is up
     pub fn is_mouse_key_up(&self, key: MouseKey) -> bool {
         self.input_handle.is_mouse_key_up(key)
     }
 
+    /// Only returns `true` on the frame where the key is first pressed down
     pub fn is_mouse_key_pressed(&self, key: MouseKey) -> bool {
         self.input_handle.is_mouse_key_pressed(key)
     }
 
+    /// Only returns `true` on the frame where the key first returns back up
     pub fn is_mouse_key_released(&self, key: MouseKey) -> bool {
         self.input_handle.is_mouse_key_released(key)
     }
 
+    /// Gives the current position of the mouse in physical pixels
     pub fn get_mouse_position(&self) -> Vec2<f32> {
         self.input_handle.get_mouse_position()
     }
 
+    /// Checks if the window has focus
     pub fn window_has_focus(&self) -> bool {
         self.window.has_focus()
     }
 
+    /// Checks if the window is maximized not fullscreened
     pub fn is_window_maximized(&self) -> bool {
         self.window.is_maximized()
     }
 
+    /// Checks to see if the window is minimized
     pub fn is_window_minimized(&self) -> bool {
         match self.window.is_minimized() {
             Some(value) => value,
@@ -216,6 +230,7 @@ impl Engine {
         }
     }
 
+    /// Checks to see if the window is fullscreen not maximized
     pub fn is_window_fullscreen(&self) -> bool {
         // based on limited docs knowledge this should work
         match self.window.fullscreen() {
@@ -224,14 +239,17 @@ impl Engine {
         }
     }
 
+    /// Will maximize the window
     pub fn maximize_window(&self) {
         self.window.set_maximized(true);
     }
 
+    /// Will minimize the window
     pub fn minimize_window(&self) {
         self.window.set_minimized(true);
     }
 
+    /// Will attempt to set the window icon for more details check the [winit docs](https://docs.rs/winit/latest/winit/window/struct.Window.html#method.set_window_icon)
     pub fn set_window_icon(&self, path: &str) -> Result<(), IconError> {
         let image = image::open(path)?.into_rgba8();
         let (width, height) = image.dimensions();
@@ -241,18 +259,22 @@ impl Engine {
         Ok(())
     }
 
+    /// Sets the window title
     pub fn set_window_title(&self, title: &str) {
         self.window.set_title(title);
     }
 
+    /// Changes the Position of the window in PhysicalPixles
     pub fn set_window_position(&self, x: f32, y: f32) {
         self.window.set_outer_position(winit::dpi::PhysicalPosition::new(x, y));
     }
 
+    /// Sets the physical minimum size of the window
     pub fn set_window_min_size(&self, width: f32, height: f32) {
         self.window.set_min_inner_size(Some(winit::dpi::PhysicalSize::new(width, height)));
     }
 
+    /// Gets the physical postion of the window
     pub fn get_window_position(&self) -> Option<Vec2<i32>>{
         match self.window.outer_position() {
             Ok(v) => Some((v.x, v.y).into()),
@@ -260,14 +282,18 @@ impl Engine {
         }
     }
 
+    /// Gets the phyisical size of the window,
     pub fn get_window_size(&self) -> Vec2<u32> {
         self.renderer.size
     }
 
+    /// Gets the scale factor to help handle diffrence between phyiscial and logical pixels
     pub fn get_window_scale_factor(&self) -> f64 {
         self.window.scale_factor()
     }
 
+    /// Toggels fullscreen mode may fail on certain Operating Systems
+    /// check the [winit docs](https://docs.rs/winit/latest/winit/window/struct.Window.html#method.set_fullscreen) for more information
     pub fn toggle_fullscreen(&self) {
         if self.is_window_fullscreen() {
             self.window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
@@ -276,21 +302,26 @@ impl Engine {
         }
     }
 
+    /// Hides the cursor
     pub fn hide_cursor(&mut self) {
         self.window.set_cursor_visible(false);
         self.cursor_visibility = false;
     }
 
+    /// Shows the cursor if its hidden
     pub fn show_cursor(&mut self) {
         self.window.set_cursor_visible(true);
         self.cursor_visibility = true;
     }
 
+    /// Will update the camera matrix as of version 0.1.0 it will effect
+    /// all things drawn is also 3D
     pub fn change_camera_matrix(&mut self, matrix: [f32; 16]) {
         self.camera_matrix = matrix;
         self.renderer.wgpu_clump.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_matrix]));
     }
 
+    /// Takes the struct that implements the Game trait and starts the winit event loop running the game
     pub fn run<T: 'static>(mut self, mut game: T) -> ! where T: Game {
         let event_loop = self.event_loop.take().unwrap(); //should never panic
         event_loop.run(move |event, _, control_flow| {
@@ -360,6 +391,7 @@ impl Engine {
     }
 }
 
+/// The main entry point for the Engine
 pub struct EngineBuilder {
     resolution: (u32, u32),
     full_screen: bool,
@@ -372,6 +404,18 @@ pub struct EngineBuilder {
 }
 
 impl EngineBuilder {
+    /// Creates a builder with some defualt presets
+    /// ```rust
+    /// Self {
+    ///     resolution: (600, 600),
+    ///     full_screen: false,
+    ///     target_fps: 30,
+    ///     close_key: None,
+    ///     clear_colour: Colour::Black,
+    ///     window_icon: None,
+    ///     window_title: "".into(),
+    ///     resizable: true,
+    /// }
     pub fn new() -> Self {
         Self {
             resolution: (600, 600),
@@ -385,6 +429,7 @@ impl EngineBuilder {
         }
     }
 
+    /// Overides the defualt resolution
     pub fn with_resolution(self, resolution: (u32, u32)) -> Self {
         Self {
             resolution,
@@ -398,6 +443,7 @@ impl EngineBuilder {
         }
     }
 
+    /// Will cause the window to be fullscreen upon launch
     pub fn fullscreen(self) -> Self {
         Self {
             resolution: self.resolution,
@@ -411,6 +457,7 @@ impl EngineBuilder {
         }
     }
 
+    /// Currently does nothing
     pub fn set_target_fps(self, fps: u32) -> Self {
         Self {
             resolution: self.resolution,
@@ -424,6 +471,7 @@ impl EngineBuilder {
         }
     }
 
+    /// Sets a key that will instantly close the window
     pub fn set_close_key(self, key: Key) -> Self {
         Self {
             resolution: self.resolution,
@@ -437,6 +485,7 @@ impl EngineBuilder {
         }
     }
 
+    /// Sets the colour that the background will be
     pub fn set_clear_colour(self, colour: Colour) -> Self {
         Self {
             resolution: self.resolution,
@@ -450,6 +499,7 @@ impl EngineBuilder {
         }
     }
 
+    /// Sets the title of the window
     pub fn set_window_title(self, title: &str) -> Self {
         Self {
             resolution: self.resolution,
@@ -463,6 +513,7 @@ impl EngineBuilder {
         }
     }
 
+    /// Sets the window icon
     pub fn set_window_icon(self, icon: winit::window::Icon) -> Self {
         Self {
             resolution: self.resolution,
@@ -476,6 +527,7 @@ impl EngineBuilder {
         }
     }
 
+    /// Prevents the window from being resized during runtime
     pub fn unresizable(self) -> Self {
         Self {
             resolution: self.resolution,
@@ -489,6 +541,7 @@ impl EngineBuilder {
         }
     }
 
+    /// Attempts to buld the Engine
     pub fn build(self) -> Result<Engine, BuildError> {        
         Engine::new(self)
     }

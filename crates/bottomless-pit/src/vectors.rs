@@ -1,6 +1,7 @@
 use std::ops::{Add, Sub};
 
-#[derive(Clone, Copy)]
+/// A generic representation of 2D data
+#[derive(Clone, Copy, Debug)]
 pub struct Vec2<T> {
     pub x: T,
     pub y: T,
@@ -19,7 +20,8 @@ impl<T> Vec2<T> {
     }
 }
 
-#[derive(Clone, Copy)]
+/// A generic representation of 3D data
+#[derive(Clone, Copy, Debug)]
 pub struct Vec3<T> {
     pub x: T,
     pub y: T,
@@ -81,17 +83,5 @@ impl<T: Sub::<Output = T>> Sub for Vec3<T> {
     type Output = Vec3<T>;
     fn sub(self, rhs: Self) -> Self::Output {
         Self{x: self.x - rhs.x, y: self.y - rhs.y, z: self.z - rhs.z}
-    }
-}
-
-impl<T: std::fmt::Debug> std::fmt::Debug for Vec2<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Vec2{{x: {:?}, y: {:?}}}", self.x, self.y)
-    }
-}
-
-impl<T: std::fmt::Debug> std::fmt::Debug for Vec3<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Vec3{{x: {:?}, y: {:?}, z: {:?}}}", self.x, self.y, self.z)
     }
 }

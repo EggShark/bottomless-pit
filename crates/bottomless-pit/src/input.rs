@@ -126,6 +126,7 @@ impl InputHandle {
     }
 }
 
+/// Representation of mouse buttons
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MouseKey {
@@ -146,6 +147,7 @@ impl Into<MouseKey> for MouseButton {
     }
 }
 
+/// Representation of keyboard keys
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Key {

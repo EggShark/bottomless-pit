@@ -13,8 +13,8 @@ use wgpu_glyph::{orthographic_projection, Layout};
 use image::GenericImageView;
 use winit::dpi::PhysicalSize;
 
+/// The handle used for rendering all objects
 pub struct Renderer {
-    //add stuff later
     white_pixel: wgpu::BindGroup,
     draw_queues: DrawQueues,
     glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
@@ -143,16 +143,25 @@ impl Renderer {
         }
     }
 
+    /// draws a textureless rectangle with a specificed colour
     pub fn draw_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, colour: Colour) {
         let rectangle = Rectangle::from_pixels(position, [width, hieght], colour.to_raw(), self.size);
         self.draw_queues.add_rectangle(&rectangle);
     }
 
+    /// draws a textured rectangle, however it will draw the entire texture
     pub fn draw_textured_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, texture: &TextureIndex) {
         let rectangle = Rectangle::from_pixels(position, [width, hieght], Colour::White.to_raw(), self.size);
         self.draw_queues.add_textured_rectange(&mut self.texture_cache, &rectangle, texture, &self.wgpu_clump.device);
     }
 
+    /// draws a textured rectangle with the specifed UV coords.
+    /// The image coords are not relative terms but the pixels of the image.
+    /// uv_position is the top left corner for the uv rectangle to start, then the width and the height
+    /// are just the width and the height of the uv rectangle.
+    /// ```rust
+    /// renderer.draw_textured_rectangle_with_uv(position, 100.0, 100.0, texture, Vec2{x: 0.0, y: 0.0}, Vec2{x: 100.0, y: 100.0})
+    /// ```
     pub fn draw_textured_rectangle_with_uv(&mut self, position: Vec2<f32>, width: f32, hieght: f32, texture: &TextureIndex, uv_position: Vec2<f32>, uv_width: f32, uv_height: f32) {
         let uv_position = normalize_points(uv_position, texture.size.x, texture.size.y);
         let uv_width = uv_width / texture.size.x;
@@ -161,12 +170,14 @@ impl Renderer {
         self.draw_queues.add_textured_rectange(&mut self.texture_cache, &rectangle, texture, &self.wgpu_clump.device)
     }
 
+    /// draws a line, WILL DRAW ONTOP OF EVERTHING ELSE DUE TO BEING ITS OWN PIPELINE
     pub fn draw_line(&mut self, start_point: Vec2<f32>, end_point: Vec2<f32>, colour: Colour) {
         let start = line_vert_pixels_to_screenspace(LineVertex::new(start_point.to_raw(), colour.to_raw()), self.size);
         let end = line_vert_pixels_to_screenspace(LineVertex::new(end_point.to_raw(), colour.to_raw()), self.size);
         self.draw_queues.add_line(start, end) 
     } 
 
+    /// Draws some text that will appear on top of all other elements due to seperate pipelines
     pub fn draw_text(&mut self, text: &str, position: Vec2<f32>, scale: f32, colour: Colour) {
         let text = Text {
             text: text.into(),
@@ -238,7 +249,6 @@ impl Renderer {
         drop(render_pass);
 
         let mut staging_belt = wgpu::util::StagingBelt::new(1024);
-        //let text_transform = flatten_matrix(unflatten_matrix(orthographic_projection(self.size.width, self.size.height)) * get_text_rotation_matrix(&test_section, self.counter, &mut self.glyph_brush));
 
         render_items.transformed_text.iter()
             .map(|text| (wgpu_glyph::Section{
