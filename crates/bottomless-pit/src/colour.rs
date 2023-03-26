@@ -25,10 +25,10 @@ impl Colour {
             Self::Green => [0.0, 1.0, 0.0, 1.0],
             Self::Blue => [0.0, 0.0, 1.0, 1.0],
             Self::Yellow => [1.0, 1.0, 0.0, 1.0],
-            Self::Orange => [1.0, 0.647058824, 0.0, 1.0],
-            Self::Pink => [1.0, 0.752941176, 0.796078431, 1.0],
-            Self::Purple => [0.501960784, 0.0, 0.501960784, 1.0],
-            Self::Brown => [0.635294118, 0.164705882, 0.164705882, 1.0],
+            Self::Orange => [1.0, 0.64705884, 0.0, 1.0],
+            Self::Pink => [1.0, 0.7529412, 0.79607844, 1.0],
+            Self::Purple => [0.50196075, 0.0, 0.50196075, 1.0],
+            Self::Brown => [0.63529414, 0.16470589, 0.16470589, 1.0],
             Self::Rgba(colour) => *colour,
             Self::Rgb(rgb) => [rgb[0], rgb[1], rgb[2], 1.0],
         }
@@ -44,9 +44,9 @@ impl Colour {
     }
 }
 
-impl Into<wgpu::Color> for Colour {
-    fn into(self) -> wgpu::Color {
-        let raw = self.to_raw();
+impl From<Colour> for wgpu::Color {
+    fn from(val: Colour) -> Self {
+        let raw = val.to_raw();
         wgpu::Color {
             r: raw[0] as f64, 
             g: raw[1] as f64, 

@@ -136,9 +136,9 @@ pub enum MouseKey {
     Other,
 }
 
-impl Into<MouseKey> for MouseButton {
-    fn into(self) -> MouseKey {
-        match self {
+impl From<MouseButton> for MouseKey {
+    fn from(val: MouseButton) -> Self {
+        match val {
             MouseButton::Left => MouseKey::Left,
             MouseButton::Right => MouseKey::Right,
             MouseButton::Middle => MouseKey::Middle,
@@ -269,9 +269,9 @@ pub enum Key {
     Unrecognized,
 }
 
-impl Into<Key> for VirtualKeyCode {
-    fn into(self) -> Key {
-        match self {
+impl From<VirtualKeyCode> for Key {
+    fn from(val: VirtualKeyCode) -> Self {
+        match val {
             VirtualKeyCode::Key0 => Key::Key0,
             VirtualKeyCode::Key1 => Key::Key1,
             VirtualKeyCode::Key2 => Key::Key2,

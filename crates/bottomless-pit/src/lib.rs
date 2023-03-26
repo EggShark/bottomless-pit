@@ -6,7 +6,9 @@
 //! in house, but the text rendering is powered by [wgpu_glyph](https://github.com/hecrj/wgpu_glyph).
 //! 
 //! To get started start by implmenting the Game trait on any struct you like
-//! ```rust
+//! ```rust,no_run
+//! use bottomless_pit::{Engine, EngineBuilder, Renderer, Game};
+//! 
 //! fn main() {
 //!     let engine = EngineBuilder::new()
 //!         .build()
@@ -34,6 +36,7 @@
 //!         // this is where all your logic should go
 //!     }
 //! }
+#![allow(clippy::needless_doctest_main)]
 
 pub mod texture;
 mod rect;

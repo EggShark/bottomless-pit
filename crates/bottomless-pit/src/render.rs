@@ -174,10 +174,10 @@ impl Renderer {
     /// ```rust
     /// renderer.draw_textured_rectangle_with_uv(position, 100.0, 100.0, texture, Vec2{x: 0.0, y: 0.0}, Vec2{x: 100.0, y: 100.0})
     /// ```
-    pub fn draw_textured_rectangle_with_uv(&mut self, position: Vec2<f32>, width: f32, hieght: f32, texture: &TextureIndex, uv_position: Vec2<f32>, uv_width: f32, uv_height: f32) {
+    pub fn draw_textured_rectangle_with_uv(&mut self, position: Vec2<f32>, width: f32, hieght: f32, texture: &TextureIndex, uv_position: Vec2<f32>, uv_size: Vec2<f32>) {
         let uv_position = normalize_points(uv_position, texture.size.x, texture.size.y);
-        let uv_width = uv_width / texture.size.x;
-        let uv_height = uv_height / texture.size.y;
+        let uv_width = uv_size.x / texture.size.x;
+        let uv_height = uv_size.y / texture.size.y;
         let rectangle = Rectangle::from_pixels_with_uv(position, [width, hieght], Colour::White.to_raw(), self.size, uv_position, Vec2{x: uv_width, y: uv_height});
         self.draw_queues.add_textured_rectange(&mut self.texture_cache, &rectangle, texture, &self.wgpu_clump.device);
     }
@@ -227,16 +227,6 @@ impl Renderer {
         
         let render_items = self.draw_queues.process_queued(&self.wgpu_clump.device);
 
-        let text_sections = render_items.text
-            .iter()
-            .map(|text| wgpu_glyph::Section{
-                screen_position: (text.position.x, text.position.y),
-                bounds: (size.x as f32, size.y as f32),
-                text: vec![wgpu_glyph::Text::new(&text.text).with_scale(text.scale).with_color(text.colour.to_raw())],
-                layout: Layout::default_single_line().line_breaker(wgpu_glyph::BuiltInLineBreaker::AnyCharLineBreaker),
-            })
-            .collect::<Vec<wgpu_glyph::Section>>();
-
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor{
             label: Some("Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment{
@@ -258,11 +248,11 @@ impl Renderer {
             let mut current_bind_group = &render_items.rectangle_bind_group_switches[0];
             for (idx, bind_group_switch_point) in render_items.rectangle_bind_group_switches.iter().enumerate() {
                 if bind_group_switch_point.bind_group != current_bind_group.bind_group {
-                    current_bind_group = &bind_group_switch_point;
+                    current_bind_group = bind_group_switch_point;
                 }
-                let bind_group = match &current_bind_group.bind_group {
-                    &BindGroups::WhitePixel => &self.white_pixel,
-                    &BindGroups::Custom {bind_group} => &self.texture_cache[bind_group].bind_group,
+                let bind_group = match current_bind_group.bind_group {
+                    BindGroups::WhitePixel => &self.white_pixel,
+                    BindGroups::Custom {bind_group} => &self.texture_cache[bind_group].bind_group,
                 };
                 render_pass.set_bind_group(0, bind_group, &[]);
                 let draw_range = match render_items.rectangle_bind_group_switches.get(idx + 1) {
@@ -293,12 +283,20 @@ impl Renderer {
                 let transform = flatten_matrix(ortho * text_transform);
                 self.glyph_brush.queue(section);
                 self.glyph_brush.draw_queued_with_transform(
-                    &self.wgpu_clump.device, &mut staging_belt, &mut encoder, &view, &camera, transform,
+                    &self.wgpu_clump.device, &mut staging_belt, &mut encoder, &view, camera, transform,
                 ).unwrap();
             });
 
-            text_sections.into_iter().for_each(|s| self.glyph_brush.queue(s));
-            self.glyph_brush.draw_queued(&self.wgpu_clump.device, &mut staging_belt, &mut encoder, &view, camera, size.x, size.y).unwrap();
+        render_items.text
+            .iter()
+            .map(|text| wgpu_glyph::Section{
+                screen_position: (text.position.x, text.position.y),
+                bounds: (size.x as f32, size.y as f32),
+                text: vec![wgpu_glyph::Text::new(&text.text).with_scale(text.scale).with_color(text.colour.to_raw())],
+                layout: Layout::default_single_line().line_breaker(wgpu_glyph::BuiltInLineBreaker::AnyCharLineBreaker),
+            }).for_each(|s| self.glyph_brush.queue(s));
+        
+        self.glyph_brush.draw_queued(&self.wgpu_clump.device, &mut staging_belt, &mut encoder, &view, camera, size.x, size.y).unwrap();
 
         staging_belt.finish();
         self.wgpu_clump.queue.submit(std::iter::once(encoder.finish()));
@@ -360,10 +358,7 @@ fn make_pipeline(
     texture_format: wgpu::TextureFormat,
     label: Option<&str>
 ) -> wgpu::RenderPipeline {
-    let layout_label = match label {
-        Some(label) => Some(format!("{}_layout", label)),
-        None => None
-    };
+    let layout_label = label.map(|label| format!("{}_layout", label));
 
     let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: layout_label.as_deref(), // somehow converss Option<String> to Option<&str>
@@ -375,12 +370,12 @@ fn make_pipeline(
         label,
         layout: Some(&layout),
         vertex: wgpu::VertexState{
-            module: &shader,
+            module: shader,
             entry_point: "vs_main", //specify the entry point (can be whatever as long as it exists)
             buffers: vertex_buffers, // specfies what type of vertices we want to pass to the shader,
         },
         fragment: Some(wgpu::FragmentState{ // techically optional. Used to store colour data to the surface
-            module: &shader,
+            module: shader,
             entry_point: "fs_main",
             targets: &[Some(wgpu::ColorTargetState{ // tells wgpu what colour outputs it should set up.
                 format: texture_format,

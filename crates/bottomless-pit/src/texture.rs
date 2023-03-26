@@ -233,7 +233,7 @@ impl TextureCache {
         });
 
         let chaced_texture = ChachedTexture {
-            bind_group: bind_group,
+            bind_group,
             time_since_used: 0
         };
 

@@ -30,7 +30,7 @@ impl Game for TestStruct {
         render_handle.draw_rectangle(Vec2{x: 0.0, y: 0.0}, 100.0, 200.0, Colour::Purple);
         render_handle.draw_text("hello world 0", Vec2{x: 0.0, y: 0.0}, 40.0, Colour::Black);
         render_handle.draw_textured_rectangle(Vec2{x: 400.0, y: 400.0}, 400.0, 600.0, &self.texture);
-        render_handle.draw_textured_rectangle_with_uv(Vec2{x: 100.0, y: 100.0}, 500.0, 500.0, &self.texture, Vec2{x: 0.0, y: 0.0}, 500.0, 500.0);
+        render_handle.draw_textured_rectangle_with_uv(Vec2{x: 100.0, y: 100.0}, 500.0, 500.0, &self.texture, Vec2{x: 0.0, y: 0.0}, Vec2{x: 500.0, y: 500.0});
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
@@ -41,7 +41,5 @@ impl Game for TestStruct {
         if engine_handle.is_mouse_key_released(MouseKey::Middle) {
             println!("no cliking :(")
         }
-
-        //println!("{:?}", engine_handle.get_mouse_position());
     }
 }

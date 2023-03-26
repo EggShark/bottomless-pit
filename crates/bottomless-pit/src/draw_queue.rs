@@ -37,8 +37,8 @@ impl DrawQueues {
         let number_of_inidices = self.general_indicies.len();
         // do index math
         let indicies = [
-            0 + number_of_verticies, 1 + number_of_verticies, 2 + number_of_verticies,
-            3 + number_of_verticies, 0 + number_of_verticies, 2 + number_of_verticies,
+            number_of_verticies, 1 + number_of_verticies, 2 + number_of_verticies,
+            3 + number_of_verticies, number_of_verticies, 2 + number_of_verticies,
         ];
 
         match self.rectangle_bind_group_switches.last() {
@@ -46,14 +46,14 @@ impl DrawQueues {
                 if point.bind_group != BindGroups::WhitePixel {
                     self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
                         bind_group: BindGroups::WhitePixel,
-                        point: 0 + number_of_inidices,
+                        point: number_of_inidices,
                     });
                 }
             },
             None => {
                 self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
                     bind_group: BindGroups::WhitePixel,
-                    point: 0 + number_of_inidices,
+                    point: number_of_inidices,
                 });
             },
         };
@@ -69,13 +69,13 @@ impl DrawQueues {
         let number_of_inidices = self.general_indicies.len();
         // do index math
         let indicies = [
-            0 + number_of_verticies, 1 + number_of_verticies, 2 + number_of_verticies,
-            3 + number_of_verticies, 0 + number_of_verticies, 2 + number_of_verticies,
+            number_of_verticies, 1 + number_of_verticies, 2 + number_of_verticies,
+            3 + number_of_verticies, number_of_verticies, 2 + number_of_verticies,
         ];
 
-        match cache.get_mut(&texture) {
+        match cache.get_mut(texture) {
             Some(item) => item.time_since_used = 0,
-            None => cache.rebuild_from_index(&texture, device),
+            None => cache.rebuild_from_index(texture, device),
         }
 
         match self.rectangle_bind_group_switches.last() {
@@ -83,14 +83,14 @@ impl DrawQueues {
                 if point.bind_group != (BindGroups::Custom{bind_group: texture_bind_group}) {
                     self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
                         bind_group: BindGroups::Custom {bind_group: texture_bind_group},
-                        point: 0 + number_of_inidices,
+                        point: number_of_inidices,
                     });
                 }
             },
             None => {
                 self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
                     bind_group: BindGroups::Custom {bind_group: texture_bind_group},
-                    point: 0 + number_of_inidices,
+                    point: number_of_inidices,
                 });
             },
         };
@@ -127,14 +127,14 @@ impl DrawQueues {
                 if point.bind_group != BindGroups::WhitePixel {
                     self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
                         bind_group: BindGroups::WhitePixel,
-                        point: 0 + number_of_inidices,
+                        point: number_of_inidices,
                     });
                 }
             },
             None => {
                 self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
                     bind_group: BindGroups::WhitePixel,
-                    point: 0 + number_of_inidices,
+                    point: number_of_inidices,
                 });
             },
         };

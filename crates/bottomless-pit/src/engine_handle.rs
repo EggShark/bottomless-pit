@@ -95,8 +95,7 @@ impl Engine {
         let surface_capabilities = surface.get_capabilities(&adapter);
         let surface_format = surface_capabilities.formats.iter()
             .copied()
-            .filter(|f| f.describe().srgb)
-            .next()
+            .find(|f| f.describe().srgb)
             .unwrap_or(surface_capabilities.formats[0]);
 
         let config = wgpu::SurfaceConfiguration {
@@ -224,19 +223,13 @@ impl Engine {
 
     /// Checks to see if the window is minimized
     pub fn is_window_minimized(&self) -> bool {
-        match self.window.is_minimized() {
-            Some(value) => value,
-            None => false,
-        }
+        self.window.is_minimized().unwrap_or(false)
     }
 
     /// Checks to see if the window is fullscreen not maximized
     pub fn is_window_fullscreen(&self) -> bool {
         // based on limited docs knowledge this should work
-        match self.window.fullscreen() {
-            Some(_) => true,
-            None => false,
-        }
+        self.window.fullscreen().is_some()
     }
 
     /// Will maximize the window
@@ -549,6 +542,12 @@ impl EngineBuilder {
     /// Attempts to buld the Engine
     pub fn build(self) -> Result<Engine, BuildError> {        
         Engine::new(self)
+    }
+}
+
+impl Default for EngineBuilder {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
