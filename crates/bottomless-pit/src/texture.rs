@@ -7,11 +7,9 @@ use crate::Vec2;
 use crate::engine_handle::WgpuClump;
 
 pub(crate) struct Texture {
-    pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
     pub sampler: wgpu::Sampler,
     pub(crate) bind_group: wgpu::BindGroup,
-    pub(crate) bind_group_layout: wgpu::BindGroupLayout,
     pub(crate) id: u32, //checksum used for hashing
     pub(crate) size: Vec2<f32>,
 }
@@ -104,11 +102,9 @@ impl Texture {
         let size = Vec2{x: width as f32, y: height as f32};
 
         Self {
-            texture, 
             view, 
             sampler, 
             bind_group, 
-            bind_group_layout,
             id,
             size,
         }
@@ -170,11 +166,6 @@ impl Display for TextureError {
 
 pub(crate) fn create_texture(texture_cache: &mut TextureCache, wgpu_things: &WgpuClump, path: &str) -> Result<TextureIndex, TextureError> {
     let texture = Texture::from_path(wgpu_things, None, path)?;
-    Ok(texture_cache.add_texture(texture))
-}
-
-pub(crate) fn create_texture_from_bytes(texture_cache: &mut TextureCache, wgpu_things: &WgpuClump, bytes: &[u8]) -> Result<TextureIndex, TextureError> {
-    let texture = Texture::from_bytes(wgpu_things, None, bytes)?;
     Ok(texture_cache.add_texture(texture))
 }
 
@@ -247,10 +238,6 @@ impl TextureCache {
         };
 
         self.cache.insert(index.id, chaced_texture);
-    }
-
-    pub fn get(&self, key: &TextureIndex) -> Option<&ChachedTexture> {
-        self.cache.get(&key.id)
     }
 
     pub fn get_mut(&mut self, key: &TextureIndex) -> Option<&mut ChachedTexture> {

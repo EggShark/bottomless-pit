@@ -104,7 +104,7 @@ impl DrawQueues {
         self.line_vertices.push(end);
     }
 
-    pub(crate) fn add_regular_n_gon(&mut self, number_of_sides: u16, radius: f32, center: (f32, f32), colour: Colour) {
+    pub(crate) fn add_regular_n_gon(&mut self, number_of_sides: u16, radius: f32, center: [f32; 2], colour: Colour) {
         if number_of_sides < 3 {
             return; // hacky fix for now think of something better later
         }
@@ -112,7 +112,7 @@ impl DrawQueues {
         let number_of_inidices = self.general_indicies.len();
 
         let vertices = (0..number_of_sides)
-            .map(|num| (radius * (2.0*PI*num as f32/number_of_sides as f32).cos() + center.0, radius * (2.0*PI*num as f32/number_of_sides as f32).sin() + center.1))
+            .map(|num| (radius * (2.0*PI*num as f32/number_of_sides as f32).cos() + center[0], radius * (2.0*PI*num as f32/number_of_sides as f32).sin() + center[1]))
             .map(|(x, y)| Vertex::from_2d([x, y], [0.0, 0.0], colour.to_raw()))
             .collect::<Vec<Vertex>>();
         // do math on monday idk

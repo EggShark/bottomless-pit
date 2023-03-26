@@ -1,4 +1,4 @@
-use image::{ImageError, GenericImageView};
+use image::ImageError;
 use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
 use winit::event::*;
@@ -6,12 +6,12 @@ use winit::event_loop::{EventLoop, ControlFlow};
 use winit::window::{BadIcon, Window};
 use winit::error::OsError;
 
-use crate::{Colour, IDENTITY_MATRIX, Game};
+use crate::{Colour, IDENTITY_MATRIX, Game, text};
 use crate::InputHandle;
 use crate::TextureIndex;
 use crate::render::Renderer;
 use crate::input::{Key, MouseKey};
-use crate::texture::{Texture, create_texture, TextureError};
+use crate::texture::{create_texture, TextureError};
 use crate::vectors::Vec2;
 
 /// The thing that makes the computer go
@@ -144,7 +144,7 @@ impl Engine {
             label: Some("camera_bind_group"),
         });
 
-        let renderer = Renderer::new(wgpu_clump, &surface, &adapter, window.inner_size(), &camera_bind_group_layout, builder.clear_colour, config.format);
+        let renderer = Renderer::new(wgpu_clump, window.inner_size(), &camera_bind_group_layout, builder.clear_colour, config.format);
         Ok(Self {
             renderer,
             input_handle,
@@ -319,6 +319,11 @@ impl Engine {
     pub fn change_camera_matrix(&mut self, matrix: [f32; 16]) {
         self.camera_matrix = matrix;
         self.renderer.wgpu_clump.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_matrix]));
+    }
+
+    /// Measures a peice of text and gives a Vec2 of the width and height
+    pub fn measure_text(&mut self, text: &str, scale: f32) -> Vec2<f32> {
+        text::measure_text(text, &mut self.renderer.glyph_brush, scale)
     }
 
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game

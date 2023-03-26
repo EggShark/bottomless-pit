@@ -1,5 +1,5 @@
 use crate::{DrawQueues, TextureCache, TextureIndex};
-use crate::text::Text;
+use crate::text::{Text, TransformedText};
 use crate::{LineVertex, WHITE_PIXEL, Texture, Vertex};
 use crate::engine_handle::WgpuClump;
 use crate::vectors::Vec2;
@@ -17,9 +17,9 @@ use winit::dpi::PhysicalSize;
 pub struct Renderer {
     white_pixel: wgpu::BindGroup,
     draw_queues: DrawQueues,
-    glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     pipelines: RenderPipelines,
     clear_colour: Colour,
+    pub(crate) glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     pub(crate) wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
     pub(crate) size: Vec2<u32>, // goes here bc normilzing stuff
     pub(crate) texture_cache: TextureCache,
@@ -28,8 +28,6 @@ pub struct Renderer {
 impl Renderer {
     pub(crate) fn new(
         wgpu_clump: WgpuClump, 
-        surface: &wgpu::Surface, 
-        adapter: &wgpu::Adapter, 
         size: PhysicalSize<u32>, 
         camera_bind_group_layout: &wgpu::BindGroupLayout,
         clear_colour: Colour,
@@ -149,10 +147,24 @@ impl Renderer {
         self.draw_queues.add_rectangle(&rectangle);
     }
 
+    /// Draws a rectangle in WGSL screenspace. point(-1.0, -1.0) is the bottom left corner and (0.0,0.0) is the center
+    /// of the screen.
+    pub fn draw_screenspace_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, colour: Colour) {
+        let rectangle = Rectangle::new(position, [width, hieght], colour.to_raw());
+        self.draw_queues.add_rectangle(&rectangle);
+    }
+
     /// draws a textured rectangle, however it will draw the entire texture
     pub fn draw_textured_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, texture: &TextureIndex) {
         let rectangle = Rectangle::from_pixels(position, [width, hieght], Colour::White.to_raw(), self.size);
         self.draw_queues.add_textured_rectange(&mut self.texture_cache, &rectangle, texture, &self.wgpu_clump.device);
+    }
+
+    /// Draws a textured rectangle in WGSL screenspace. point(-1.0, -1.0) is the bottom left corner and (0.0,0.0) is the 
+    /// center of the screen.
+    pub fn draw_textured_screenspace_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, texture: &TextureIndex) {
+        let rectangle = Rectangle::new(position, [width, hieght], Colour::White.to_raw());
+        self.draw_queues.add_textured_rectange(&mut self.texture_cache,&rectangle, texture, &self.wgpu_clump.device);
     }
 
     /// draws a textured rectangle with the specifed UV coords.
@@ -167,7 +179,12 @@ impl Renderer {
         let uv_width = uv_width / texture.size.x;
         let uv_height = uv_height / texture.size.y;
         let rectangle = Rectangle::from_pixels_with_uv(position, [width, hieght], Colour::White.to_raw(), self.size, uv_position, Vec2{x: uv_width, y: uv_height});
-        self.draw_queues.add_textured_rectange(&mut self.texture_cache, &rectangle, texture, &self.wgpu_clump.device)
+        self.draw_queues.add_textured_rectange(&mut self.texture_cache, &rectangle, texture, &self.wgpu_clump.device);
+    }
+
+    /// draws a regular polygon of any number of sides
+    pub fn draw_regular_n_gon(&mut self, number_of_sides: u16, radius: f32, center: Vec2<f32>, colour: Colour) {
+        self.draw_queues.add_regular_n_gon(number_of_sides, radius, center.to_raw(), colour);
     }
 
     /// draws a line, WILL DRAW ONTOP OF EVERTHING ELSE DUE TO BEING ITS OWN PIPELINE
@@ -186,6 +203,19 @@ impl Renderer {
             colour
         };
         self.draw_queues.add_text(text)
+    }
+
+    /// Draws text with custom transform matrix
+    pub fn draw_text_with_transform(&mut self, text: &str, position: Vec2<f32>, scale: f32, colour: Colour, transform: [f32; 16]) {
+        let text = TransformedText {
+            text: text.into(),
+            position,
+            scale,
+            colour,
+            transformation: transform,
+            bounds: (self.size.x as f32, self.size.y as f32)
+        };
+        self.draw_queues.add_transfromed_text(text)
     }
 
     pub(crate) fn render(&mut self, size: Vec2<u32>, camera: &wgpu::BindGroup, surface: &wgpu::Surface) -> Result<(), wgpu::SurfaceError>{
@@ -253,7 +283,7 @@ impl Renderer {
         render_items.transformed_text.iter()
             .map(|text| (wgpu_glyph::Section{
                 screen_position: (text.position.x, text.position.y),
-                bounds: (size.x as f32, size.y as f32),
+                bounds: text.bounds,
                 text: vec![wgpu_glyph::Text::new(&text.text).with_scale(text.scale).with_color(text.colour.to_raw())],
                 layout: Layout::default_single_line().line_breaker(wgpu_glyph::BuiltInLineBreaker::AnyCharLineBreaker),
                 }, text.transformation))

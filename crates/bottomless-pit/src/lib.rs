@@ -35,17 +35,17 @@
 //!     }
 //! }
 
-mod texture;
+pub mod texture;
 mod rect;
 mod vertex;
 mod input;
 mod draw_queue;
-mod matrix_math;
-mod colour;
+pub mod matrix_math;
+pub mod colour;
 mod text;
-mod engine_handle;
-mod render;
-mod vectors;
+pub mod engine_handle;
+pub mod render;
+pub mod vectors;
 
 pub use engine_handle::{Engine, EngineBuilder, BuildError};
 pub use render::Renderer;

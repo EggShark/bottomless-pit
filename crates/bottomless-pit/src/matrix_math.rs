@@ -7,13 +7,6 @@ pub fn normalize_points<T: std::ops::Div<Output = T>>(point: Vec2<T>, width: T, 
     Vec2{x, y}
 }
 
-pub(crate) fn get_mid_point(rectangle: wgpu_glyph::ab_glyph::Rect) -> Vec2<f32> {
-    let x_mid = (rectangle.min.x + rectangle.max.x) / 2.0;
-    let y_mid = (rectangle.min.y + rectangle.max.y) / 2.0;
-
-    Vec2{ x: x_mid, y: y_mid}
-}
-
 /// Helper function to make a 2d rotation matrix
 pub fn calculate_rotation_matrix(degree: f32) -> [f32; 16] {
     let degree = degree.to_radians();
