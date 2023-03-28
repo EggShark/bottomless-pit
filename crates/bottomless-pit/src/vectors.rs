@@ -1,3 +1,5 @@
+//! Generic implmentation of both 2D and 3D vectors
+
 use std::ops::{Add, Sub};
 
 /// A generic representation of 2D data

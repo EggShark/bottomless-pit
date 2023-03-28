@@ -1,3 +1,6 @@
+//! Contains the Renderer struct which also contains all the 
+//! functions and logic to draw things to the screen
+
 use crate::colour::Colour;
 use crate::draw_queue::{BindGroups, DrawQueues};
 use crate::engine_handle::WgpuClump;

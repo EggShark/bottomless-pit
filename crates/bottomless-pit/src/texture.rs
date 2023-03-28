@@ -1,3 +1,6 @@
+//! Cointains the interface into the texture cache and by
+//! extension accsss
+
 use crate::engine_handle::WgpuClump;
 use crate::vectors::Vec2;
 use crc32fast::Hasher;

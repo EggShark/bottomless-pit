@@ -1,3 +1,5 @@
+///! contains several functions that help with doing matrix arithmetic
+
 use crate::vectors::Vec2;
 
 /// Helper function to normalize 2D points

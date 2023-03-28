@@ -1,3 +1,4 @@
+///! Stores a convienent way to respresnt colour using rusts enums
 /// An enum to represent RGBA colours (spelled properly)
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum Colour {

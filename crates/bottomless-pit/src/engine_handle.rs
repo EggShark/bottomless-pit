@@ -1,3 +1,8 @@
+//! Contains both the Engine and the Engine builder
+//! Both of these are crucial to using the engine as the
+//! builder lets you customize the engine at the start, and the
+//! Engine gives you access to all the crucial logic functions
+
 use image::ImageError;
 use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
