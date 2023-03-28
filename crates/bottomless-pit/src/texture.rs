@@ -1,5 +1,5 @@
 //! Cointains the interface into the texture cache and by
-//! extension accsss
+//! extension accsss the texture interface
 
 use crate::engine_handle::WgpuClump;
 use crate::vectors::Vec2;
