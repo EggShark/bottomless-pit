@@ -2,23 +2,25 @@
 //!
 //! [`wgpu`]: https://github.com/gfx-rs/wgpu
 //! [`glyph_brush`]: https://github.com/alexheretic/glyph-brush/tree/master/glyph-brush
+// have to add this here because I turned this from a module to a library
+// and I just cant be asked to remove all the dead code
+#![allow(dead_code)]
 #![allow(clippy::too_many_arguments)]
 #![deny(unused_results)]
 mod builder;
 mod pipeline;
 mod region;
 
-pub use region::Region;
+use region::Region;
 
 use pipeline::{Instance, Pipeline};
 
 pub use builder::GlyphBrushBuilder;
 pub use glyph_brush::ab_glyph;
 pub use glyph_brush::{
-    BuiltInLineBreaker, Extra, FontId, GlyphCruncher, GlyphPositioner,
-    HorizontalAlign, Layout, LineBreak, LineBreaker, OwnedSection, OwnedText,
-    Section, SectionGeometry, SectionGlyph, SectionGlyphIter, SectionText,
-    Text, VerticalAlign,
+    BuiltInLineBreaker, Extra, FontId, GlyphCruncher, GlyphPositioner, HorizontalAlign, Layout,
+    LineBreak, LineBreaker, OwnedSection, OwnedText, Section, SectionGeometry, SectionGlyph,
+    SectionGlyphIter, SectionText, Text, VerticalAlign,
 };
 
 use ab_glyph::{Font, Rect};
@@ -61,11 +63,8 @@ impl<Depth, F: Font, H: BuildHasher> GlyphBrush<Depth, F, H> {
     ///
     /// Benefits from caching, see [caching behaviour](#caching-behaviour).
     #[inline]
-    pub fn queue_custom_layout<'a, S, G>(
-        &mut self,
-        section: S,
-        custom_layout: &G,
-    ) where
+    pub fn queue_custom_layout<'a, S, G>(&mut self, section: S, custom_layout: &G)
+    where
         G: GlyphPositioner,
         S: Into<Cow<'a, Section<'a>>>,
     {
@@ -91,11 +90,8 @@ impl<Depth, F: Font, H: BuildHasher> GlyphBrush<Depth, F, H> {
     /// Should not be necessary unless using multiple draws per frame with
     /// distinct transforms, see [caching behaviour](#caching-behaviour).
     #[inline]
-    pub fn keep_cached_custom_layout<'a, S, G>(
-        &mut self,
-        section: S,
-        custom_layout: &G,
-    ) where
+    pub fn keep_cached_custom_layout<'a, S, G>(&mut self, section: S, custom_layout: &G)
+    where
         S: Into<Cow<'a, Section<'a>>>,
         G: GlyphPositioner,
     {
@@ -153,14 +149,7 @@ where
                     let offset = [rect.min[0] as u16, rect.min[1] as u16];
                     let size = [rect.width() as u16, rect.height() as u16];
 
-                    pipeline.update_cache(
-                        device,
-                        staging_belt,
-                        encoder,
-                        offset,
-                        size,
-                        tex_data,
-                    );
+                    pipeline.update_cache(device, staging_belt, encoder, offset, size, tex_data);
                 },
                 Instance::from_vertex,
             );
@@ -172,13 +161,10 @@ where
                     // This is currently not possible I think. Ask!
                     let max_image_dimension = 2048;
 
-                    let (new_width, new_height) = if (suggested.0
-                        > max_image_dimension
+                    let (new_width, new_height) = if (suggested.0 > max_image_dimension
                         || suggested.1 > max_image_dimension)
-                        && (self.glyph_brush.texture_dimensions().0
-                            < max_image_dimension
-                            || self.glyph_brush.texture_dimensions().1
-                                < max_image_dimension)
+                        && (self.glyph_brush.texture_dimensions().0 < max_image_dimension
+                            || self.glyph_brush.texture_dimensions().1 < max_image_dimension)
                     {
                         (max_image_dimension, max_image_dimension)
                     } else {

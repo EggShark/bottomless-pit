@@ -14,9 +14,7 @@ pub struct GlyphBrushBuilder<D, F, H = DefaultSectionHasher> {
     depth: D,
 }
 
-impl<F, H> From<glyph_brush::GlyphBrushBuilder<F, H>>
-    for GlyphBrushBuilder<(), F, H>
-{
+impl<F, H> From<glyph_brush::GlyphBrushBuilder<F, H>> for GlyphBrushBuilder<(), F, H> {
     fn from(inner: glyph_brush::GlyphBrushBuilder<F, H>) -> Self {
         GlyphBrushBuilder {
             inner,
@@ -59,26 +57,19 @@ impl<F: Font, D, H: BuildHasher> GlyphBrushBuilder<D, F, H> {
     ///
     /// This option has no effect on wasm32.
     pub fn draw_cache_multithread(mut self, multithread: bool) -> Self {
-        self.inner.draw_cache_builder =
-            self.inner.draw_cache_builder.multithread(multithread);
+        self.inner.draw_cache_builder = self.inner.draw_cache_builder.multithread(multithread);
 
         self
     }
 
     /// Sets the texture filtering method.
-    pub fn texture_filter_method(
-        mut self,
-        filter_method: wgpu::FilterMode,
-    ) -> Self {
+    pub fn texture_filter_method(mut self, filter_method: wgpu::FilterMode) -> Self {
         self.texture_filter_method = filter_method;
         self
     }
 
     /// Sets the multi-sampling state of the render pipeline.
-    pub fn multisample_state(
-        mut self,
-        multisample_state: wgpu::MultisampleState,
-    ) -> Self {
+    pub fn multisample_state(mut self, multisample_state: wgpu::MultisampleState) -> Self {
         self.multisample_state = multisample_state;
         self
     }
@@ -90,10 +81,7 @@ impl<F: Font, D, H: BuildHasher> GlyphBrushBuilder<D, F, H> {
     /// internal use.
     ///
     /// Defaults to [xxHash](https://docs.rs/twox-hash).
-    pub fn section_hasher<T: BuildHasher>(
-        self,
-        section_hasher: T,
-    ) -> GlyphBrushBuilder<D, F, T> {
+    pub fn section_hasher<T: BuildHasher>(self, section_hasher: T) -> GlyphBrushBuilder<D, F, T> {
         GlyphBrushBuilder {
             inner: self.inner.section_hasher(section_hasher),
             texture_filter_method: self.texture_filter_method,
@@ -134,9 +122,7 @@ impl<F: Font + Sync, H: BuildHasher> GlyphBrushBuilder<(), F, H> {
     }
 }
 
-impl<F: Font + Sync, H: BuildHasher>
-    GlyphBrushBuilder<wgpu::DepthStencilState, F, H>
-{
+impl<F: Font + Sync, H: BuildHasher> GlyphBrushBuilder<wgpu::DepthStencilState, F, H> {
     /// Builds a `GlyphBrush` using the given `wgpu::Device` that can render
     /// text for texture views with the given `render_format`.
     pub fn build(

@@ -49,6 +49,7 @@ mod text;
 pub mod texture;
 pub mod vectors;
 mod vertex;
+mod wgpu_glyph;
 
 use engine_handle::Engine;
 use render::Renderer;

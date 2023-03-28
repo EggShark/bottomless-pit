@@ -1,11 +1,12 @@
 mod cache;
 
-use crate::Region;
+use super::Region;
 use cache::Cache;
 
 use bytemuck::{Pod, Zeroable};
 use core::num::NonZeroU64;
 use glyph_brush::ab_glyph::{point, Rect};
+use std::borrow::Cow;
 use std::marker::PhantomData;
 use std::mem;
 
@@ -127,12 +128,7 @@ impl<Depth> Pipeline<Depth> {
             .update(device, staging_belt, encoder, offset, size, data);
     }
 
-    pub fn increase_cache_size(
-        &mut self,
-        device: &wgpu::Device,
-        width: u32,
-        height: u32,
-    ) {
+    pub fn increase_cache_size(&mut self, device: &wgpu::Device, width: u32, height: u32) {
         self.cache = Cache::new(device, width, height);
 
         self.uniforms = create_uniforms(
@@ -159,10 +155,8 @@ impl<Depth> Pipeline<Depth> {
         if instances.len() > self.supported_instances {
             self.instances = device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("wgpu_glyph::Pipeline instances"),
-                size: mem::size_of::<Instance>() as u64
-                    * instances.len() as u64,
-                usage: wgpu::BufferUsages::VERTEX
-                    | wgpu::BufferUsages::COPY_DST,
+                size: mem::size_of::<Instance>() as u64 * instances.len() as u64,
+                usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
 
@@ -172,13 +166,8 @@ impl<Depth> Pipeline<Depth> {
         let instances_bytes = bytemuck::cast_slice(instances);
 
         if let Some(size) = NonZeroU64::new(instances_bytes.len() as u64) {
-            let mut instances_view = staging_belt.write_buffer(
-                encoder,
-                &self.instances,
-                0,
-                size,
-                device,
-            );
+            let mut instances_view =
+                staging_belt.write_buffer(encoder, &self.instances, 0, size, device);
 
             instances_view.copy_from_slice(instances_bytes);
         }
@@ -207,12 +196,11 @@ fn build<D>(
 ) -> Pipeline<D> {
     use wgpu::util::DeviceExt;
 
-    let transform =
-        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: None,
-            contents: bytemuck::cast_slice(&IDENTITY_MATRIX),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
+    let transform = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: None,
+        contents: bytemuck::cast_slice(&IDENTITY_MATRIX),
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+    });
 
     let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
         address_mode_u: wgpu::AddressMode::ClampToEdge,
@@ -226,56 +214,43 @@ fn build<D>(
 
     let cache = Cache::new(device, cache_width, cache_height);
 
-    let uniform_layout =
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("wgpu_glyph::Pipeline uniforms"),
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: wgpu::BufferSize::new(
-                            mem::size_of::<[f32; 16]>() as u64,
-                        ),
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(
-                        wgpu::SamplerBindingType::Filtering,
-                    ),
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 2,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        sample_type: wgpu::TextureSampleType::Float {
-                            filterable: true,
-                        },
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        multisampled: false,
-                    },
-                    count: None,
-                },
-            ],
-        });
-
-    let uniforms = create_uniforms(
-        device,
-        &uniform_layout,
-        &transform,
-        &sampler,
-        &cache.view,
-    );
-
-    let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+    let uniform_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("wgpu_glyph::Pipeline uniforms"),
         entries: &[
             wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: wgpu::BufferSize::new(mem::size_of::<[f32; 16]>() as u64),
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 1,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 2,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                    multisampled: false,
+                },
+                count: None,
+            },
+        ],
+    });
+
+    let uniforms = create_uniforms(device, &uniform_layout, &transform, &sampler, &cache.view);
+
+    let camera_bind_group_layout =
+        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[wgpu::BindGroupLayoutEntry {
                 binding: 0,
                 visibility: wgpu::ShaderStages::VERTEX,
                 ty: wgpu::BindingType::Buffer {
@@ -284,34 +259,26 @@ fn build<D>(
                     min_binding_size: None,
                 },
                 count: None,
-            }
-        ],
-        label: Some("camera_bind_group_layout"),
-    });
+            }],
+            label: Some("camera_bind_group_layout"),
+        });
 
     let instances = device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("wgpu_glyph::Pipeline instances"),
-        size: mem::size_of::<Instance>() as u64
-            * Instance::INITIAL_AMOUNT as u64,
+        size: mem::size_of::<Instance>() as u64 * Instance::INITIAL_AMOUNT as u64,
         usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });
 
-    let layout =
-        device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: None,
-            push_constant_ranges: &[],
-            bind_group_layouts: &[
-                &uniform_layout,
-                &camera_bind_group_layout,
-            ],
-        });
+    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: None,
+        push_constant_ranges: &[],
+        bind_group_layouts: &[&uniform_layout, &camera_bind_group_layout],
+    });
 
     let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Glyph Shader"),
-        source: wgpu::ShaderSource::Wgsl(crate::Cow::Borrowed(include_str!(
-            "shader/glyph.wgsl"
-        ))),
+        source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shader/glyph.wgsl"))),
     });
 
     let raw = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -403,19 +370,18 @@ fn draw<D>(
         pipeline.current_transform = transform;
     }
 
-    let mut render_pass =
-        encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("wgpu_glyph::pipeline render pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: target,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Load,
-                    store: true,
-                },
-            })],
-            depth_stencil_attachment,
-        });
+    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("wgpu_glyph::pipeline render pass"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: target,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Load,
+                store: true,
+            },
+        })],
+        depth_stencil_attachment,
+    });
 
     render_pass.set_pipeline(&pipeline.raw);
     render_pass.set_bind_group(0, &pipeline.uniforms, &[]);
@@ -423,12 +389,7 @@ fn draw<D>(
     render_pass.set_vertex_buffer(0, pipeline.instances.slice(..));
 
     if let Some(region) = region {
-        render_pass.set_scissor_rect(
-            region.x,
-            region.y,
-            region.width,
-            region.height,
-        );
+        render_pass.set_scissor_rect(region.x, region.y, region.width, region.height);
     }
 
     render_pass.draw(0..4, 0..pipeline.current_instances as u32);
@@ -497,29 +458,27 @@ impl Instance {
         if gl_rect.max.x > gl_bounds.max.x {
             let old_width = gl_rect.width();
             gl_rect.max.x = gl_bounds.max.x;
-            tex_coords.max.x = tex_coords.min.x
-                + tex_coords.width() * gl_rect.width() / old_width;
+            tex_coords.max.x = tex_coords.min.x + tex_coords.width() * gl_rect.width() / old_width;
         }
 
         if gl_rect.min.x < gl_bounds.min.x {
             let old_width = gl_rect.width();
             gl_rect.min.x = gl_bounds.min.x;
-            tex_coords.min.x = tex_coords.max.x
-                - tex_coords.width() * gl_rect.width() / old_width;
+            tex_coords.min.x = tex_coords.max.x - tex_coords.width() * gl_rect.width() / old_width;
         }
 
         if gl_rect.max.y > gl_bounds.max.y {
             let old_height = gl_rect.height();
             gl_rect.max.y = gl_bounds.max.y;
-            tex_coords.max.y = tex_coords.min.y
-                + tex_coords.height() * gl_rect.height() / old_height;
+            tex_coords.max.y =
+                tex_coords.min.y + tex_coords.height() * gl_rect.height() / old_height;
         }
 
         if gl_rect.min.y < gl_bounds.min.y {
             let old_height = gl_rect.height();
             gl_rect.min.y = gl_bounds.min.y;
-            tex_coords.min.y = tex_coords.max.y
-                - tex_coords.height() * gl_rect.height() / old_height;
+            tex_coords.min.y =
+                tex_coords.max.y - tex_coords.height() * gl_rect.height() / old_height;
         }
 
         Instance {

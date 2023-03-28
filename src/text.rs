@@ -1,6 +1,7 @@
 use crate::colour::Colour;
 use crate::vectors::Vec2;
-use wgpu_glyph::GlyphCruncher;
+use crate::wgpu_glyph;
+use crate::wgpu_glyph::GlyphCruncher;
 #[derive(Debug)]
 pub(crate) struct Text {
     pub(crate) text: String,

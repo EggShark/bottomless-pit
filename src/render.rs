@@ -1,4 +1,4 @@
-//! Contains the Renderer struct which also contains all the 
+//! Contains the Renderer struct which also contains all the
 //! functions and logic to draw things to the screen
 
 use crate::colour::Colour;
@@ -10,8 +10,9 @@ use crate::text::{Text, TransformedText};
 use crate::texture::{Texture, TextureCache, TextureIndex};
 use crate::vectors::Vec2;
 use crate::vertex::{line_vert_pixels_to_screenspace, LineVertex, Vertex};
+use crate::wgpu_glyph;
+use crate::wgpu_glyph::{orthographic_projection, Layout};
 use crate::WHITE_PIXEL;
-use wgpu_glyph::{orthographic_projection, Layout};
 
 use image::GenericImageView;
 use winit::dpi::PhysicalSize;
@@ -39,10 +40,9 @@ impl Renderer {
         let texture_cache = TextureCache::new();
         let draw_queues = DrawQueues::new();
 
-        let minecraft_mono = wgpu_glyph::ab_glyph::FontArc::try_from_slice(include_bytes!(
-            "../assets/Monocraft.ttf"
-        ))
-        .unwrap();
+        let minecraft_mono =
+            wgpu_glyph::ab_glyph::FontArc::try_from_slice(include_bytes!("../Monocraft.ttf"))
+                .unwrap();
         let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(minecraft_mono)
             .build(&wgpu_clump.device, wgpu::TextureFormat::Bgra8UnormSrgb);
 

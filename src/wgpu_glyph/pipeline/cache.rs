@@ -9,8 +9,7 @@ pub struct Cache {
 }
 
 impl Cache {
-    const INITIAL_UPLOAD_BUFFER_SIZE: u64 =
-        wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as u64 * 100;
+    const INITIAL_UPLOAD_BUFFER_SIZE: u64 = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as u64 * 100;
 
     pub fn new(device: &wgpu::Device, width: u32, height: u32) -> Cache {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
@@ -23,8 +22,7 @@ impl Cache {
             view_formats: &[],
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::R8Unorm,
-            usage: wgpu::TextureUsages::COPY_DST
-                | wgpu::TextureUsages::TEXTURE_BINDING,
+            usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
             mip_level_count: 1,
             sample_count: 1,
         });
@@ -69,14 +67,12 @@ impl Cache {
         let padded_data_size = (padded_width * height) as u64;
 
         if self.upload_buffer_size < padded_data_size {
-            self.upload_buffer =
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("wgpu_glyph::Cache upload buffer"),
-                    size: padded_data_size,
-                    usage: wgpu::BufferUsages::COPY_DST
-                        | wgpu::BufferUsages::COPY_SRC,
-                    mapped_at_creation: false,
-                });
+            self.upload_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("wgpu_glyph::Cache upload buffer"),
+                size: padded_data_size,
+                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+                mapped_at_creation: false,
+            });
 
             self.upload_buffer_size = padded_data_size;
         }
