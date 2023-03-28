@@ -1,6 +1,5 @@
 use crate::vectors::Vec2;
-use crate::vertex::vert_pixels_to_screenspace;
-use crate::Vertex;
+use crate::vertex::{vert_pixels_to_screenspace, Vertex};
 
 pub struct Rectangle {
     points: [Vertex; 4],

@@ -1,5 +1,5 @@
 use crate::engine_handle::WgpuClump;
-use crate::Vec2;
+use crate::vectors::Vec2;
 use crc32fast::Hasher;
 use image::{GenericImageView, ImageError};
 use std::collections::HashMap;

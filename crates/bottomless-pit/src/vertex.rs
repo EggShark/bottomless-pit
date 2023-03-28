@@ -1,4 +1,4 @@
-use crate::Vec2;
+use crate::vectors::Vec2;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]

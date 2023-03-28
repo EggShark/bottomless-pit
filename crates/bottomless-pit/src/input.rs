@@ -1,6 +1,6 @@
 use winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 
-use crate::Vec2;
+use crate::vectors::Vec2;
 
 pub(crate) struct InputHandle {
     previous_keyboard_state: [bool; 115],

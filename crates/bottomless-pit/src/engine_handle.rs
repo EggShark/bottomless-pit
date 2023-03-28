@@ -6,13 +6,12 @@ use winit::event::*;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{BadIcon, Window};
 
-use crate::input::{Key, MouseKey};
+use crate::colour::Colour;
+use crate::input::{InputHandle, Key, MouseKey};
 use crate::render::Renderer;
-use crate::texture::{create_texture, TextureError};
+use crate::texture::{create_texture, TextureError, TextureIndex};
 use crate::vectors::Vec2;
-use crate::InputHandle;
-use crate::TextureIndex;
-use crate::{text, Colour, Game, IDENTITY_MATRIX};
+use crate::{text, Game, IDENTITY_MATRIX};
 
 /// The thing that makes the computer go
 pub struct Engine {

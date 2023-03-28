@@ -1,4 +1,5 @@
-use crate::{Colour, Vec2};
+use crate::colour::Colour;
+use crate::vectors::Vec2;
 use wgpu_glyph::GlyphCruncher;
 #[derive(Debug)]
 pub(crate) struct Text {

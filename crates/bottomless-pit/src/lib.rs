@@ -50,16 +50,8 @@ pub mod texture;
 pub mod vectors;
 mod vertex;
 
-pub use colour::Colour;
-use draw_queue::{BindGroups, DrawQueues};
-pub use engine_handle::{BuildError, Engine, EngineBuilder};
-pub use input::{Key, MouseKey};
-pub use matrix_math::*;
-pub use render::Renderer;
-use texture::{Texture, TextureCache, TextureError, TextureIndex};
-pub use vectors::{Vec2, Vec3};
-use vertex::{LineVertex, Vertex};
-
+use engine_handle::Engine;
+use render::Renderer;
 /// The Trait needed for structs to be used in with the Engine
 pub trait Game {
     /// Rendering code goes here

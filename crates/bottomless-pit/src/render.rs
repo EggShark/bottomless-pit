@@ -1,13 +1,13 @@
 use crate::colour::Colour;
+use crate::draw_queue::{BindGroups, DrawQueues};
 use crate::engine_handle::WgpuClump;
 use crate::matrix_math::*;
 use crate::rect::Rectangle;
 use crate::text::{Text, TransformedText};
+use crate::texture::{Texture, TextureCache, TextureIndex};
 use crate::vectors::Vec2;
-use crate::vertex::line_vert_pixels_to_screenspace;
-use crate::{
-    BindGroups, DrawQueues, LineVertex, Texture, TextureCache, TextureIndex, Vertex, WHITE_PIXEL,
-};
+use crate::vertex::{line_vert_pixels_to_screenspace, LineVertex, Vertex};
+use crate::WHITE_PIXEL;
 use wgpu_glyph::{orthographic_projection, Layout};
 
 use image::GenericImageView;

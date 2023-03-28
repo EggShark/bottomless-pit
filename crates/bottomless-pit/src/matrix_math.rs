@@ -1,4 +1,4 @@
-use crate::Vec2;
+use crate::vectors::Vec2;
 
 /// Helper function to normalize 2D points
 pub fn normalize_points<T: std::ops::Div<Output = T>>(

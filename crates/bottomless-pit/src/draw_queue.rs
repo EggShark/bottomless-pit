@@ -3,10 +3,8 @@ use wgpu::util::DeviceExt;
 use crate::colour::Colour;
 use crate::rect::Rectangle;
 use crate::text::{Text, TransformedText};
-use crate::LineVertex;
-use crate::TextureCache;
-use crate::TextureIndex;
-use crate::Vertex;
+use crate::texture::{TextureCache, TextureIndex};
+use crate::vertex::{LineVertex, Vertex};
 use std::f32::consts::PI;
 
 #[derive(Debug)]
