@@ -1,4 +1,4 @@
-use winit::event::{VirtualKeyCode, ElementState, WindowEvent, KeyboardInput, MouseButton};
+use winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 
 use crate::Vec2;
 
@@ -17,7 +17,7 @@ impl InputHandle {
             current_keyboard_state: [false; 115],
             previous_mouse_state: [false; 4],
             current_mouse_state: [false; 4],
-            mouse_position: Vec2{x: 0.0, y:0.0}
+            mouse_position: Vec2 { x: 0.0, y: 0.0 },
         }
     }
 
@@ -29,23 +29,22 @@ impl InputHandle {
     pub(crate) fn process_input(&mut self, event: &WindowEvent) -> bool {
         match event {
             WindowEvent::KeyboardInput {
-                input: KeyboardInput {
-                    virtual_keycode,
-                    state,
-                    ..
-                },
+                input:
+                    KeyboardInput {
+                        virtual_keycode,
+                        state,
+                        ..
+                    },
                 ..
             } => self.process_keyboard_input(virtual_keycode, *state),
-            WindowEvent::MouseInput {
-                state,
-                button,
-                ..
-            } => self.process_mouse_input(*state, *button),
-            WindowEvent::CursorMoved {
-                position, 
-                ..
-            } => {
-                let pos = Vec2{x: position.x as f32, y: position.y as f32};
+            WindowEvent::MouseInput { state, button, .. } => {
+                self.process_mouse_input(*state, *button)
+            }
+            WindowEvent::CursorMoved { position, .. } => {
+                let pos = Vec2 {
+                    x: position.x as f32,
+                    y: position.y as f32,
+                };
                 self.mouse_position = pos;
                 true
             }
@@ -62,16 +61,20 @@ impl InputHandle {
         true
     }
 
-    fn process_keyboard_input(&mut self, key_code: &Option<VirtualKeyCode>, state: winit::event::ElementState) -> bool {
+    fn process_keyboard_input(
+        &mut self,
+        key_code: &Option<VirtualKeyCode>,
+        state: winit::event::ElementState,
+    ) -> bool {
         let key_bool = state == ElementState::Pressed;
         let key: Key = match key_code {
             Some(virtual_code) => {
                 let c = *virtual_code;
                 c.into()
-            },
+            }
             None => return false,
         };
-        
+
         if key == Key::Unrecognized {
             return false;
         }

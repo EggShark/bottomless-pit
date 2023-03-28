@@ -1,18 +1,18 @@
 use image::ImageError;
 use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
-use winit::event::*;
-use winit::event_loop::{EventLoop, ControlFlow};
-use winit::window::{BadIcon, Window};
 use winit::error::OsError;
+use winit::event::*;
+use winit::event_loop::{ControlFlow, EventLoop};
+use winit::window::{BadIcon, Window};
 
-use crate::{Colour, IDENTITY_MATRIX, Game, text};
-use crate::InputHandle;
-use crate::TextureIndex;
-use crate::render::Renderer;
 use crate::input::{Key, MouseKey};
+use crate::render::Renderer;
 use crate::texture::{create_texture, TextureError};
 use crate::vectors::Vec2;
+use crate::InputHandle;
+use crate::TextureIndex;
+use crate::{text, Colour, Game, IDENTITY_MATRIX};
 
 /// The thing that makes the computer go
 pub struct Engine {
@@ -30,7 +30,6 @@ pub struct Engine {
     close_key: Option<Key>,
 }
 
-
 impl Engine {
     fn new(builder: EngineBuilder) -> Result<Self, BuildError> {
         let cursor_visibility = true;
@@ -40,7 +39,10 @@ impl Engine {
         let event_loop = EventLoop::new();
         let window_builder = winit::window::WindowBuilder::new()
             .with_title(builder.window_title)
-            .with_inner_size(winit::dpi::PhysicalSize::new(builder.resolution.0, builder.resolution.1))
+            .with_inner_size(winit::dpi::PhysicalSize::new(
+                builder.resolution.0,
+                builder.resolution.1,
+            ))
             .with_resizable(builder.resizable)
             .with_window_icon(builder.window_icon);
 
@@ -58,14 +60,12 @@ impl Engine {
             wgpu::Backends::all()
         };
 
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor{ 
-            backends: backend, 
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: backend,
             dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
         });
 
-        let surface = unsafe {
-            instance.create_surface(&window)
-        }?;
+        let surface = unsafe { instance.create_surface(&window) }?;
 
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
@@ -75,11 +75,11 @@ impl Engine {
 
         let adapter = match adapter {
             Some(a) => Ok(a),
-            None => Err(BuildError::FailedToCreateAdapter)
+            None => Err(BuildError::FailedToCreateAdapter),
         }?;
 
         let (device, queue) = pollster::block_on(adapter.request_device(
-            &wgpu::DeviceDescriptor{
+            &wgpu::DeviceDescriptor {
                 features: wgpu::Features::empty(),
                 limits: wgpu::Limits::default(),
                 label: None,
@@ -87,13 +87,12 @@ impl Engine {
             None,
         ))?;
 
-        let wgpu_clump = WgpuClump {
-            device,
-            queue,
-        };
+        let wgpu_clump = WgpuClump { device, queue };
 
         let surface_capabilities = surface.get_capabilities(&adapter);
-        let surface_format = surface_capabilities.formats.iter()
+        let surface_format = surface_capabilities
+            .formats
+            .iter()
             .copied()
             .find(|f| f.describe().srgb)
             .unwrap_or(surface_capabilities.formats[0]);
@@ -110,40 +109,51 @@ impl Engine {
         surface.configure(&wgpu_clump.device, &config);
 
         let camera_matrix = IDENTITY_MATRIX;
-        let camera_buffer = wgpu_clump.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(&[camera_matrix]),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
-        
-        let camera_bind_group_layout = wgpu_clump.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }
-            ],
-            label: Some("camera_bind_group_layout"),
-        });
+        let camera_buffer =
+            wgpu_clump
+                .device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Camera Buffer"),
+                    contents: bytemuck::cast_slice(&[camera_matrix]),
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                });
 
-        let camera_bind_group = wgpu_clump.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &camera_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
+        let camera_bind_group_layout =
+            wgpu_clump
+                .device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    entries: &[wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    }],
+                    label: Some("camera_bind_group_layout"),
+                });
+
+        let camera_bind_group = wgpu_clump
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &camera_bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
                     binding: 0,
                     resource: camera_buffer.as_entire_binding(),
-                }
-            ],
-            label: Some("camera_bind_group"),
-        });
+                }],
+                label: Some("camera_bind_group"),
+            });
 
-        let renderer = Renderer::new(wgpu_clump, window.inner_size(), &camera_bind_group_layout, builder.clear_colour, config.format);
+        let renderer = Renderer::new(
+            wgpu_clump,
+            window.inner_size(),
+            &camera_bind_group_layout,
+            builder.clear_colour,
+            config.format,
+        );
+
         Ok(Self {
             renderer,
             input_handle,
@@ -158,12 +168,15 @@ impl Engine {
             should_close: false,
             close_key: builder.close_key,
         })
-        
     }
 
     /// Attempts to create a texture
     pub fn create_texture(&mut self, path: &str) -> Result<TextureIndex, TextureError> {
-        create_texture(&mut self.renderer.texture_cache, &self.renderer.wgpu_clump, path)
+        create_texture(
+            &mut self.renderer.texture_cache,
+            &self.renderer.wgpu_clump,
+            path,
+        )
     }
 
     /// Checks if a key is down
@@ -259,16 +272,18 @@ impl Engine {
 
     /// Changes the Position of the window in PhysicalPixles
     pub fn set_window_position(&self, x: f32, y: f32) {
-        self.window.set_outer_position(winit::dpi::PhysicalPosition::new(x, y));
+        self.window
+            .set_outer_position(winit::dpi::PhysicalPosition::new(x, y));
     }
 
     /// Sets the physical minimum size of the window
     pub fn set_window_min_size(&self, width: f32, height: f32) {
-        self.window.set_min_inner_size(Some(winit::dpi::PhysicalSize::new(width, height)));
+        self.window
+            .set_min_inner_size(Some(winit::dpi::PhysicalSize::new(width, height)));
     }
 
     /// Gets the physical postion of the window
-    pub fn get_window_position(&self) -> Option<Vec2<i32>>{
+    pub fn get_window_position(&self) -> Option<Vec2<i32>> {
         match self.window.outer_position() {
             Ok(v) => Some((v.x, v.y).into()),
             Err(_) => None,
@@ -289,7 +304,8 @@ impl Engine {
     /// check the [winit docs](https://docs.rs/winit/latest/winit/window/struct.Window.html#method.set_fullscreen) for more information
     pub fn toggle_fullscreen(&self) {
         if self.is_window_fullscreen() {
-            self.window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
+            self.window
+                .set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
         } else {
             self.window.set_fullscreen(None);
         }
@@ -311,7 +327,11 @@ impl Engine {
     /// all things drawn is also 3D
     pub fn change_camera_matrix(&mut self, matrix: [f32; 16]) {
         self.camera_matrix = matrix;
-        self.renderer.wgpu_clump.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_matrix]));
+        self.renderer.wgpu_clump.queue.write_buffer(
+            &self.camera_buffer,
+            0,
+            bytemuck::cast_slice(&[self.camera_matrix]),
+        );
     }
 
     /// Measures a peice of text and gives a Vec2 of the width and height
@@ -320,14 +340,21 @@ impl Engine {
     }
 
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
-    pub fn run<T: 'static>(mut self, mut game: T) -> ! where T: Game {
+    pub fn run<T: 'static>(mut self, mut game: T) -> !
+    where
+        T: Game,
+    {
         let event_loop = self.event_loop.take().unwrap(); //should never panic
         event_loop.run(move |event, _, control_flow| {
             match event {
                 Event::RedrawRequested(window_id) if window_id == self.window.id() => {
                     game.render(&mut self.renderer);
-                    match self.renderer.render(self.window.inner_size().into(), &self.camera_bind_group, &self.surface) {
-                        Ok(_) => {},
+                    match self.renderer.render(
+                        self.window.inner_size().into(),
+                        &self.camera_bind_group,
+                        &self.surface,
+                    ) {
+                        Ok(_) => {}
                         // reconfigure surface if lost
                         Err(wgpu::SurfaceError::Lost) => self.resize(self.renderer.size),
                         Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
@@ -346,20 +373,22 @@ impl Engine {
                 Event::WindowEvent {
                     ref event,
                     window_id,
-                } if window_id == self.window.id() => if !self.input(event) {
-                    match event {
-                        WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-                        WindowEvent::Resized(physical_size) => {
-                            let s = *physical_size;
-                            self.resize(s.into());
-                        },
-                        WindowEvent::ScaleFactorChanged{new_inner_size, ..} => {
-                            let s = **new_inner_size;
-                            self.resize(s.into());
+                } if window_id == self.window.id() => {
+                    if !self.input(event) {
+                        match event {
+                            WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                            WindowEvent::Resized(physical_size) => {
+                                let s = *physical_size;
+                                self.resize(s.into());
+                            }
+                            WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
+                                let s = **new_inner_size;
+                                self.resize(s.into());
+                            }
+                            _ => {}
                         }
-                        _ => {}
                     }
-                },
+                }
                 _ => {}
             }
         });
@@ -383,7 +412,8 @@ impl Engine {
         if new_size.x > 0 && new_size.y > 0 {
             self.config.width = new_size.x;
             self.config.height = new_size.y;
-            self.surface.configure(&self.renderer.wgpu_clump.device, &self.config);
+            self.surface
+                .configure(&self.renderer.wgpu_clump.device, &self.config);
             self.renderer.size = new_size;
         }
     }
@@ -423,7 +453,7 @@ impl EngineBuilder {
             clear_colour: Colour::Black,
             window_icon: None,
             window_title: "".into(),
-            resizable: true
+            resizable: true,
         }
     }
 
@@ -540,7 +570,7 @@ impl EngineBuilder {
     }
 
     /// Attempts to buld the Engine
-    pub fn build(self) -> Result<Engine, BuildError> {        
+    pub fn build(self) -> Result<Engine, BuildError> {
         Engine::new(self)
     }
 }
@@ -581,7 +611,7 @@ impl From<RequestDeviceError> for BuildError {
 #[derive(Debug)]
 pub enum IconError {
     BadIcon(BadIcon),
-    IconLoadingError(ImageError)
+    IconLoadingError(ImageError),
 }
 
 impl From<BadIcon> for IconError {

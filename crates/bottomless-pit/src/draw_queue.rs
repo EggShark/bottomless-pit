@@ -1,12 +1,12 @@
 use wgpu::util::DeviceExt;
 
-use crate::Vertex;
-use crate::LineVertex;
-use crate::TextureCache;
-use crate::TextureIndex;
 use crate::colour::Colour;
 use crate::rect::Rectangle;
 use crate::text::{Text, TransformedText};
+use crate::LineVertex;
+use crate::TextureCache;
+use crate::TextureIndex;
+use crate::Vertex;
 use std::f32::consts::PI;
 
 #[derive(Debug)]
@@ -31,6 +31,8 @@ impl DrawQueues {
         }
     }
 
+    #[rustfmt::skip]
+    // once again need fmt skip for indicies
     pub(crate) fn add_rectangle(&mut self, rectangle: &Rectangle) {
         let vertices = rectangle.get_vertices();
         let number_of_verticies = self.general_vertices.len() as u16;
@@ -44,25 +46,35 @@ impl DrawQueues {
         match self.rectangle_bind_group_switches.last() {
             Some(point) => {
                 if point.bind_group != BindGroups::WhitePixel {
-                    self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
+                    self.rectangle_bind_group_switches
+                        .push(BindGroupSwitchPoint {
+                            bind_group: BindGroups::WhitePixel,
+                            point: number_of_inidices,
+                        });
+                }
+            }
+            None => {
+                self.rectangle_bind_group_switches
+                    .push(BindGroupSwitchPoint {
                         bind_group: BindGroups::WhitePixel,
                         point: number_of_inidices,
                     });
-                }
-            },
-            None => {
-                self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
-                    bind_group: BindGroups::WhitePixel,
-                    point: number_of_inidices,
-                });
-            },
+            }
         };
 
         self.general_vertices.extend_from_slice(&vertices);
         self.general_indicies.extend_from_slice(&indicies);
     }
 
-    pub(crate) fn add_textured_rectange(&mut self, cache: &mut TextureCache, rectangle: &Rectangle, texture: &TextureIndex, device: &wgpu::Device) {
+    #[rustfmt::skip]
+    // the indicies math I want formated becuase 2 triagnles same for above
+    pub(crate) fn add_textured_rectange(
+        &mut self,
+        cache: &mut TextureCache,
+        rectangle: &Rectangle,
+        texture: &TextureIndex,
+        device: &wgpu::Device,
+    ) {
         let vertices = rectangle.get_vertices();
         let texture_bind_group = texture.id;
         let number_of_verticies = self.general_vertices.len() as u16;
@@ -80,19 +92,29 @@ impl DrawQueues {
 
         match self.rectangle_bind_group_switches.last() {
             Some(point) => {
-                if point.bind_group != (BindGroups::Custom{bind_group: texture_bind_group}) {
-                    self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
-                        bind_group: BindGroups::Custom {bind_group: texture_bind_group},
+                if point.bind_group
+                    != (BindGroups::Custom {
+                        bind_group: texture_bind_group,
+                    })
+                {
+                    self.rectangle_bind_group_switches
+                        .push(BindGroupSwitchPoint {
+                            bind_group: BindGroups::Custom {
+                                bind_group: texture_bind_group,
+                            },
+                            point: number_of_inidices,
+                        });
+                }
+            }
+            None => {
+                self.rectangle_bind_group_switches
+                    .push(BindGroupSwitchPoint {
+                        bind_group: BindGroups::Custom {
+                            bind_group: texture_bind_group,
+                        },
                         point: number_of_inidices,
                     });
-                }
-            },
-            None => {
-                self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
-                    bind_group: BindGroups::Custom {bind_group: texture_bind_group},
-                    point: number_of_inidices,
-                });
-            },
+            }
         };
 
         self.general_vertices.extend_from_slice(&vertices);
@@ -104,7 +126,13 @@ impl DrawQueues {
         self.line_vertices.push(end);
     }
 
-    pub(crate) fn add_regular_n_gon(&mut self, number_of_sides: u16, radius: f32, center: [f32; 2], colour: Colour) {
+    pub(crate) fn add_regular_n_gon(
+        &mut self,
+        number_of_sides: u16,
+        radius: f32,
+        center: [f32; 2],
+        colour: Colour,
+    ) {
         if number_of_sides < 3 {
             return; // hacky fix for now think of something better later
         }
@@ -112,31 +140,44 @@ impl DrawQueues {
         let number_of_inidices = self.general_indicies.len();
 
         let vertices = (0..number_of_sides)
-            .map(|num| (radius * (2.0*PI*num as f32/number_of_sides as f32).cos() + center[0], radius * (2.0*PI*num as f32/number_of_sides as f32).sin() + center[1]))
+            .map(|num| {
+                (
+                    radius * (2.0 * PI * num as f32 / number_of_sides as f32).cos() + center[0],
+                    radius * (2.0 * PI * num as f32 / number_of_sides as f32).sin() + center[1],
+                )
+            })
             .map(|(x, y)| Vertex::from_2d([x, y], [0.0, 0.0], colour.to_raw()))
             .collect::<Vec<Vertex>>();
         // do math on monday idk
 
         let number_of_triangles = number_of_sides - 2;
         let indicies = (1..number_of_triangles + 1)
-            .flat_map(|i| [number_of_vertices, i + 1 + number_of_vertices, i + number_of_vertices])
+            .flat_map(|i| {
+                [
+                    number_of_vertices,
+                    i + 1 + number_of_vertices,
+                    i + number_of_vertices,
+                ]
+            })
             .collect::<Vec<u16>>();
 
         match self.rectangle_bind_group_switches.last() {
             Some(point) => {
                 if point.bind_group != BindGroups::WhitePixel {
-                    self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
+                    self.rectangle_bind_group_switches
+                        .push(BindGroupSwitchPoint {
+                            bind_group: BindGroups::WhitePixel,
+                            point: number_of_inidices,
+                        });
+                }
+            }
+            None => {
+                self.rectangle_bind_group_switches
+                    .push(BindGroupSwitchPoint {
                         bind_group: BindGroups::WhitePixel,
                         point: number_of_inidices,
                     });
-                }
-            },
-            None => {
-                self.rectangle_bind_group_switches.push(BindGroupSwitchPoint {
-                    bind_group: BindGroups::WhitePixel,
-                    point: number_of_inidices,
-                });
-            },
+            }
         };
 
         self.general_vertices.extend_from_slice(&vertices);
@@ -195,7 +236,7 @@ pub(crate) struct RenderItems {
     pub(crate) rectangle_buffer: wgpu::Buffer,
     pub(crate) rectangle_index_buffer: wgpu::Buffer,
     pub(crate) number_of_rectangle_indicies: u32,
-    pub(crate) rectangle_bind_group_switches: Vec<BindGroupSwitchPoint>, 
+    pub(crate) rectangle_bind_group_switches: Vec<BindGroupSwitchPoint>,
     pub(crate) line_buffer: wgpu::Buffer,
     pub(crate) number_of_line_verticies: u32,
     pub(crate) text: Vec<Text>,
@@ -211,5 +252,5 @@ pub(crate) struct BindGroupSwitchPoint {
 #[derive(Debug, PartialEq)]
 pub(crate) enum BindGroups {
     WhitePixel,
-    Custom{bind_group: u32},
+    Custom { bind_group: u32 },
 }

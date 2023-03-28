@@ -1,10 +1,10 @@
-use image::{GenericImageView, ImageError};
+use crate::engine_handle::WgpuClump;
+use crate::Vec2;
 use crc32fast::Hasher;
+use image::{GenericImageView, ImageError};
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::io::Error;
-use crate::Vec2;
-use crate::engine_handle::WgpuClump;
 
 pub(crate) struct Texture {
     pub view: wgpu::TextureView,
@@ -15,7 +15,11 @@ pub(crate) struct Texture {
 }
 
 impl Texture {
-    pub fn from_bytes(wgpu_things: &WgpuClump, label: Option<&str>, bytes: &[u8]) -> Result<Self, TextureError> {
+    pub fn from_bytes(
+        wgpu_things: &WgpuClump,
+        label: Option<&str>,
+        bytes: &[u8],
+    ) -> Result<Self, TextureError> {
         let mut hasher = Hasher::new();
         hasher.update(bytes);
         let checksum = hasher.finalize();
@@ -23,13 +27,22 @@ impl Texture {
         Ok(Self::from_image(wgpu_things, img, label, checksum))
     }
 
-    pub fn from_path(wgpu_things: &WgpuClump, label: Option<&str>, path: &str) -> Result<Self, TextureError> {
+    pub fn from_path(
+        wgpu_things: &WgpuClump,
+        label: Option<&str>,
+        path: &str,
+    ) -> Result<Self, TextureError> {
         let bytes = std::fs::read(path)?;
         let out = Self::from_bytes(wgpu_things, label, &bytes)?;
         Ok(out)
     }
 
-    fn from_image(wgpu_things: &WgpuClump, img: image::DynamicImage, label: Option<&str>, id: u32) -> Self {
+    fn from_image(
+        wgpu_things: &WgpuClump,
+        img: image::DynamicImage,
+        label: Option<&str>,
+        id: u32,
+    ) -> Self {
         let diffuse_rgba = img.to_rgba8();
         let (width, height) = img.dimensions();
 
@@ -47,7 +60,7 @@ impl Texture {
             format: wgpu::TextureFormat::Rgba8UnormSrgb,
             view_formats: &[],
             // TEXTURE_BINDING tells wgpu that we want to use this texture in shaders
-            // COPY_DST means that we want to copy data to this texture 
+            // COPY_DST means that we want to copy data to this texture
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             label,
         });
@@ -59,17 +72,17 @@ impl Texture {
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            &diffuse_rgba, 
+            &diffuse_rgba,
             wgpu::ImageDataLayout {
                 offset: 0,
                 bytes_per_row: std::num::NonZeroU32::new(4 * width),
                 rows_per_image: std::num::NonZeroU32::new(height),
             },
-            texture_size
+            texture_size,
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = wgpu_things.device.create_sampler(&wgpu::SamplerDescriptor{
+        let sampler = wgpu_things.device.create_sampler(&wgpu::SamplerDescriptor {
             // what to do when given cordinates outside the textures height/width
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
@@ -84,27 +97,32 @@ impl Texture {
 
         let bind_group_layout = Self::make_bind_group_layout(&wgpu_things.device);
 
-        let bind_group = wgpu_things.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry{
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
-                }
-            ],
-            label: Some("diffuse_bind_group"),
-        });
+        let bind_group = wgpu_things
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&sampler),
+                    },
+                ],
+                label: Some("diffuse_bind_group"),
+            });
 
-        let size = Vec2{x: width as f32, y: height as f32};
+        let size = Vec2 {
+            x: width as f32,
+            y: height as f32,
+        };
 
         Self {
-            view, 
-            sampler, 
-            bind_group, 
+            view,
+            sampler,
+            bind_group,
             id,
             size,
         }
@@ -119,7 +137,7 @@ impl Texture {
                     ty: wgpu::BindingType::Texture {
                         multisampled: false,
                         view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float {filterable: true},
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
                     },
                     count: None,
                 },
@@ -128,7 +146,7 @@ impl Texture {
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                     count: None,
-                }
+                },
             ],
             label: Some("texture_bind_group_layout"),
         })
@@ -159,12 +177,16 @@ impl Display for TextureError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::IoError(e) => write!(f, "{}", e),
-            Self::ImageError(e) => write!(f, "{}", e)
+            Self::ImageError(e) => write!(f, "{}", e),
         }
     }
 }
 
-pub(crate) fn create_texture(texture_cache: &mut TextureCache, wgpu_things: &WgpuClump, path: &str) -> Result<TextureIndex, TextureError> {
+pub(crate) fn create_texture(
+    texture_cache: &mut TextureCache,
+    wgpu_things: &WgpuClump,
+    path: &str,
+) -> Result<TextureIndex, TextureError> {
     let texture = Texture::from_path(wgpu_things, None, path)?;
     Ok(texture_cache.add_texture(texture))
 }
@@ -182,12 +204,15 @@ impl TextureCache {
     }
 
     pub fn chache_update(&mut self) {
-        self.cache.iter_mut().for_each(|(_, v)| v.time_since_used += 1);
+        self.cache
+            .iter_mut()
+            .for_each(|(_, v)| v.time_since_used += 1);
         self.cahce_cleanup();
     }
 
     fn cahce_cleanup(&mut self) {
-        let keys_to_remove = self.cache
+        let keys_to_remove = self
+            .cache
             .iter()
             .filter_map(|(k, v)| (v.time_since_used > 60).then_some(*k))
             .collect::<Vec<u32>>();
@@ -200,7 +225,7 @@ impl TextureCache {
     pub fn add_texture(&mut self, texture: Texture) -> TextureIndex {
         let chaced_texture = ChachedTexture {
             bind_group: texture.bind_group,
-            time_since_used: 0
+            time_since_used: 0,
         };
 
         let index = TextureIndex {
@@ -220,21 +245,21 @@ impl TextureCache {
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &bind_group_layout,
             entries: &[
-                wgpu::BindGroupEntry{
+                wgpu::BindGroupEntry {
                     binding: 0,
                     resource: wgpu::BindingResource::TextureView(&index.view),
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
                     resource: wgpu::BindingResource::Sampler(&index.sampler),
-                }
+                },
             ],
             label: Some("diffuse_bind_group"),
         });
 
         let chaced_texture = ChachedTexture {
             bind_group,
-            time_since_used: 0
+            time_since_used: 0,
         };
 
         self.cache.insert(index.id, chaced_texture);
@@ -248,14 +273,18 @@ impl TextureCache {
 impl std::ops::Index<TextureIndex> for TextureCache {
     type Output = ChachedTexture;
     fn index(&self, index: TextureIndex) -> &Self::Output {
-        self.cache.get(&index.id).unwrap_or_else(|| panic!("No Texture found for id {}", index.id))
+        self.cache
+            .get(&index.id)
+            .unwrap_or_else(|| panic!("No Texture found for id {}", index.id))
     }
 }
 
 impl std::ops::Index<u32> for TextureCache {
     type Output = ChachedTexture;
     fn index(&self, index: u32) -> &Self::Output {
-        self.cache.get(&index).unwrap_or_else(|| panic!("No Texture found for id {}", index))
+        self.cache
+            .get(&index)
+            .unwrap_or_else(|| panic!("No Texture found for id {}", index))
     }
 }
 

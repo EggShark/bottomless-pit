@@ -1,12 +1,17 @@
 use crate::Vec2;
 
 /// Helper function to normalize 2D points
-pub fn normalize_points<T: std::ops::Div<Output = T>>(point: Vec2<T>, width: T, height: T) -> Vec2<T> {
+pub fn normalize_points<T: std::ops::Div<Output = T>>(
+    point: Vec2<T>,
+    width: T,
+    height: T,
+) -> Vec2<T> {
     let x = point.x / width;
     let y = point.y / height;
-    Vec2{x, y}
+    Vec2 { x, y }
 }
 
+#[rustfmt::skip]
 /// Helper function to make a 2d rotation matrix
 pub fn calculate_rotation_matrix(degree: f32) -> [f32; 16] {
     let degree = degree.to_radians();
@@ -18,8 +23,14 @@ pub fn calculate_rotation_matrix(degree: f32) -> [f32; 16] {
     ]
 }
 
+#[rustfmt::skip]
 pub(crate) fn flatten_matrix(matrix: cgmath::Matrix4<f32>) -> [f32; 16] {
-    [matrix.x.x, matrix.x.y, matrix.x.z, matrix.x.w, matrix.y.x, matrix.y.y, matrix.y.z, matrix.y.w, matrix.z.x, matrix.z.y, matrix.z.z, matrix.z.w, matrix.w.x, matrix.w.y, matrix.w.z, matrix.w.w]
+    [
+        matrix.x.x, matrix.x.y, matrix.x.z, matrix.x.w,
+        matrix.y.x, matrix.y.y, matrix.y.z, matrix.y.w,
+        matrix.z.x, matrix.z.y, matrix.z.z, matrix.z.w,
+        matrix.w.x, matrix.w.y, matrix.w.z, matrix.w.w
+    ]
 }
 
 pub(crate) fn unflatten_matrix(array: [f32; 16]) -> cgmath::Matrix4<f32> {

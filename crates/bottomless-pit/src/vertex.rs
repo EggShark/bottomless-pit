@@ -5,12 +5,12 @@ use crate::Vec2;
 pub struct Vertex {
     pub position: [f32; 3],
     pub tex_coords: [f32; 2],
-    pub colour: [f32; 4], 
+    pub colour: [f32; 4],
 }
 
 impl Vertex {
     pub fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        wgpu::VertexBufferLayout{
+        wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
@@ -28,8 +28,8 @@ impl Vertex {
                     offset: std::mem::size_of::<[f32; 5]>() as wgpu::BufferAddress,
                     shader_location: 2,
                     format: wgpu::VertexFormat::Float32x4,
-                }
-            ]
+                },
+            ],
         }
     }
 
@@ -51,7 +51,7 @@ pub(crate) struct LineVertex {
 
 impl LineVertex {
     pub fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        wgpu::VertexBufferLayout{
+        wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<LineVertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
             attributes: &[
@@ -65,16 +65,13 @@ impl LineVertex {
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x4,
                 },
-            ]
+            ],
         }
     }
 
     pub(crate) fn new(point: [f32; 2], colour: [f32; 4]) -> Self {
-        let pos =  [point[0], point[1], 0.0];
-        Self {
-            pos,
-            colour,
-        }
+        let pos = [point[0], point[1], 0.0];
+        Self { pos, colour }
     }
 }
 
@@ -87,7 +84,10 @@ pub(crate) fn vert_pixels_to_screenspace(mut point: Vertex, screen_size: Vec2<u3
     point
 }
 
-pub(crate) fn line_vert_pixels_to_screenspace(mut point: LineVertex, screen_size: Vec2<u32>) -> LineVertex {
+pub(crate) fn line_vert_pixels_to_screenspace(
+    mut point: LineVertex,
+    screen_size: Vec2<u32>,
+) -> LineVertex {
     let width = screen_size.x as f32;
     let height = screen_size.y as f32;
     point.pos[0] = (2.0 * point.pos[0] / width) - 1.0;
