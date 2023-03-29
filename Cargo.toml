@@ -1,7 +1,12 @@
 [package]
 name = "bottomless-pit"
+description = "A very simple 2D rendering/game engine inspired by raylib"
 version = "0.1.0"
+keywords = ["bottomless-pit", "bp", "2D", "game", "engine"]
+authors = ["Charles Crabtree <charles.crabtree@turtlebamboo.com"]
 edition = "2021"
+license = "MIT"
+readme = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
