@@ -9,7 +9,7 @@ use crate::rect::Rectangle;
 use crate::text::{Text, TransformedText};
 use crate::texture::{Texture, TextureCache, TextureIndex};
 use crate::vectors::Vec2;
-use crate::vertex::{line_vert_pixels_to_screenspace, LineVertex, Vertex};
+use crate::vertex::{LineVertex, Vertex};
 use crate::wgpu_glyph;
 use crate::wgpu_glyph::{orthographic_projection, Layout};
 use crate::WHITE_PIXEL;
@@ -247,6 +247,46 @@ impl Renderer {
         );
     }
 
+    /// draws a triangle at the specificed coordniates with the specified colour
+    /// verticies MUST be in CLOCKWISE rotation ex:
+    /// ```rust,no_run
+    /// render_handle.draw_triangle(Vec2{x: 300.0, y: 0.0}, Vec2{x: 350.0, y: 100.0}, Vec2{x: 250.0, y: 100.0}, Colour::White);
+    /// ```
+    pub fn draw_triangle(&mut self, p1: Vec2<f32>, p2: Vec2<f32>, p3: Vec2<f32>, colour: Colour) {
+        let tex_coords = [0.0, 0.0];
+        let colour = colour.to_raw();
+        let points = [
+            Vertex::from_2d([p1.x, p1.y], tex_coords, colour)
+                .pixels_to_screenspace(self.size),
+            Vertex::from_2d([p2.x, p2.y], tex_coords, colour)
+                .pixels_to_screenspace(self.size),
+            Vertex::from_2d([p3.x, p3.y], tex_coords, colour)
+                .pixels_to_screenspace(self.size),
+        ];
+        self.draw_queues.add_triangle(points);
+    }
+
+    pub fn draw_triangle_with_coloured_verticies(
+        &mut self,
+        p1: Vec2<f32>,
+        p2: Vec2<f32>,
+        p3: Vec2<f32>,
+        c1: Colour,
+        c2: Colour,
+        c3: Colour,
+    ) {
+        let tex_coords = [0.0, 0.0];
+        let points = [
+            Vertex::from_2d([p1.x, p1.y], tex_coords, c1.to_raw())
+                .pixels_to_screenspace(self.size),
+            Vertex::from_2d([p2.x, p2.y], tex_coords, c2.to_raw())
+                .pixels_to_screenspace(self.size),
+            Vertex::from_2d([p3.x, p3.y], tex_coords, c3.to_raw())
+                .pixels_to_screenspace(self.size)
+        ];
+        self.draw_queues.add_triangle(points);
+    }
+
     /// draws a regular polygon of any number of sides
     pub fn draw_regular_n_gon(
         &mut self,
@@ -261,14 +301,10 @@ impl Renderer {
 
     /// draws a line, WILL DRAW ONTOP OF EVERTHING ELSE DUE TO BEING ITS OWN PIPELINE
     pub fn draw_line(&mut self, start_point: Vec2<f32>, end_point: Vec2<f32>, colour: Colour) {
-        let start = line_vert_pixels_to_screenspace(
-            LineVertex::new(start_point.to_raw(), colour.to_raw()),
-            self.size,
-        );
-        let end = line_vert_pixels_to_screenspace(
-            LineVertex::new(end_point.to_raw(), colour.to_raw()),
-            self.size,
-        );
+        let start = LineVertex::new(start_point.to_raw(), colour.to_raw())
+            .pixels_to_screenspace(self.size);
+        let end = LineVertex::new(end_point.to_raw(), colour.to_raw())
+            .pixels_to_screenspace(self.size);
 
         self.draw_queues.add_line(start, end)
     }

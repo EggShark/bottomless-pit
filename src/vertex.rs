@@ -40,6 +40,14 @@ impl Vertex {
             colour,
         }
     }
+
+    pub(crate) fn pixels_to_screenspace(mut self, screen_size: Vec2<u32>) -> Self {
+        let width = screen_size.x as f32;
+        let height = screen_size.y as f32;
+        self.position[0] = (2.0 * self.position[0] / width) - 1.0;
+        self.position[1] = ((2.0 * self.position[1] / height) - 1.0) * -1.0;
+        self
+    }
 }
 
 #[repr(C)]
@@ -73,24 +81,12 @@ impl LineVertex {
         let pos = [point[0], point[1], 0.0];
         Self { pos, colour }
     }
-}
 
-pub(crate) fn vert_pixels_to_screenspace(mut point: Vertex, screen_size: Vec2<u32>) -> Vertex {
-    //println!("{:?}", point);
-    let width = screen_size.x as f32;
-    let height = screen_size.y as f32;
-    point.position[0] = (2.0 * point.position[0] / width) - 1.0;
-    point.position[1] = ((2.0 * point.position[1] / height) - 1.0) * -1.0;
-    point
-}
-
-pub(crate) fn line_vert_pixels_to_screenspace(
-    mut point: LineVertex,
-    screen_size: Vec2<u32>,
-) -> LineVertex {
-    let width = screen_size.x as f32;
-    let height = screen_size.y as f32;
-    point.pos[0] = (2.0 * point.pos[0] / width) - 1.0;
-    point.pos[1] = ((2.0 * point.pos[1] / height) - 1.0) * -1.0;
-    point
+    pub(crate) fn pixels_to_screenspace(mut self, screen_size: Vec2<u32>) -> Self {
+        let width = screen_size.x as f32;
+        let height = screen_size.y as f32;
+        self.pos[0] = (2.0 * self.pos[0] / width) - 1.0;
+        self.pos[1] = ((2.0 * self.pos[1] / height) - 1.0) * -1.0;
+        self
+    }
 }

@@ -182,6 +182,34 @@ impl DrawQueues {
         self.general_indicies.extend_from_slice(&indicies);
     }
 
+    pub(crate) fn add_triangle(&mut self, points: [Vertex; 3]) {
+        let number_of_verticies = self.general_vertices.len() as u16;
+        let number_of_inidices = self.general_indicies.len();
+        let indicies = [number_of_verticies, number_of_verticies+1, number_of_verticies+2];
+        
+        match self.rectangle_bind_group_switches.last() {
+            Some(point) => {
+                if point.bind_group != BindGroups::WhitePixel {
+                    self.rectangle_bind_group_switches
+                        .push(BindGroupSwitchPoint {
+                            bind_group: BindGroups::WhitePixel,
+                            point: number_of_inidices,
+                        });
+                }
+            }
+            None => {
+                self.rectangle_bind_group_switches
+                    .push(BindGroupSwitchPoint {
+                        bind_group: BindGroups::WhitePixel,
+                        point: number_of_inidices,
+                    });
+            }
+        };
+
+        self.general_vertices.extend_from_slice(&points);
+        self.general_indicies.extend_from_slice(&indicies);
+    }
+
     pub(crate) fn add_text(&mut self, text: Text) {
         self.text.push(text);
     }

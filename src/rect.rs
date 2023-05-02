@@ -1,5 +1,5 @@
 use crate::vectors::Vec2;
-use crate::vertex::{vert_pixels_to_screenspace, Vertex};
+use crate::vertex::Vertex;
 
 pub struct Rectangle {
     points: [Vertex; 4],
@@ -26,19 +26,14 @@ impl Rectangle {
     ) -> Self {
         let pos = pos.to_raw();
         let points = [
-            vert_pixels_to_screenspace(Vertex::from_2d(pos, [0.0, 0.0], colour), screen_size),
-            vert_pixels_to_screenspace(
-                Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour),
-                screen_size,
-            ),
-            vert_pixels_to_screenspace(
-                Vertex::from_2d([pos[0] + size[0], pos[1] + size[1]], [1.0, 1.0], colour),
-                screen_size,
-            ),
-            vert_pixels_to_screenspace(
-                Vertex::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour),
-                screen_size,
-            ),
+            Vertex::from_2d(pos, [0.0, 0.0], colour).to_owned()
+                .pixels_to_screenspace(screen_size),
+            Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour)
+                .pixels_to_screenspace(screen_size),
+            Vertex::from_2d([pos[0] + size[0], pos[1] + size[1]], [1.0, 1.0], colour)
+                .pixels_to_screenspace(screen_size),
+            Vertex::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour)
+                .pixels_to_screenspace(screen_size),
         ];
 
         Self { points }
@@ -55,31 +50,22 @@ impl Rectangle {
         let pos = pos.to_raw();
         let uv_pos = uv_pos.to_raw();
         let points = [
-            vert_pixels_to_screenspace(Vertex::from_2d(pos, uv_pos, colour), screen_size),
-            vert_pixels_to_screenspace(
-                Vertex::from_2d(
-                    [pos[0] + size[0], pos[1]],
-                    [uv_pos[0] + uv_size.x, uv_pos[1]],
-                    colour,
-                ),
-                screen_size,
-            ),
-            vert_pixels_to_screenspace(
-                Vertex::from_2d(
-                    [pos[0] + size[0], pos[1] + size[1]],
-                    [uv_pos[0] + uv_size.x, uv_pos[1] + uv_size.y],
-                    colour,
-                ),
-                screen_size,
-            ),
-            vert_pixels_to_screenspace(
-                Vertex::from_2d(
-                    [pos[0], pos[1] + size[1]],
-                    [uv_pos[0], uv_pos[1] + uv_size.y],
-                    colour,
-                ),
-                screen_size,
-            ),
+            Vertex::from_2d(pos, uv_pos, colour),
+            Vertex::from_2d(
+                [pos[0] + size[0], pos[1]],
+                [uv_pos[0] + uv_size.x, uv_pos[1]],
+                colour,
+            ).pixels_to_screenspace(screen_size),
+            Vertex::from_2d(
+                [pos[0] + size[0], pos[1] + size[1]],
+                [uv_pos[0] + uv_size.x, uv_pos[1] + uv_size.y],
+                colour,
+            ).pixels_to_screenspace(screen_size),
+            Vertex::from_2d(
+                [pos[0], pos[1] + size[1]],
+                [uv_pos[0], uv_pos[1] + uv_size.y],
+                colour,
+            ).pixels_to_screenspace(screen_size),
         ];
 
         Self { points }
