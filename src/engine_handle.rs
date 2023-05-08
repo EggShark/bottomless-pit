@@ -4,6 +4,7 @@
 //! Engine gives you access to all the crucial logic functions
 
 use image::ImageError;
+use std::time::Instant;
 use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
 use winit::error::OsError;
@@ -32,6 +33,7 @@ pub struct Engine {
     camera_buffer: wgpu::Buffer,
     should_close: bool,
     close_key: Option<Key>,
+    last_frame: Instant,
 }
 
 impl Engine {
@@ -171,6 +173,7 @@ impl Engine {
             camera_buffer,
             should_close: false,
             close_key: builder.close_key,
+            last_frame: Instant::now(),
         })
     }
 
@@ -343,6 +346,12 @@ impl Engine {
         text::measure_text(text, &mut self.renderer.glyph_brush, scale)
     }
 
+    /// Gets the time since the previous frame or change in time between now and last frame
+    pub fn get_frame_delta_time(&self) -> f32 {
+        let dt = Instant::now().duration_since(self.last_frame).as_secs_f32();
+        dt
+    }
+
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
     pub fn run<T: 'static>(mut self, mut game: T) -> !
     where
@@ -406,6 +415,7 @@ impl Engine {
                 self.should_close = true;
             }
         }
+        self.last_frame = Instant::now();
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
