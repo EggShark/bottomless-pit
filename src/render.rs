@@ -266,6 +266,8 @@ impl Renderer {
         self.draw_queues.add_triangle(points);
     }
 
+    /// Does the same as draw_triangle but lets you speicify a colour per vertex again
+    /// verticies MUST be in CLOCKWISE rotation
     pub fn draw_triangle_with_coloured_verticies(
         &mut self,
         p1: Vec2<f32>,

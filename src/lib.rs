@@ -7,7 +7,9 @@
 //!
 //! To get started start by implmenting the Game trait on any struct you like
 //! ```rust,no_run
-//! use bottomless_pit::{Engine, EngineBuilder, Renderer, Game};
+//! use bottomless_pit::Game;
+//! use bottomless_pit::engine_handle{Engine, EngineBuilder};
+//! use bottomless_pit::render::Renderer;
 //!
 //! fn main() {
 //!     let engine = EngineBuilder::new()
