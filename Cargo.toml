@@ -1,7 +1,7 @@
 [package]
 name = "bottomless-pit"
 description = "A very simple 2D rendering/game engine inspired by raylib"
-version = "0.1.0"
+version = "0.1.1"
 repository = "https://github.com/EggShark/bottomless-pit"
 keywords = ["bottomless-pit", "bp", "2D", "game", "engine"]
 authors = ["Charles Crabtree <charles.crabtree@turtlebamboo.com>"]
