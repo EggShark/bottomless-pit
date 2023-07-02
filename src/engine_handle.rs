@@ -4,6 +4,7 @@
 //! Engine gives you access to all the crucial logic functions
 
 use image::ImageError;
+use spin_sleep::SpinSleeper;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
@@ -33,7 +34,10 @@ pub struct Engine {
     camera_buffer: wgpu::Buffer,
     should_close: bool,
     close_key: Option<Key>,
+    target_fps: Option<u16>,
     last_frame: Instant,
+    spin_sleeper: SpinSleeper,
+    current_frametime: Instant,
 }
 
 impl Engine {
@@ -41,6 +45,7 @@ impl Engine {
         let cursor_visibility = true;
         let input_handle = InputHandle::new();
         let size: Vec2<u32> = builder.resolution.into();
+        let target_fps = builder.target_fps;
 
         let event_loop = EventLoop::new();
         let window_builder = winit::window::WindowBuilder::new()
@@ -173,7 +178,10 @@ impl Engine {
             camera_buffer,
             should_close: false,
             close_key: builder.close_key,
+            target_fps,
             last_frame: Instant::now(),
+            current_frametime: Instant::now(),
+            spin_sleeper: SpinSleeper::default(),
         })
     }
 
@@ -352,6 +360,25 @@ impl Engine {
         dt
     }
 
+    /// Gets the current target fps
+    pub fn get_target_fps(&self) -> Option<u16> {
+        self.target_fps
+    }
+
+    /// Will uncap the framerate and cause the engine to redner and update as soon
+    /// as the next frame is ready
+    pub fn remove_target_fps(&mut self) {
+        self.target_fps = None;
+    }
+
+    /// Sets a target fps cap. The thread will spin sleep using the
+    /// [spin_sleep](https://docs.rs/spin_sleep/latest/spin_sleep/index.html) crate
+    /// untill the desired frame time is reached. If the frames are slower than the target
+    /// no action is taken to "speed" up the rendering and updating
+    pub fn set_target_fps(&mut self, fps: u16) {
+        self.target_fps = Some(fps);
+    }
+
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
     pub fn run<T: 'static>(mut self, mut game: T) -> !
     where
@@ -361,6 +388,7 @@ impl Engine {
         event_loop.run(move |event, _, control_flow| {
             match event {
                 Event::RedrawRequested(window_id) if window_id == self.window.id() => {
+                    self.current_frametime = Instant::now();
                     game.render(&mut self.renderer);
                     match self.renderer.render(
                         self.window.inner_size().into(),
@@ -408,6 +436,7 @@ impl Engine {
     }
 
     fn update(&mut self) {
+        self.last_frame = Instant::now();
         self.renderer.texture_cache.chache_update();
         self.input_handle.end_of_frame_refresh();
         if let Some(key) = self.close_key {
@@ -415,7 +444,14 @@ impl Engine {
                 self.should_close = true;
             }
         }
-        self.last_frame = Instant::now();
+
+        if let Some(frame_rate) = self.target_fps {
+            let frame_time = Instant::now().duration_since(self.current_frametime).as_nanos() as u64;
+            let desired_time_between_frames = 1000000000 / frame_rate as u64;
+            if frame_time < desired_time_between_frames {
+                self.spin_sleeper.sleep_ns(desired_time_between_frames-frame_time);
+            }
+        }
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
@@ -437,7 +473,7 @@ impl Engine {
 pub struct EngineBuilder {
     resolution: (u32, u32),
     full_screen: bool,
-    target_fps: u32,
+    target_fps: Option<u16>,
     close_key: Option<Key>,
     clear_colour: Colour,
     window_icon: Option<winit::window::Icon>,
@@ -462,7 +498,7 @@ impl EngineBuilder {
         Self {
             resolution: (600, 600),
             full_screen: false,
-            target_fps: 30,
+            target_fps: None,
             close_key: None,
             clear_colour: Colour::Black,
             window_icon: None,
@@ -499,12 +535,15 @@ impl EngineBuilder {
         }
     }
 
-    /// Currently does nothing
-    pub fn set_target_fps(self, fps: u32) -> Self {
+    /// Sets a target fps cap. The thread will spin sleep using the
+    /// [spin_sleep](https://docs.rs/spin_sleep/latest/spin_sleep/index.html) crate
+    /// untill the desired frame time is reached. If the frames are slower than the target
+    /// no action is taken to "speed" up the rendering and updating
+    pub fn set_target_fps(self, fps: u16) -> Self {
         Self {
             resolution: self.resolution,
             full_screen: self.full_screen,
-            target_fps: fps,
+            target_fps: Some(fps),
             close_key: self.close_key,
             clear_colour: self.clear_colour,
             window_icon: self.window_icon,

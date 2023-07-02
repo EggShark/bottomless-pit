@@ -6,6 +6,7 @@ use bottomless_pit::vectors::Vec2;
 
 fn main() {
     let engine = EngineBuilder::new()
+    	.set_target_fps(12)
         .build()
         .unwrap();
 

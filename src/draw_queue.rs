@@ -2,8 +2,9 @@ use wgpu::util::DeviceExt;
 
 use crate::colour::Colour;
 use crate::rect::Rectangle;
+use crate::resource_cache::ResourceCache;
 use crate::text::{Text, TransformedText};
-use crate::texture::{TextureCache, TextureIndex};
+use crate::texture::{Texture, TextureIndex};
 use crate::vertex::{LineVertex, Vertex};
 use std::f32::consts::PI;
 
@@ -68,7 +69,7 @@ impl DrawQueues {
     // the indicies math I want formated becuase 2 triagnles same for above
     pub(crate) fn add_textured_rectange(
         &mut self,
-        cache: &mut TextureCache,
+        cache: &mut ResourceCache<wgpu::BindGroup>,
         rectangle: &Rectangle,
         texture: &TextureIndex,
         device: &wgpu::Device,
@@ -83,9 +84,27 @@ impl DrawQueues {
             3 + number_of_verticies, number_of_verticies, 2 + number_of_verticies,
         ];
 
-        match cache.get_mut(texture) {
+        match cache.get_mut(texture.id) {
             Some(item) => item.time_since_used = 0,
-            None => cache.rebuild_from_index(texture, device),
+            None => {
+                let bind_group_layout = Texture::make_bind_group_layout(device);
+                let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    layout: &bind_group_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::TextureView(texture.get_view()),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Sampler(texture.get_sampler()),
+                        },
+                    ],
+                    label: Some("diffuse_bind_group"),
+                });
+
+                cache.add_item(bind_group, texture.id);
+            },
         }
 
         match self.rectangle_bind_group_switches.last() {

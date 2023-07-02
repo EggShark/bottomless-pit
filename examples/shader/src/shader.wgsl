@@ -23,7 +23,7 @@ fn vs_main(model: VertexInput) -> VertexOutput {
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
     out.clip_position = camera.view_proj * vec4<f32>(model.position, 1.0); // the vectors on the right the matrices go on the left in order of importance
-    out.colour = model.colour;
+    out.colour = vec4(1.0, 1.0, 1.0, 0.0);
     return out;
 }
 

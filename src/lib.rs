@@ -43,13 +43,15 @@
 pub mod colour;
 mod draw_queue;
 pub mod engine_handle;
-mod input;
+pub mod input;
 pub mod matrix_math;
 mod rect;
+mod resource_cache;
 pub mod render;
 mod text;
 pub mod texture;
 pub mod vectors;
+pub mod shader;
 mod vertex;
 mod wgpu_glyph;
 

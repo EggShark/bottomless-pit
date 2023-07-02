@@ -6,8 +6,9 @@ use crate::draw_queue::{BindGroups, DrawQueues};
 use crate::engine_handle::WgpuClump;
 use crate::matrix_math::*;
 use crate::rect::Rectangle;
+use crate::resource_cache::ResourceCache;
 use crate::text::{Text, TransformedText};
-use crate::texture::{Texture, TextureCache, TextureIndex};
+use crate::texture::{Texture, TextureIndex};
 use crate::vectors::Vec2;
 use crate::vertex::{LineVertex, Vertex};
 use crate::wgpu_glyph;
@@ -26,7 +27,7 @@ pub struct Renderer {
     pub(crate) glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     pub(crate) wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
     pub(crate) size: Vec2<u32>,       // goes here bc normilzing stuff
-    pub(crate) texture_cache: TextureCache,
+    pub(crate) texture_cache: ResourceCache<wgpu::BindGroup>,
 }
 
 impl Renderer {
@@ -37,7 +38,7 @@ impl Renderer {
         clear_colour: Colour,
         texture_format: wgpu::TextureFormat,
     ) -> Self {
-        let texture_cache = TextureCache::new();
+        let texture_cache = ResourceCache::new();
         let draw_queues = DrawQueues::new();
 
         let minecraft_mono =
@@ -393,7 +394,7 @@ impl Renderer {
                 }
                 let bind_group = match current_bind_group.bind_group {
                     BindGroups::WhitePixel => &self.white_pixel,
-                    BindGroups::Custom { bind_group } => &self.texture_cache[bind_group].bind_group,
+                    BindGroups::Custom { bind_group } => &self.texture_cache[bind_group].resource,
                 };
                 render_pass.set_bind_group(0, bind_group, &[]);
                 let draw_range = match render_items.rectangle_bind_group_switches.get(idx + 1) {
