@@ -2,11 +2,12 @@
 //! functions and logic to draw things to the screen
 
 use crate::colour::Colour;
-use crate::draw_queue::{BindGroups, DrawQueues};
+use crate::draw_queue::{BindGroups, DrawQueues, SwitchPoint};
 use crate::engine_handle::WgpuClump;
 use crate::matrix_math::*;
 use crate::rect::Rectangle;
 use crate::resource_cache::ResourceCache;
+use crate::shader::{Shader, ShaderIndex};
 use crate::text::{Text, TransformedText};
 use crate::texture::{Texture, TextureIndex};
 use crate::vectors::Vec2;
@@ -28,6 +29,7 @@ pub struct Renderer {
     pub(crate) wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
     pub(crate) size: Vec2<u32>,       // goes here bc normilzing stuff
     pub(crate) texture_cache: ResourceCache<wgpu::BindGroup>,
+    pub(crate) shader_cache: ResourceCache<Shader>
 }
 
 impl Renderer {
@@ -151,6 +153,7 @@ impl Renderer {
             wgpu_clump,
             size: size.into(),
             texture_cache,
+            shader_cache: ResourceCache::new(),
         }
     }
 
@@ -343,6 +346,11 @@ impl Renderer {
         self.draw_queues.add_transfromed_text(text)
     }
 
+    /// Sets the current shader to the shader supplied. Everything will be drawn from this shader untill changed
+    pub fn set_shader(&mut self, shader: &ShaderIndex) {
+
+    }
+
     pub(crate) fn render(
         &mut self,
         size: Vec2<u32>,
@@ -377,37 +385,50 @@ impl Renderer {
 
         render_pass.set_pipeline(&self.pipelines.polygon_pipeline);
         render_pass.set_bind_group(1, camera, &[]);
+
         if render_items.number_of_rectangle_indicies != 0 {
             render_pass.set_vertex_buffer(0, render_items.rectangle_buffer.slice(..));
             render_pass.set_index_buffer(
                 render_items.rectangle_index_buffer.slice(..),
                 wgpu::IndexFormat::Uint16,
             );
-            let mut current_bind_group = &render_items.rectangle_bind_group_switches[0];
-            for (idx, bind_group_switch_point) in render_items
-                .rectangle_bind_group_switches
+
+            let mut current_bind_group = BindGroups::WhitePixel;
+
+            for (idx, switch_point) in render_items
+                .general_bind_group_switches
                 .iter()
                 .enumerate()
             {
-                if bind_group_switch_point.bind_group != current_bind_group.bind_group {
-                    current_bind_group = bind_group_switch_point;
+                match switch_point {
+                    SwitchPoint::Shader { id, point } => {todo!()},
+                    SwitchPoint::TextureGroup { bind_group, point } => {
+                        if *bind_group != current_bind_group {
+                            current_bind_group = *bind_group;
+                        }
+                
+                        let bind_group = match current_bind_group {
+                            BindGroups::WhitePixel => &self.white_pixel,
+                            BindGroups::Custom { bind_group } => &self.texture_cache[bind_group].resource,
+                        };
+                
+                        render_pass.set_bind_group(0, bind_group, &[]);
+                
+                        let draw_range = match render_items.general_bind_group_switches.get(idx + 1) {
+                            Some(switch_point) => {
+                                *point as u32..switch_point.get_point() as u32
+                            }
+                            None => {
+                                *point as u32..render_items.number_of_rectangle_indicies
+                            }
+                        };
+                
+                        render_pass.draw_indexed(draw_range, 0, 0..1);
+                    }
                 }
-                let bind_group = match current_bind_group.bind_group {
-                    BindGroups::WhitePixel => &self.white_pixel,
-                    BindGroups::Custom { bind_group } => &self.texture_cache[bind_group].resource,
-                };
-                render_pass.set_bind_group(0, bind_group, &[]);
-                let draw_range = match render_items.rectangle_bind_group_switches.get(idx + 1) {
-                    Some(switch_point) => {
-                        current_bind_group.point as u32..switch_point.point as u32
-                    }
-                    None => {
-                        current_bind_group.point as u32..render_items.number_of_rectangle_indicies
-                    }
-                };
-                render_pass.draw_indexed(draw_range, 0, 0..1);
             }
         }
+
         render_pass.set_pipeline(&self.pipelines.line_pipeline);
         render_pass.set_bind_group(0, camera, &[]);
         render_pass.set_vertex_buffer(0, render_items.line_buffer.slice(..));
@@ -541,7 +562,7 @@ impl RenderPipelines {
     }
 }
 
-fn make_pipeline(
+pub(crate) fn make_pipeline(
     device: &wgpu::Device,
     topology: wgpu::PrimitiveTopology,
     bind_group_layouts: &[&wgpu::BindGroupLayout],

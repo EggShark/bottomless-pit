@@ -16,6 +16,7 @@ use winit::window::{BadIcon, Window};
 use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
 use crate::render::Renderer;
+use crate::shader::{ShaderIndex, create_shader};
 use crate::texture::{create_texture, TextureError, TextureIndex};
 use crate::vectors::Vec2;
 use crate::{text, Game, IDENTITY_MATRIX};
@@ -31,6 +32,7 @@ pub struct Engine {
     cursor_visibility: bool,
     camera_matrix: [f32; 16],
     camera_bind_group: wgpu::BindGroup,
+    camera_bind_group_layout: wgpu::BindGroupLayout, // used for making shaders
     camera_buffer: wgpu::Buffer,
     should_close: bool,
     close_key: Option<Key>,
@@ -175,6 +177,7 @@ impl Engine {
             cursor_visibility,
             camera_matrix,
             camera_bind_group,
+            camera_bind_group_layout,
             camera_buffer,
             should_close: false,
             close_key: builder.close_key,
@@ -191,6 +194,15 @@ impl Engine {
             &mut self.renderer.texture_cache,
             &self.renderer.wgpu_clump,
             path,
+        )
+    }
+
+    pub fn create_shader(&mut self, path: &str) -> Result<ShaderIndex, std::io::Error> {
+        create_shader(&mut self.renderer.shader_cache,
+            path,
+            &self.renderer.wgpu_clump,
+            &self.camera_bind_group_layout,
+            &self.config
         )
     }
 

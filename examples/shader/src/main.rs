@@ -4,11 +4,14 @@ use colour::Colour;
 
 fn main() {
     let s = Unit;
-    let engine = EngineBuilder::new()
+    let mut engine = EngineBuilder::new()
         .set_window_title("Testing Triangle")
         .with_resolution((400, 400))
         .build()
         .unwrap();
+
+    let shader = engine.create_shader("shader.wgsl").unwrap();
+
     engine.run(s);
 }
 

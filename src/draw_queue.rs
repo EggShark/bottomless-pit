@@ -12,7 +12,7 @@ use std::f32::consts::PI;
 pub(crate) struct DrawQueues {
     general_vertices: Vec<Vertex>,
     general_indicies: Vec<u16>,
-    rectangle_bind_group_switches: Vec<BindGroupSwitchPoint>,
+    general_bind_group_switches: Vec<SwitchPoint>,
     text: Vec<Text>,
     transformed_text: Vec<TransformedText>,
     line_vertices: Vec<LineVertex>,
@@ -23,7 +23,7 @@ impl DrawQueues {
         Self {
             general_vertices: Vec::new(),
             general_indicies: Vec::new(),
-            rectangle_bind_group_switches: Vec::new(),
+            general_bind_group_switches: Vec::new(),
             text: Vec::new(),
             transformed_text: Vec::new(),
             line_vertices: Vec::new(),
@@ -42,19 +42,19 @@ impl DrawQueues {
             3 + number_of_verticies, number_of_verticies, 2 + number_of_verticies,
         ];
 
-        match self.rectangle_bind_group_switches.last() {
+        match self.general_bind_group_switches.iter().filter(|i| i.is_texture()).last() {
             Some(point) => {
-                if point.bind_group != BindGroups::WhitePixel {
-                    self.rectangle_bind_group_switches
-                        .push(BindGroupSwitchPoint {
+                if !point.is_white_pixel() {
+                    self.general_bind_group_switches
+                        .push(SwitchPoint::TextureGroup {
                             bind_group: BindGroups::WhitePixel,
                             point: number_of_inidices,
                         });
                 }
             }
             None => {
-                self.rectangle_bind_group_switches
-                    .push(BindGroupSwitchPoint {
+                self.general_bind_group_switches
+                    .push(SwitchPoint::TextureGroup {
                         bind_group: BindGroups::WhitePixel,
                         point: number_of_inidices,
                     });
@@ -107,25 +107,37 @@ impl DrawQueues {
             },
         }
 
-        match self.rectangle_bind_group_switches.last() {
+        match self.general_bind_group_switches.iter().filter(|i| i.is_texture()).last() {
             Some(point) => {
-                if point.bind_group
-                    != (BindGroups::Custom {
-                        bind_group: texture_bind_group,
-                    })
-                {
-                    self.rectangle_bind_group_switches
-                        .push(BindGroupSwitchPoint {
-                            bind_group: BindGroups::Custom {
-                                bind_group: texture_bind_group,
-                            },
-                            point: number_of_inidices,
-                        });
+                match point {
+                    SwitchPoint::TextureGroup {
+                        bind_group: BindGroups::Custom { bind_group: bind_group_id },
+                        ..
+                    } => {
+                        if *bind_group_id != texture_bind_group {
+                            self.general_bind_group_switches
+                                .push(SwitchPoint::TextureGroup {
+                                    bind_group: BindGroups::Custom {
+                                        bind_group: texture_bind_group,
+                                    },
+                                    point: number_of_inidices,
+                                });
+                        }
+                    },
+                    _ => {
+                        self.general_bind_group_switches
+                            .push(SwitchPoint::TextureGroup {
+                                bind_group: BindGroups::Custom {
+                                    bind_group: texture_bind_group,
+                                },
+                                point: number_of_inidices,
+                            });
+                    }
                 }
             }
             None => {
-                self.rectangle_bind_group_switches
-                    .push(BindGroupSwitchPoint {
+                self.general_bind_group_switches
+                    .push(SwitchPoint::TextureGroup {
                         bind_group: BindGroups::Custom {
                             bind_group: texture_bind_group,
                         },
@@ -178,19 +190,19 @@ impl DrawQueues {
             })
             .collect::<Vec<u16>>();
 
-        match self.rectangle_bind_group_switches.last() {
+        match self.general_bind_group_switches.iter().filter(|i| i.is_texture()).last() {
             Some(point) => {
-                if point.bind_group != BindGroups::WhitePixel {
-                    self.rectangle_bind_group_switches
-                        .push(BindGroupSwitchPoint {
+                if !point.is_white_pixel() {
+                    self.general_bind_group_switches
+                        .push(SwitchPoint::TextureGroup {
                             bind_group: BindGroups::WhitePixel,
                             point: number_of_inidices,
                         });
                 }
             }
             None => {
-                self.rectangle_bind_group_switches
-                    .push(BindGroupSwitchPoint {
+                self.general_bind_group_switches
+                    .push(SwitchPoint::TextureGroup {
                         bind_group: BindGroups::WhitePixel,
                         point: number_of_inidices,
                     });
@@ -206,19 +218,19 @@ impl DrawQueues {
         let number_of_inidices = self.general_indicies.len();
         let indicies = [number_of_verticies, number_of_verticies+1, number_of_verticies+2];
         
-        match self.rectangle_bind_group_switches.last() {
+        match self.general_bind_group_switches.iter().filter(|i| i.is_texture()).last() {
             Some(point) => {
-                if point.bind_group != BindGroups::WhitePixel {
-                    self.rectangle_bind_group_switches
-                        .push(BindGroupSwitchPoint {
+                if !point.is_white_pixel() {
+                    self.general_bind_group_switches
+                        .push(SwitchPoint::TextureGroup {
                             bind_group: BindGroups::WhitePixel,
                             point: number_of_inidices,
                         });
                 }
             }
             None => {
-                self.rectangle_bind_group_switches
-                    .push(BindGroupSwitchPoint {
+                self.general_bind_group_switches
+                    .push(SwitchPoint::TextureGroup {
                         bind_group: BindGroups::WhitePixel,
                         point: number_of_inidices,
                     });
@@ -268,7 +280,7 @@ impl DrawQueues {
             rectangle_buffer,
             rectangle_index_buffer,
             number_of_rectangle_indicies,
-            rectangle_bind_group_switches: std::mem::take(&mut self.rectangle_bind_group_switches),
+            general_bind_group_switches: std::mem::take(&mut self.general_bind_group_switches),
             line_buffer,
             number_of_line_verticies,
             text,
@@ -281,7 +293,7 @@ pub(crate) struct RenderItems {
     pub(crate) rectangle_buffer: wgpu::Buffer,
     pub(crate) rectangle_index_buffer: wgpu::Buffer,
     pub(crate) number_of_rectangle_indicies: u32,
-    pub(crate) rectangle_bind_group_switches: Vec<BindGroupSwitchPoint>,
+    pub(crate) general_bind_group_switches: Vec<SwitchPoint>,
     pub(crate) line_buffer: wgpu::Buffer,
     pub(crate) number_of_line_verticies: u32,
     pub(crate) text: Vec<Text>,
@@ -294,8 +306,46 @@ pub(crate) struct BindGroupSwitchPoint {
     pub(crate) point: usize,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum BindGroups {
     WhitePixel,
     Custom { bind_group: u32 },
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(crate) enum SwitchPoint {
+    TextureGroup {
+        bind_group: BindGroups,
+        point: usize,
+    },
+    Shader {
+        id: u32,
+        point: usize,
+    }
+}
+
+impl SwitchPoint {
+    pub fn is_white_pixel(&self) -> bool {
+        match self {
+            Self::TextureGroup {
+                bind_group: BindGroups::WhitePixel,
+                ..
+            } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_texture(&self) -> bool {
+        match self {
+            Self::TextureGroup { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn get_point(&self) -> usize {
+        match self {
+            Self::TextureGroup { point, .. } => *point,
+            Self::Shader { point, .. } => *point,
+        }
+    }
 }

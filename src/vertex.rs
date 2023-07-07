@@ -3,7 +3,7 @@ use crate::vectors::Vec2;
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
-    pub position: [f32; 3],
+    pub position: [f32; 2],
     pub tex_coords: [f32; 2],
     pub colour: [f32; 4],
 }
@@ -17,15 +17,15 @@ impl Vertex {
                 wgpu::VertexAttribute {
                     offset: 0,
                     shader_location: 0,
-                    format: wgpu::VertexFormat::Float32x3,
+                    format: wgpu::VertexFormat::Float32x2,
                 },
                 wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    offset: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x2,
                 },
                 wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 5]>() as wgpu::BufferAddress,
+                    offset: std::mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
                     shader_location: 2,
                     format: wgpu::VertexFormat::Float32x4,
                 },
@@ -33,9 +33,9 @@ impl Vertex {
         }
     }
 
-    pub fn from_2d(point: [f32; 2], tex_coords: [f32; 2], colour: [f32; 4]) -> Self {
+    pub fn from_2d(position: [f32; 2], tex_coords: [f32; 2], colour: [f32; 4]) -> Self {
         Self {
-            position: [point[0], point[1], 0.0],
+            position,
             tex_coords,
             colour,
         }
@@ -53,7 +53,7 @@ impl Vertex {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub(crate) struct LineVertex {
-    pub pos: [f32; 3],
+    pub pos: [f32; 2],
     pub colour: [f32; 4],
 }
 
@@ -66,10 +66,10 @@ impl LineVertex {
                 wgpu::VertexAttribute {
                     offset: 0,
                     shader_location: 0,
-                    format: wgpu::VertexFormat::Float32x3,
+                    format: wgpu::VertexFormat::Float32x2,
                 },
                 wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                    offset: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x4,
                 },
@@ -77,8 +77,7 @@ impl LineVertex {
         }
     }
 
-    pub(crate) fn new(point: [f32; 2], colour: [f32; 4]) -> Self {
-        let pos = [point[0], point[1], 0.0];
+    pub(crate) fn new(pos: [f32; 2], colour: [f32; 4]) -> Self {
         Self { pos, colour }
     }
 

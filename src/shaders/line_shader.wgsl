@@ -5,7 +5,7 @@ struct CameraUniform {
 var<uniform> camera: CameraUniform;
 
 struct VertexInput {
-    @location(0) position: vec3<f32>,
+    @location(0) position: vec2<f32>,
     @location(1) colour: vec4<f32>
 }
 
@@ -18,7 +18,7 @@ struct VertexOutput {
 @vertex
 fn vs_main(model: VertexInput) -> VertexOutput {
     var out: VertexOutput;
-    out.clip_position = camera.view_proj * vec4<f32>(model.position, 1.0); // the vectors on the right the matrices go on the left in order of importance
+    out.clip_position = camera.view_proj * vec4<f32>(model.position, 0.0, 1.0); // the vectors on the right the matrices go on the left in order of importance
     out.colour = model.colour;
     return out;
 }
