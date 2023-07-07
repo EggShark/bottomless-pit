@@ -26,14 +26,9 @@ pub struct Engine {
     renderer: Renderer,
     input_handle: InputHandle,
     window: Window,
-    config: wgpu::SurfaceConfiguration,
     surface: wgpu::Surface,
     event_loop: Option<EventLoop<()>>,
     cursor_visibility: bool,
-    camera_matrix: [f32; 16],
-    camera_bind_group: wgpu::BindGroup,
-    camera_bind_group_layout: wgpu::BindGroupLayout, // used for making shaders
-    camera_buffer: wgpu::Buffer,
     should_close: bool,
     close_key: Option<Key>,
     target_fps: Option<u16>,
@@ -162,9 +157,11 @@ impl Engine {
         let renderer = Renderer::new(
             wgpu_clump,
             window.inner_size(),
-            &camera_bind_group_layout,
+            camera_bind_group,
+            camera_bind_group_layout,
+            camera_buffer,
             builder.clear_colour,
-            config.format,
+            config,
         );
 
         Ok(Self {
@@ -172,13 +169,8 @@ impl Engine {
             input_handle,
             window,
             surface,
-            config,
             event_loop: Some(event_loop),
             cursor_visibility,
-            camera_matrix,
-            camera_bind_group,
-            camera_bind_group_layout,
-            camera_buffer,
             should_close: false,
             close_key: builder.close_key,
             target_fps,
@@ -197,12 +189,13 @@ impl Engine {
         )
     }
 
+    /// Loads in the shader to the cache and returns the index
     pub fn create_shader(&mut self, path: &str) -> Result<ShaderIndex, std::io::Error> {
         create_shader(&mut self.renderer.shader_cache,
             path,
             &self.renderer.wgpu_clump,
-            &self.camera_bind_group_layout,
-            &self.config
+            &self.renderer.camera_bind_group_layout,
+            &self.renderer.config,
         )
     }
 
@@ -353,11 +346,11 @@ impl Engine {
     /// Will update the camera matrix as of version 0.1.0 it will effect
     /// all things drawn is also 3D
     pub fn change_camera_matrix(&mut self, matrix: [f32; 16]) {
-        self.camera_matrix = matrix;
+        self.renderer.camera_matrix = matrix;
         self.renderer.wgpu_clump.queue.write_buffer(
-            &self.camera_buffer,
+            &self.renderer.camera_buffer,
             0,
-            bytemuck::cast_slice(&[self.camera_matrix]),
+            bytemuck::cast_slice(&[self.renderer.camera_matrix]),
         );
     }
 
@@ -404,7 +397,6 @@ impl Engine {
                     game.render(&mut self.renderer);
                     match self.renderer.render(
                         self.window.inner_size().into(),
-                        &self.camera_bind_group,
                         &self.surface,
                     ) {
                         Ok(_) => {}
@@ -472,10 +464,10 @@ impl Engine {
 
     fn resize(&mut self, new_size: Vec2<u32>) {
         if new_size.x > 0 && new_size.y > 0 {
-            self.config.width = new_size.x;
-            self.config.height = new_size.y;
+            self.renderer.config.width = new_size.x;
+            self.renderer.config.height = new_size.y;
             self.surface
-                .configure(&self.renderer.wgpu_clump.device, &self.config);
+                .configure(&self.renderer.wgpu_clump.device, &self.renderer.config);
             self.renderer.size = new_size;
         }
     }

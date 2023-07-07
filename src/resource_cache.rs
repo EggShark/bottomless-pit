@@ -37,10 +37,6 @@ impl<T> ResourceCache<T> {
         }
     }
 
-    pub fn contains_item(&self, key: u32) -> bool {
-        self.resources.contains_key(&key)
-    }
-
     pub fn add_item(&mut self, resource: T, key: u32) {
         let cache_item = CachedResource {
             resource,

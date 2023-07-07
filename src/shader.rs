@@ -28,6 +28,13 @@ impl ShaderIndex {
             id,
         })
     }
+
+    pub(crate) fn from_module(moudle: ShaderModule, id: u32) -> Self {
+        Self {
+            shader: moudle,
+            id,
+        }
+    }
 }
 
 pub(crate) struct Shader {
@@ -52,6 +59,10 @@ impl Shader {
         Self {
             pipeline: shader_pipeline,
         }
+    }
+
+    pub fn get_pipeline(&self) -> &wgpu::RenderPipeline {
+        &self.pipeline
     }
 }
 

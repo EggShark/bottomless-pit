@@ -1,8 +1,10 @@
 use wgpu::util::DeviceExt;
 
 use crate::colour::Colour;
+use crate::engine_handle::WgpuClump;
 use crate::rect::Rectangle;
 use crate::resource_cache::ResourceCache;
+use crate::shader::{ShaderIndex, Shader};
 use crate::text::{Text, TransformedText};
 use crate::texture::{Texture, TextureIndex};
 use crate::vertex::{LineVertex, Vertex};
@@ -12,7 +14,7 @@ use std::f32::consts::PI;
 pub(crate) struct DrawQueues {
     general_vertices: Vec<Vertex>,
     general_indicies: Vec<u16>,
-    general_bind_group_switches: Vec<SwitchPoint>,
+    general_switches: Vec<SwitchPoint>,
     text: Vec<Text>,
     transformed_text: Vec<TransformedText>,
     line_vertices: Vec<LineVertex>,
@@ -23,7 +25,7 @@ impl DrawQueues {
         Self {
             general_vertices: Vec::new(),
             general_indicies: Vec::new(),
-            general_bind_group_switches: Vec::new(),
+            general_switches: Vec::new(),
             text: Vec::new(),
             transformed_text: Vec::new(),
             line_vertices: Vec::new(),
@@ -42,10 +44,10 @@ impl DrawQueues {
             3 + number_of_verticies, number_of_verticies, 2 + number_of_verticies,
         ];
 
-        match self.general_bind_group_switches.iter().filter(|i| i.is_texture()).last() {
+        match self.general_switches.iter().filter(|i| i.is_texture()).last() {
             Some(point) => {
                 if !point.is_white_pixel() {
-                    self.general_bind_group_switches
+                    self.general_switches
                         .push(SwitchPoint::TextureGroup {
                             bind_group: BindGroups::WhitePixel,
                             point: number_of_inidices,
@@ -53,7 +55,7 @@ impl DrawQueues {
                 }
             }
             None => {
-                self.general_bind_group_switches
+                self.general_switches
                     .push(SwitchPoint::TextureGroup {
                         bind_group: BindGroups::WhitePixel,
                         point: number_of_inidices,
@@ -107,7 +109,7 @@ impl DrawQueues {
             },
         }
 
-        match self.general_bind_group_switches.iter().filter(|i| i.is_texture()).last() {
+        match self.general_switches.iter().filter(|i| i.is_texture()).last() {
             Some(point) => {
                 match point {
                     SwitchPoint::TextureGroup {
@@ -115,7 +117,7 @@ impl DrawQueues {
                         ..
                     } => {
                         if *bind_group_id != texture_bind_group {
-                            self.general_bind_group_switches
+                            self.general_switches
                                 .push(SwitchPoint::TextureGroup {
                                     bind_group: BindGroups::Custom {
                                         bind_group: texture_bind_group,
@@ -125,7 +127,7 @@ impl DrawQueues {
                         }
                     },
                     _ => {
-                        self.general_bind_group_switches
+                        self.general_switches
                             .push(SwitchPoint::TextureGroup {
                                 bind_group: BindGroups::Custom {
                                     bind_group: texture_bind_group,
@@ -136,7 +138,7 @@ impl DrawQueues {
                 }
             }
             None => {
-                self.general_bind_group_switches
+                self.general_switches
                     .push(SwitchPoint::TextureGroup {
                         bind_group: BindGroups::Custom {
                             bind_group: texture_bind_group,
@@ -190,10 +192,10 @@ impl DrawQueues {
             })
             .collect::<Vec<u16>>();
 
-        match self.general_bind_group_switches.iter().filter(|i| i.is_texture()).last() {
+        match self.general_switches.iter().filter(|i| i.is_texture()).last() {
             Some(point) => {
                 if !point.is_white_pixel() {
-                    self.general_bind_group_switches
+                    self.general_switches
                         .push(SwitchPoint::TextureGroup {
                             bind_group: BindGroups::WhitePixel,
                             point: number_of_inidices,
@@ -201,7 +203,7 @@ impl DrawQueues {
                 }
             }
             None => {
-                self.general_bind_group_switches
+                self.general_switches
                     .push(SwitchPoint::TextureGroup {
                         bind_group: BindGroups::WhitePixel,
                         point: number_of_inidices,
@@ -218,10 +220,10 @@ impl DrawQueues {
         let number_of_inidices = self.general_indicies.len();
         let indicies = [number_of_verticies, number_of_verticies+1, number_of_verticies+2];
         
-        match self.general_bind_group_switches.iter().filter(|i| i.is_texture()).last() {
+        match self.general_switches.iter().filter(|i| i.is_texture()).last() {
             Some(point) => {
                 if !point.is_white_pixel() {
-                    self.general_bind_group_switches
+                    self.general_switches
                         .push(SwitchPoint::TextureGroup {
                             bind_group: BindGroups::WhitePixel,
                             point: number_of_inidices,
@@ -229,7 +231,7 @@ impl DrawQueues {
                 }
             }
             None => {
-                self.general_bind_group_switches
+                self.general_switches
                     .push(SwitchPoint::TextureGroup {
                         bind_group: BindGroups::WhitePixel,
                         point: number_of_inidices,
@@ -239,6 +241,29 @@ impl DrawQueues {
 
         self.general_vertices.extend_from_slice(&points);
         self.general_indicies.extend_from_slice(&indicies);
+    }
+
+    pub(crate) fn add_shader_point(&mut self,
+        shader_cache: &mut ResourceCache<Shader>,
+        shader: &ShaderIndex,
+        wgpu: &WgpuClump,
+        camera_bind_group_layout: &wgpu::BindGroupLayout,
+        config: &wgpu::SurfaceConfiguration,
+    ) {
+        let number_of_inidices = self.general_indicies.len();
+
+        match shader_cache.get_mut(shader.id) {
+            Some(cached_shader) => cached_shader.time_since_used = 0,
+            None => {
+                let new_shader = Shader::from_index(shader, wgpu, camera_bind_group_layout, config);
+                shader_cache.add_item(new_shader, shader.id);
+            }
+        }
+
+        self.general_switches.push(SwitchPoint::Shader {
+            id: shader.id,
+            point: number_of_inidices,
+        })
     }
 
     pub(crate) fn add_text(&mut self, text: Text) {
@@ -280,7 +305,7 @@ impl DrawQueues {
             rectangle_buffer,
             rectangle_index_buffer,
             number_of_rectangle_indicies,
-            general_bind_group_switches: std::mem::take(&mut self.general_bind_group_switches),
+            general_switches: std::mem::take(&mut self.general_switches),
             line_buffer,
             number_of_line_verticies,
             text,
@@ -293,17 +318,11 @@ pub(crate) struct RenderItems {
     pub(crate) rectangle_buffer: wgpu::Buffer,
     pub(crate) rectangle_index_buffer: wgpu::Buffer,
     pub(crate) number_of_rectangle_indicies: u32,
-    pub(crate) general_bind_group_switches: Vec<SwitchPoint>,
+    pub(crate) general_switches: Vec<SwitchPoint>,
     pub(crate) line_buffer: wgpu::Buffer,
     pub(crate) number_of_line_verticies: u32,
     pub(crate) text: Vec<Text>,
     pub(crate) transformed_text: Vec<TransformedText>,
-}
-
-#[derive(Debug, PartialEq)]
-pub(crate) struct BindGroupSwitchPoint {
-    pub(crate) bind_group: BindGroups,
-    pub(crate) point: usize,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

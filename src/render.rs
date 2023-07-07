@@ -4,12 +4,12 @@
 use crate::colour::Colour;
 use crate::draw_queue::{BindGroups, DrawQueues, SwitchPoint};
 use crate::engine_handle::WgpuClump;
-use crate::matrix_math::*;
+use crate::{matrix_math::*, IDENTITY_MATRIX};
 use crate::rect::Rectangle;
 use crate::resource_cache::ResourceCache;
 use crate::shader::{Shader, ShaderIndex};
 use crate::text::{Text, TransformedText};
-use crate::texture::{Texture, TextureIndex};
+use crate::texture::TextureIndex;
 use crate::vectors::Vec2;
 use crate::vertex::{LineVertex, Vertex};
 use crate::wgpu_glyph;
@@ -23,8 +23,14 @@ use winit::dpi::PhysicalSize;
 pub struct Renderer {
     white_pixel: wgpu::BindGroup,
     draw_queues: DrawQueues,
-    pipelines: RenderPipelines,
+    line_pipeline: wgpu::RenderPipeline,
+    defualt_shader: ShaderIndex,
     clear_colour: Colour,
+    pub(crate) config: wgpu::SurfaceConfiguration,
+    pub(crate) camera_matrix: [f32; 16],
+    pub(crate) camera_bind_group: wgpu::BindGroup,
+    pub(crate) camera_bind_group_layout: wgpu::BindGroupLayout, // used for making shaders
+    pub(crate) camera_buffer: wgpu::Buffer,
     pub(crate) glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     pub(crate) wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
     pub(crate) size: Vec2<u32>,       // goes here bc normilzing stuff
@@ -36,10 +42,14 @@ impl Renderer {
     pub(crate) fn new(
         wgpu_clump: WgpuClump,
         size: PhysicalSize<u32>,
-        camera_bind_group_layout: &wgpu::BindGroupLayout,
+        camera_bind_group: wgpu::BindGroup,
+        camera_bind_group_layout: wgpu::BindGroupLayout,
+        camera_buffer: wgpu::Buffer,
         clear_colour: Colour,
-        texture_format: wgpu::TextureFormat,
+        config: wgpu::SurfaceConfiguration,
     ) -> Self {
+        let texture_format = config.format;
+
         let texture_cache = ResourceCache::new();
         let draw_queues = DrawQueues::new();
 
@@ -142,18 +152,57 @@ impl Renderer {
                 label: Some("diffuse_bind_group"),
             });
 
-        let pipelines = RenderPipelines::new(&wgpu_clump, camera_bind_group_layout, texture_format);
+        let generic_shader = wgpu_clump
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Shader"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),
+            });
+
+        let line_shader = wgpu_clump
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Line_Shader"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/line_shader.wgsl").into()),
+            });
+
+        let line_pipeline = make_pipeline(
+            &wgpu_clump.device,
+            wgpu::PrimitiveTopology::LineList,
+            &[&camera_bind_group_layout],
+            &[LineVertex::desc()],
+            &line_shader,
+            texture_format,
+            Some("line_renderer"),
+        );
+
+        let defualt_index = ShaderIndex::from_module(generic_shader, 0);
+        let defualt_shader = Shader::from_index(
+            &defualt_index,
+            &wgpu_clump,
+            &camera_bind_group_layout,
+            &config,
+        );
+
+        let mut shader_cache = ResourceCache::new();
+        shader_cache.add_item(defualt_shader, 0);
 
         Self {
             white_pixel,
             draw_queues,
+            line_pipeline,
+            defualt_shader: defualt_index,
             glyph_brush,
-            pipelines,
             clear_colour,
+            camera_matrix: IDENTITY_MATRIX,
+            camera_bind_group,
+            camera_bind_group_layout,
+            camera_buffer,
             wgpu_clump,
             size: size.into(),
             texture_cache,
-            shader_cache: ResourceCache::new(),
+            shader_cache,
+            config,
         }
     }
 
@@ -346,15 +395,32 @@ impl Renderer {
         self.draw_queues.add_transfromed_text(text)
     }
 
-    /// Sets the current shader to the shader supplied. Everything will be drawn from this shader untill changed
+    /// Sets the current shader to the shader supplied. Everything will be drawn from this shader untill changed or at the next loop
     pub fn set_shader(&mut self, shader: &ShaderIndex) {
+        self.draw_queues.add_shader_point(
+            &mut self.shader_cache,
+            shader,
+            &self.wgpu_clump,
+            &self.camera_bind_group_layout,
+            &self.config
+        );
+    }
 
+    /// Resets the active shader back to the engines defualt. This is also done automatically at the start of 
+    /// each draw call
+    pub fn set_to_defualt_shader(&mut self) {
+        self.draw_queues.add_shader_point(
+            &mut self.shader_cache,
+            &self.defualt_shader,
+            &self.wgpu_clump,
+            &self.camera_bind_group_layout,
+            &self.config
+        )
     }
 
     pub(crate) fn render(
         &mut self,
         size: Vec2<u32>,
-        camera: &wgpu::BindGroup,
         surface: &wgpu::Surface,
     ) -> Result<(), wgpu::SurfaceError> {
         let output = surface.get_current_texture()?;
@@ -383,8 +449,24 @@ impl Renderer {
             depth_stencil_attachment: None,
         });
 
-        render_pass.set_pipeline(&self.pipelines.polygon_pipeline);
-        render_pass.set_bind_group(1, camera, &[]);
+        match self.shader_cache.get_mut(0) {
+            Some(shader_thing) => {
+                shader_thing.time_since_used = 0;
+            },
+            None => {
+                let new_shader = Shader::from_index(
+                    &self.defualt_shader,
+                    &self.wgpu_clump,
+                    &self.camera_bind_group_layout,
+                    &self.config
+                );
+                self.shader_cache.add_item(new_shader, self.defualt_shader.id);
+            }
+        }
+
+        render_pass.set_pipeline(self.shader_cache[0].resource.get_pipeline());
+        render_pass.set_bind_group(0, &self.white_pixel, &[]);
+        render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
 
         if render_items.number_of_rectangle_indicies != 0 {
             render_pass.set_vertex_buffer(0, render_items.rectangle_buffer.slice(..));
@@ -396,12 +478,24 @@ impl Renderer {
             let mut current_bind_group = BindGroups::WhitePixel;
 
             for (idx, switch_point) in render_items
-                .general_bind_group_switches
+                .general_switches
                 .iter()
                 .enumerate()
             {
                 match switch_point {
-                    SwitchPoint::Shader { id, point } => {todo!()},
+                    SwitchPoint::Shader { id, point} => {
+                        render_pass.set_pipeline(self.shader_cache[*id].resource.get_pipeline());
+                        let draw_range = match render_items.general_switches.get(idx + 1) {
+                            Some(switch_point) => {
+                                *point as u32..switch_point.get_point() as u32
+                            }
+                            None => {
+                                *point as u32..render_items.number_of_rectangle_indicies
+                            }
+                        };
+
+                        render_pass.draw_indexed(draw_range, 0, 0..1);
+                    },
                     SwitchPoint::TextureGroup { bind_group, point } => {
                         if *bind_group != current_bind_group {
                             current_bind_group = *bind_group;
@@ -414,7 +508,7 @@ impl Renderer {
                 
                         render_pass.set_bind_group(0, bind_group, &[]);
                 
-                        let draw_range = match render_items.general_bind_group_switches.get(idx + 1) {
+                        let draw_range = match render_items.general_switches.get(idx + 1) {
                             Some(switch_point) => {
                                 *point as u32..switch_point.get_point() as u32
                             }
@@ -422,15 +516,15 @@ impl Renderer {
                                 *point as u32..render_items.number_of_rectangle_indicies
                             }
                         };
-                
+
                         render_pass.draw_indexed(draw_range, 0, 0..1);
                     }
                 }
             }
         }
 
-        render_pass.set_pipeline(&self.pipelines.line_pipeline);
-        render_pass.set_bind_group(0, camera, &[]);
+        render_pass.set_pipeline(&self.line_pipeline);
+        render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
         render_pass.set_vertex_buffer(0, render_items.line_buffer.slice(..));
         render_pass.draw(0..render_items.number_of_line_verticies, 0..1);
         drop(render_pass);
@@ -465,7 +559,7 @@ impl Renderer {
                         &mut staging_belt,
                         &mut encoder,
                         &view,
-                        camera,
+                        &self.camera_bind_group,
                         transform,
                     )
                     .unwrap();
@@ -491,7 +585,7 @@ impl Renderer {
                 &mut staging_belt,
                 &mut encoder,
                 &view,
-                camera,
+                &self.camera_bind_group,
                 size.x,
                 size.y,
             )
@@ -504,61 +598,6 @@ impl Renderer {
         output.present();
 
         Ok(())
-    }
-}
-
-pub(crate) struct RenderPipelines {
-    pub(crate) line_pipeline: wgpu::RenderPipeline,
-    pub(crate) polygon_pipeline: wgpu::RenderPipeline,
-}
-
-impl RenderPipelines {
-    pub fn new(
-        wgpu_clump: &WgpuClump,
-        camera_bind_group_layout: &wgpu::BindGroupLayout,
-        texture_format: wgpu::TextureFormat,
-    ) -> Self {
-        let generic_shader = wgpu_clump
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),
-            });
-
-        let line_shader = wgpu_clump
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Line_Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/line_shader.wgsl").into()),
-            });
-
-        let polygon_pipeline = make_pipeline(
-            &wgpu_clump.device,
-            wgpu::PrimitiveTopology::TriangleList,
-            &[
-                &Texture::make_bind_group_layout(&wgpu_clump.device),
-                camera_bind_group_layout,
-            ],
-            &[Vertex::desc()],
-            &generic_shader,
-            texture_format,
-            Some("Generic_pipeline"),
-        );
-
-        let line_pipeline = make_pipeline(
-            &wgpu_clump.device,
-            wgpu::PrimitiveTopology::LineList,
-            &[camera_bind_group_layout],
-            &[LineVertex::desc()],
-            &line_shader,
-            texture_format,
-            Some("line_renderer"),
-        );
-
-        Self {
-            polygon_pipeline,
-            line_pipeline,
-        }
     }
 }
 
