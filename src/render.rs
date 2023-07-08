@@ -300,6 +300,30 @@ impl Renderer {
         );
     }
 
+    pub fn draw_textured_rect_with_rotation(
+        &mut self,
+        position: Vec2<f32>,
+        width: f32,
+        hieght: f32,
+        texture: &TextureIndex,
+        deg: f32,
+    ) {
+        let rectangle = Rectangle::from_pixels_with_rotation(
+            position,
+            [width, hieght],
+            Colour::White.to_raw(),
+            self.size,
+            deg
+        );
+
+        self.draw_queues.add_textured_rectange(
+            &mut self.texture_cache,
+            &rectangle,
+            texture,
+            &self.wgpu_clump.device,
+        );
+    }
+
     /// draws a triangle at the specificed coordniates with the specified colour
     /// verticies MUST be in CLOCKWISE rotation ex:
     /// ```rust,no_run
