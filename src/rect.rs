@@ -50,7 +50,8 @@ impl Rectangle {
         let pos = pos.to_raw();
         let uv_pos = uv_pos.to_raw();
         let points = [
-            Vertex::from_2d(pos, uv_pos, colour),
+            Vertex::from_2d(pos, uv_pos, colour)
+                .pixels_to_screenspace(screen_size),
             Vertex::from_2d(
                 [pos[0] + size[0], pos[1]],
                 [uv_pos[0] + uv_size.x, uv_pos[1]],
@@ -67,7 +68,6 @@ impl Rectangle {
                 colour,
             ).pixels_to_screenspace(screen_size),
         ];
-
         Self { points }
     }
 
@@ -97,6 +97,46 @@ impl Rectangle {
                 .pixels_to_screenspace(screen_size),
         ];
 
+        Self { points }
+    }
+
+    pub fn from_pixels_ex(
+        pos: Vec2<f32>,
+        size: [f32; 2],
+        colour: [f32; 4],
+        screen_size: Vec2<u32>,
+        rotation: f32,
+        uv_pos: Vec2<f32>,
+        uv_size: Vec2<f32>,
+    ) -> Self {
+        let pos = pos.to_raw();
+        let uv_pos = uv_pos.to_raw();
+
+        let center = Vec2{x: pos[0] + size[0]/2.0, y: pos[1] + size[1]/2.0};
+        let points = [
+            Vertex::from_2d(pos, uv_pos, colour)
+                .rotate(rotation, center)
+                .pixels_to_screenspace(screen_size),
+            Vertex::from_2d(
+                [pos[0] + size[0], pos[1]],
+                [uv_pos[0] + uv_size.x, uv_pos[1]],
+                colour,
+            ).rotate(rotation, center)
+                .pixels_to_screenspace(screen_size),
+            Vertex::from_2d(
+                [pos[0] + size[0], pos[1] + size[1]],
+                [uv_pos[0] + uv_size.x, uv_pos[1] + uv_size.y],
+                colour,
+            ).rotate(rotation, center)
+                .pixels_to_screenspace(screen_size),
+            Vertex::from_2d(
+                [pos[0], pos[1] + size[1]],
+                [uv_pos[0], uv_pos[1] + uv_size.y],
+                colour,
+            ).rotate(rotation, center)
+                .pixels_to_screenspace(screen_size),
+        ];
+        
         Self { points }
     }
 

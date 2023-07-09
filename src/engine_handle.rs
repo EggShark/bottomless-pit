@@ -275,6 +275,11 @@ impl Engine {
         self.window.set_minimized(true);
     }
 
+    /// Will close the window and stop the program
+    pub fn close(&mut self) {
+        self.should_close = true;
+    }
+
     /// Will attempt to set the window icon for more details check the [winit docs](https://docs.rs/winit/latest/winit/window/struct.Window.html#method.set_window_icon)
     pub fn set_window_icon(&self, path: &str) -> Result<(), IconError> {
         let image = image::open(path)?.into_rgba8();

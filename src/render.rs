@@ -281,6 +281,7 @@ impl Renderer {
         let uv_position = normalize_points(uv_position, texture.size.x, texture.size.y);
         let uv_width = uv_size.x / texture.size.x;
         let uv_height = uv_size.y / texture.size.y;
+
         let rectangle = Rectangle::from_pixels_with_uv(
             position,
             [width, hieght],
@@ -300,6 +301,7 @@ impl Renderer {
         );
     }
 
+    /// Draws a textured rectangle that rotates around its center point
     pub fn draw_textured_rect_with_rotation(
         &mut self,
         position: Vec2<f32>,
@@ -314,6 +316,38 @@ impl Renderer {
             Colour::White.to_raw(),
             self.size,
             deg
+        );
+
+        self.draw_queues.add_textured_rectange(
+            &mut self.texture_cache,
+            &rectangle,
+            texture,
+            &self.wgpu_clump.device,
+        );
+    }
+
+    /// Draws a textured rectangle while allowing you to sepcifiy, rotaion, and UV coridnates
+    pub fn draw_textured_rectangle_ex(
+        &mut self,
+        position: Vec2<f32>,
+        width: f32,
+        hieght: f32,
+        texture: &TextureIndex,
+        deg: f32,
+        uv_position: Vec2<f32>,
+        uv_size: Vec2<f32>,
+    ) {
+        let uv_position = normalize_points(uv_position, texture.size.x, texture.size.y);
+        let uv_size = Vec2{x: uv_size.x / texture.size.x, y: uv_size.y / texture.size.y};
+
+        let rectangle = Rectangle::from_pixels_ex(
+            position,
+            [width, hieght],
+            Colour::White.to_raw(),
+            self.size,
+            deg,
+            uv_position,
+            uv_size,
         );
 
         self.draw_queues.add_textured_rectange(

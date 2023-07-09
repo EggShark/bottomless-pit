@@ -87,8 +87,8 @@ impl Texture {
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let sampler = wgpu_things.device.create_sampler(&wgpu::SamplerDescriptor {
             // what to do when given cordinates outside the textures height/width
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
             // what do when give less or more than 1 pixel to sample
             // linear interprelates between all of them nearest gives the closet colour

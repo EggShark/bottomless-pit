@@ -3,7 +3,7 @@
 use std::ops::{Add, Sub};
 
 /// A generic representation of 2D data
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Vec2<T> {
     pub x: T,
     pub y: T,
