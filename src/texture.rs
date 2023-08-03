@@ -2,6 +2,7 @@
 //! extension accsss the texture interface
 
 use crate::engine_handle::WgpuClump;
+use crate::layouts;
 use crate::resource_cache::ResourceCache;
 use crate::vectors::Vec2;
 use crc32fast::Hasher;
@@ -98,7 +99,7 @@ impl Texture {
             ..Default::default()
         });
 
-        let bind_group_layout = Self::make_bind_group_layout(&wgpu_things.device);
+        let bind_group_layout = layouts::create_texture_layout(&wgpu_things.device);
 
         let bind_group = wgpu_things
             .device
@@ -129,30 +130,6 @@ impl Texture {
             id,
             size,
         }
-    }
-
-    pub fn make_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: Some("texture_bind_group_layout"),
-        })
     }
 }
 

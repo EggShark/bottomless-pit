@@ -18,7 +18,7 @@ impl<T> ResourceCache<T> {
         }
     }
 
-    pub fn chache_update(&mut self) {
+    pub fn cache_update(&mut self) {
         self.resources
             .iter_mut()
             .for_each(|(_, v)| v.time_since_used += 1);

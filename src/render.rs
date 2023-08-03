@@ -4,10 +4,10 @@
 use crate::colour::Colour;
 use crate::draw_queue::{BindGroups, DrawQueues, SwitchPoint};
 use crate::engine_handle::WgpuClump;
-use crate::{matrix_math::*, IDENTITY_MATRIX};
+use crate::{matrix_math::*, IDENTITY_MATRIX, layouts};
 use crate::rect::Rectangle;
 use crate::resource_cache::ResourceCache;
-use crate::shader::{Shader, ShaderIndex};
+use crate::shader::{Shader, ShaderIndex, ShaderOptions};
 use crate::text::{Text, TransformedText};
 use crate::texture::TextureIndex;
 use crate::vectors::Vec2;
@@ -34,7 +34,7 @@ pub struct Renderer {
     pub(crate) glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     pub(crate) wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
     pub(crate) size: Vec2<u32>,       // goes here bc normilzing stuff
-    pub(crate) texture_cache: ResourceCache<wgpu::BindGroup>,
+    pub(crate) bind_group_cache: ResourceCache<wgpu::BindGroup>,
     pub(crate) shader_cache: ResourceCache<Shader>
 }
 
@@ -50,7 +50,7 @@ impl Renderer {
     ) -> Self {
         let texture_format = config.format;
 
-        let texture_cache = ResourceCache::new();
+        let bind_group_cache = ResourceCache::new();
         let draw_queues = DrawQueues::new();
 
         let minecraft_mono =
@@ -149,7 +149,7 @@ impl Renderer {
                         resource: wgpu::BindingResource::Sampler(&white_pixel_sampler),
                     },
                 ],
-                label: Some("diffuse_bind_group"),
+                label: Some("texture_bind_group"),
             });
 
         let generic_shader = wgpu_clump
@@ -176,12 +176,19 @@ impl Renderer {
             Some("line_renderer"),
         );
 
-        let defualt_index = ShaderIndex::from_module(generic_shader, 0);
+        let defualt_index = ShaderIndex::from_module(
+            generic_shader,
+            0,
+            vec![
+                layouts::create_texture_layout(&wgpu_clump.device),
+                layouts::create_camera_layout(&wgpu_clump.device),
+            ],
+        );
         let defualt_shader = Shader::from_index(
             &defualt_index,
             &wgpu_clump,
-            &camera_bind_group_layout,
             &config,
+            Some("defualt pipleline"),
         );
 
         let mut shader_cache = ResourceCache::new();
@@ -200,7 +207,7 @@ impl Renderer {
             camera_buffer,
             wgpu_clump,
             size: size.into(),
-            texture_cache,
+            bind_group_cache,
             shader_cache,
             config,
         }
@@ -237,7 +244,7 @@ impl Renderer {
         let rectangle =
             Rectangle::from_pixels(position, [width, hieght], Colour::White.to_raw(), self.size);
         self.draw_queues.add_textured_rectange(
-            &mut self.texture_cache,
+            &mut self.bind_group_cache,
             &rectangle,
             texture,
             &self.wgpu_clump.device,
@@ -255,7 +262,7 @@ impl Renderer {
     ) {
         let rectangle = Rectangle::new(position, [width, hieght], Colour::White.to_raw());
         self.draw_queues.add_textured_rectange(
-            &mut self.texture_cache,
+            &mut self.bind_group_cache,
             &rectangle,
             texture,
             &self.wgpu_clump.device,
@@ -294,7 +301,7 @@ impl Renderer {
             },
         );
         self.draw_queues.add_textured_rectange(
-            &mut self.texture_cache,
+            &mut self.bind_group_cache,
             &rectangle,
             texture,
             &self.wgpu_clump.device,
@@ -319,7 +326,7 @@ impl Renderer {
         );
 
         self.draw_queues.add_textured_rectange(
-            &mut self.texture_cache,
+            &mut self.bind_group_cache,
             &rectangle,
             texture,
             &self.wgpu_clump.device,
@@ -351,7 +358,7 @@ impl Renderer {
         );
 
         self.draw_queues.add_textured_rectange(
-            &mut self.texture_cache,
+            &mut self.bind_group_cache,
             &rectangle,
             texture,
             &self.wgpu_clump.device,
@@ -459,19 +466,26 @@ impl Renderer {
             &mut self.shader_cache,
             shader,
             &self.wgpu_clump,
-            &self.camera_bind_group_layout,
             &self.config
+        );
+    }
+
+    pub fn set_shader_options(&mut self, uniform: &ShaderOptions) {
+        self.draw_queues.add_shader_option_point(
+            &mut self.bind_group_cache,
+            uniform,
+            &self.wgpu_clump,
         );
     }
 
     /// Resets the active shader back to the engines defualt. This is also done automatically at the start of 
     /// each draw call
     pub fn set_to_defualt_shader(&mut self) {
+        println!("to defualt !");
         self.draw_queues.add_shader_point(
             &mut self.shader_cache,
             &self.defualt_shader,
             &self.wgpu_clump,
-            &self.camera_bind_group_layout,
             &self.config
         )
     }
@@ -481,6 +495,8 @@ impl Renderer {
         size: Vec2<u32>,
         surface: &wgpu::Surface,
     ) -> Result<(), wgpu::SurfaceError> {
+        println!("RENDER !");
+
         let output = surface.get_current_texture()?;
         let view = output
             .texture
@@ -508,18 +524,8 @@ impl Renderer {
         });
 
         match self.shader_cache.get_mut(0) {
-            Some(shader_thing) => {
-                shader_thing.time_since_used = 0;
-            },
-            None => {
-                let new_shader = Shader::from_index(
-                    &self.defualt_shader,
-                    &self.wgpu_clump,
-                    &self.camera_bind_group_layout,
-                    &self.config
-                );
-                self.shader_cache.add_item(new_shader, self.defualt_shader.id);
-            }
+            Some(shader_thing) => shader_thing.time_since_used = 0,
+            None => unreachable!(),
         }
 
         render_pass.set_pipeline(self.shader_cache[0].resource.get_pipeline());
@@ -533,16 +539,18 @@ impl Renderer {
                 wgpu::IndexFormat::Uint16,
             );
 
-            let mut current_bind_group = BindGroups::WhitePixel;
+            let mut current_texture = BindGroups::WhitePixel;
 
             for (idx, switch_point) in render_items
                 .general_switches
                 .iter()
                 .enumerate()
             {
+                println!("switch point {:?}", switch_point);
                 match switch_point {
                     SwitchPoint::Shader { id, point} => {
                         render_pass.set_pipeline(self.shader_cache[*id].resource.get_pipeline());
+                        println!("shader switched id: {}", id);
                         let draw_range = match render_items.general_switches.get(idx + 1) {
                             Some(switch_point) => {
                                 *point as u32..switch_point.get_point() as u32
@@ -551,21 +559,27 @@ impl Renderer {
                                 *point as u32..render_items.number_of_rectangle_indicies
                             }
                         };
-
+                        println!("draw_rangeSS: {:?}", draw_range);
                         render_pass.draw_indexed(draw_range, 0, 0..1);
                     },
-                    SwitchPoint::TextureGroup { bind_group, point } => {
-                        if *bind_group != current_bind_group {
-                            current_bind_group = *bind_group;
+                    SwitchPoint::BindGroup { bind_group, point } => {
+                        if *bind_group != current_texture {
+                            current_texture= *bind_group;
                         }
                 
-                        let bind_group = match current_bind_group {
-                            BindGroups::WhitePixel => &self.white_pixel,
-                            BindGroups::Custom { bind_group } => &self.texture_cache[bind_group].resource,
+                        let (bind_group, index) = match current_texture {
+                            BindGroups::WhitePixel => (&self.white_pixel, 0),
+                            BindGroups::Texture { bind_group } => (&self.bind_group_cache[bind_group].resource, 0),
+                            BindGroups::ShaderOptions{ bind_group, group_num } => {
+                                println!("shader Options set {:?}, {}", self.bind_group_cache[bind_group].resource, bind_group);
+                                (&self.bind_group_cache[bind_group].resource, group_num)
+                            },
                         };
+
+                        println!("index: {}, has been set", index);
                 
-                        render_pass.set_bind_group(0, bind_group, &[]);
-                
+                        render_pass.set_bind_group(index, bind_group, &[]);
+                    
                         let draw_range = match render_items.general_switches.get(idx + 1) {
                             Some(switch_point) => {
                                 *point as u32..switch_point.get_point() as u32
@@ -574,6 +588,7 @@ impl Renderer {
                                 *point as u32..render_items.number_of_rectangle_indicies
                             }
                         };
+                        println!("draw_rage: {:?}", draw_range);
 
                         render_pass.draw_indexed(draw_range, 0, 0..1);
                     }
@@ -581,6 +596,7 @@ impl Renderer {
             }
         }
 
+        // line rendering uses diffrent shader have to shift over
         render_pass.set_pipeline(&self.line_pipeline);
         render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
         render_pass.set_vertex_buffer(0, render_items.line_buffer.slice(..));

@@ -44,6 +44,7 @@ pub mod colour;
 mod draw_queue;
 pub mod engine_handle;
 pub mod input;
+mod layouts;
 pub mod matrix_math;
 mod rect;
 mod resource_cache;
@@ -55,6 +56,7 @@ pub mod shader;
 mod vertex;
 mod wgpu_glyph;
 
+pub use crevice;
 use engine_handle::Engine;
 use render::Renderer;
 /// The Trait needed for structs to be used in with the Engine

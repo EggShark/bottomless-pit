@@ -19,7 +19,7 @@ use crate::render::Renderer;
 use crate::shader::{ShaderIndex, create_shader};
 use crate::texture::{create_texture, TextureError, TextureIndex};
 use crate::vectors::Vec2;
-use crate::{text, Game, IDENTITY_MATRIX};
+use crate::{text, Game, IDENTITY_MATRIX, layouts};
 
 /// The thing that makes the computer go
 pub struct Engine {
@@ -183,18 +183,19 @@ impl Engine {
     /// Attempts to create a texture
     pub fn create_texture(&mut self, path: &str) -> Result<TextureIndex, TextureError> {
         create_texture(
-            &mut self.renderer.texture_cache,
+            &mut self.renderer.bind_group_cache,
             &self.renderer.wgpu_clump,
             path,
         )
     }
 
     /// Loads in the shader to the cache and returns the index
-    pub fn create_shader(&mut self, path: &str) -> Result<ShaderIndex, std::io::Error> {
-        create_shader(&mut self.renderer.shader_cache,
+    pub fn create_shader(&mut self, path: &str, layouts: Vec<wgpu::BindGroupLayout>) -> Result<ShaderIndex, std::io::Error> {
+        create_shader(
+            &mut self.renderer.shader_cache,
+            layouts,
             path,
             &self.renderer.wgpu_clump,
-            &self.renderer.camera_bind_group_layout,
             &self.renderer.config,
         )
     }
@@ -359,6 +360,25 @@ impl Engine {
         );
     }
 
+    /// nessicary for creating shaders and wanting to include the camera in the layouts
+    /// this is required if you would like to use the camera in the shader
+    pub fn camera_layout(&self) -> wgpu::BindGroupLayout {
+        layouts::create_camera_layout(&self.renderer.wgpu_clump.device)
+    }
+
+    /// nessicary for creating shaders and wanting to include textures in the layouts
+    /// this is required if you would like to use textures in your shader
+    pub fn texture_layout(&self) -> wgpu::BindGroupLayout {
+        layouts::create_texture_layout(&self.renderer.wgpu_clump.device)
+    }
+
+    /// nessicary for creating shaders and wanting to use your own unifroms
+    /// this should be pretty generic as it is exposed to both the vertex 
+    /// and fragment stage
+    pub fn uniform_layout(&self) -> wgpu::BindGroupLayout {
+        layouts::create_uniform_layout(&self.renderer.wgpu_clump.device)
+    }
+
     /// Measures a peice of text and gives a Vec2 of the width and height
     pub fn measure_text(&mut self, text: &str, scale: f32) -> Vec2<f32> {
         text::measure_text(text, &mut self.renderer.glyph_brush, scale)
@@ -387,6 +407,15 @@ impl Engine {
     /// no action is taken to "speed" up the rendering and updating
     pub fn set_target_fps(&mut self, fps: u16) {
         self.target_fps = Some(fps);
+    }
+
+    pub(crate) fn get_wgpu(&self) -> &WgpuClump {
+        &self.renderer.wgpu_clump
+    }
+
+    /// Used when adding shader options into the bindgroup cahce !
+    pub(crate) fn add_to_bind_group_cache(&mut self, bind_group: wgpu::BindGroup, key: u32) {
+        self.renderer.bind_group_cache.add_item(bind_group, key);
     }
 
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
@@ -446,7 +475,7 @@ impl Engine {
 
     fn update(&mut self) {
         self.last_frame = Instant::now();
-        self.renderer.texture_cache.chache_update();
+        self.renderer.bind_group_cache.cache_update();
         self.input_handle.end_of_frame_refresh();
         if let Some(key) = self.close_key {
             if self.input_handle.is_key_down(key) {
@@ -632,7 +661,7 @@ impl EngineBuilder {
     }
 
     /// Attempts to buld the Engine
-    pub fn build(self) -> Result<Engine, BuildError> {
+    pub fn build<'a>(self) -> Result<Engine, BuildError> {
         Engine::new(self)
     }
 }

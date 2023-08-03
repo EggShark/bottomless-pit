@@ -2,11 +2,12 @@ use wgpu::util::DeviceExt;
 
 use crate::colour::Colour;
 use crate::engine_handle::WgpuClump;
+use crate::layouts;
 use crate::rect::Rectangle;
 use crate::resource_cache::ResourceCache;
-use crate::shader::{ShaderIndex, Shader};
+use crate::shader::{ShaderIndex, ShaderOptions, Shader};
 use crate::text::{Text, TransformedText};
-use crate::texture::{Texture, TextureIndex};
+use crate::texture::TextureIndex;
 use crate::vertex::{LineVertex, Vertex};
 use std::f32::consts::PI;
 
@@ -48,7 +49,7 @@ impl DrawQueues {
             Some(point) => {
                 if !point.is_white_pixel() {
                     self.general_switches
-                        .push(SwitchPoint::TextureGroup {
+                        .push(SwitchPoint::BindGroup {
                             bind_group: BindGroups::WhitePixel,
                             point: number_of_inidices,
                         });
@@ -56,7 +57,7 @@ impl DrawQueues {
             }
             None => {
                 self.general_switches
-                    .push(SwitchPoint::TextureGroup {
+                    .push(SwitchPoint::BindGroup {
                         bind_group: BindGroups::WhitePixel,
                         point: number_of_inidices,
                     });
@@ -89,7 +90,7 @@ impl DrawQueues {
         match cache.get_mut(texture.id) {
             Some(item) => item.time_since_used = 0,
             None => {
-                let bind_group_layout = Texture::make_bind_group_layout(device);
+                let bind_group_layout = layouts::create_texture_layout(device);
                 let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                     layout: &bind_group_layout,
                     entries: &[
@@ -112,14 +113,14 @@ impl DrawQueues {
         match self.general_switches.iter().filter(|i| i.is_texture()).last() {
             Some(point) => {
                 match point {
-                    SwitchPoint::TextureGroup {
-                        bind_group: BindGroups::Custom { bind_group: bind_group_id },
+                    SwitchPoint::BindGroup {
+                        bind_group: BindGroups::Texture { bind_group: bind_group_id },
                         ..
                     } => {
                         if *bind_group_id != texture_bind_group {
                             self.general_switches
-                                .push(SwitchPoint::TextureGroup {
-                                    bind_group: BindGroups::Custom {
+                                .push(SwitchPoint::BindGroup {
+                                    bind_group: BindGroups::Texture {
                                         bind_group: texture_bind_group,
                                     },
                                     point: number_of_inidices,
@@ -128,8 +129,8 @@ impl DrawQueues {
                     },
                     _ => {
                         self.general_switches
-                            .push(SwitchPoint::TextureGroup {
-                                bind_group: BindGroups::Custom {
+                            .push(SwitchPoint::BindGroup {
+                                bind_group: BindGroups::Texture {
                                     bind_group: texture_bind_group,
                                 },
                                 point: number_of_inidices,
@@ -139,8 +140,8 @@ impl DrawQueues {
             }
             None => {
                 self.general_switches
-                    .push(SwitchPoint::TextureGroup {
-                        bind_group: BindGroups::Custom {
+                    .push(SwitchPoint::BindGroup {
+                        bind_group: BindGroups::Texture {
                             bind_group: texture_bind_group,
                         },
                         point: number_of_inidices,
@@ -196,7 +197,7 @@ impl DrawQueues {
             Some(point) => {
                 if !point.is_white_pixel() {
                     self.general_switches
-                        .push(SwitchPoint::TextureGroup {
+                        .push(SwitchPoint::BindGroup {
                             bind_group: BindGroups::WhitePixel,
                             point: number_of_inidices,
                         });
@@ -204,7 +205,7 @@ impl DrawQueues {
             }
             None => {
                 self.general_switches
-                    .push(SwitchPoint::TextureGroup {
+                    .push(SwitchPoint::BindGroup {
                         bind_group: BindGroups::WhitePixel,
                         point: number_of_inidices,
                     });
@@ -224,7 +225,7 @@ impl DrawQueues {
             Some(point) => {
                 if !point.is_white_pixel() {
                     self.general_switches
-                        .push(SwitchPoint::TextureGroup {
+                        .push(SwitchPoint::BindGroup {
                             bind_group: BindGroups::WhitePixel,
                             point: number_of_inidices,
                         });
@@ -232,7 +233,7 @@ impl DrawQueues {
             }
             None => {
                 self.general_switches
-                    .push(SwitchPoint::TextureGroup {
+                    .push(SwitchPoint::BindGroup {
                         bind_group: BindGroups::WhitePixel,
                         point: number_of_inidices,
                     });
@@ -247,7 +248,6 @@ impl DrawQueues {
         shader_cache: &mut ResourceCache<Shader>,
         shader: &ShaderIndex,
         wgpu: &WgpuClump,
-        camera_bind_group_layout: &wgpu::BindGroupLayout,
         config: &wgpu::SurfaceConfiguration,
     ) {
         let number_of_inidices = self.general_indicies.len();
@@ -255,7 +255,7 @@ impl DrawQueues {
         match shader_cache.get_mut(shader.id) {
             Some(cached_shader) => cached_shader.time_since_used = 0,
             None => {
-                let new_shader = Shader::from_index(shader, wgpu, camera_bind_group_layout, config);
+                let new_shader = Shader::from_index(shader, wgpu, config, Some("User_Shader"));
                 shader_cache.add_item(new_shader, shader.id);
             }
         }
@@ -263,7 +263,32 @@ impl DrawQueues {
         self.general_switches.push(SwitchPoint::Shader {
             id: shader.id,
             point: number_of_inidices,
-        })
+        });
+    }
+
+    pub(crate) fn add_shader_option_point(
+        &mut self,
+        bind_group_cache: &mut ResourceCache<wgpu::BindGroup>,
+        options: &ShaderOptions,
+        wgpu: &WgpuClump,
+    ) {
+        let number_of_indices = self.general_indicies.len();
+
+        match bind_group_cache.get_mut(options.id) {
+            Some(bind_group) => bind_group.time_since_used = 0,
+            None => {
+                let bind_group = options.rebuild_bindgroup(wgpu);
+                bind_group_cache.add_item(bind_group, options.id);
+            }
+        }
+
+        self.general_switches.push(SwitchPoint::BindGroup {
+            bind_group: BindGroups::ShaderOptions {
+                bind_group: options.id,
+                group_num: 2,
+            },
+            point: number_of_indices,
+        });
     }
 
     pub(crate) fn add_text(&mut self, text: Text) {
@@ -328,12 +353,16 @@ pub(crate) struct RenderItems {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum BindGroups {
     WhitePixel,
-    Custom { bind_group: u32 },
+    Texture{ bind_group: u32 },
+    ShaderOptions {
+        bind_group: u32,
+        group_num: u32,
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum SwitchPoint {
-    TextureGroup {
+    BindGroup {
         bind_group: BindGroups,
         point: usize,
     },
@@ -346,7 +375,7 @@ pub(crate) enum SwitchPoint {
 impl SwitchPoint {
     pub fn is_white_pixel(&self) -> bool {
         match self {
-            Self::TextureGroup {
+            Self::BindGroup {
                 bind_group: BindGroups::WhitePixel,
                 ..
             } => true,
@@ -356,14 +385,14 @@ impl SwitchPoint {
 
     pub fn is_texture(&self) -> bool {
         match self {
-            Self::TextureGroup { .. } => true,
+            Self::BindGroup { .. } => true,
             _ => false,
         }
     }
 
     pub fn get_point(&self) -> usize {
         match self {
-            Self::TextureGroup { point, .. } => *point,
+            Self::BindGroup { point, .. } => *point,
             Self::Shader { point, .. } => *point,
         }
     }

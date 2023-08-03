@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 bottomless-pit = {path="../.."}
+bytemuck = "1.13.1"
+crevice = "0.13.0"
