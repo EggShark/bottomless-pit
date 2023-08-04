@@ -102,7 +102,8 @@ impl Engine {
             .formats
             .iter()
             .copied()
-            .find(|f| f.describe().srgb)
+            .filter(|f| f.is_srgb())
+            .next()
             .unwrap_or(surface_capabilities.formats[0]);
 
         let config = wgpu::SurfaceConfiguration {
@@ -126,22 +127,7 @@ impl Engine {
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 });
 
-        let camera_bind_group_layout =
-            wgpu_clump
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    entries: &[wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    }],
-                    label: Some("camera_bind_group_layout"),
-                });
+        let camera_bind_group_layout = layouts::create_camera_layout(&wgpu_clump.device);
 
         let camera_bind_group = wgpu_clump
             .device
@@ -190,13 +176,14 @@ impl Engine {
     }
 
     /// Loads in the shader to the cache and returns the index
-    pub fn create_shader(&mut self, path: &str, layouts: Vec<wgpu::BindGroupLayout>) -> Result<ShaderIndex, std::io::Error> {
+    pub fn create_shader(&mut self, path: &str, layouts: Vec<wgpu::BindGroupLayout>, label: Option<&str>) -> Result<ShaderIndex, std::io::Error> {
         create_shader(
             &mut self.renderer.shader_cache,
             layouts,
             path,
             &self.renderer.wgpu_clump,
             &self.renderer.config,
+            label,
         )
     }
 

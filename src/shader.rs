@@ -3,7 +3,7 @@ use crevice::std140::{AsStd140, Std140};
 use wgpu::util::DeviceExt;
 use wgpu::{ShaderModule, RenderPipeline};
 use crate::engine_handle::{WgpuClump, Engine};
-use crate::layouts;
+use crate::{layouts, IDENTITY_MATRIX};
 use crate::resource_cache::ResourceCache;
 use crate::texture::Texture;
 use crate::vertex::Vertex;
@@ -66,13 +66,14 @@ impl ShaderOptions {
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor{
                 label: Some("User Uniform Buffer"),
-                contents: bytemuck::cast_slice(&[[0.5_f32, 0.1]]),
+                contents: bytemuck::cast_slice(&[IDENTITY_MATRIX]),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST
             });
 
         let layout = layouts::create_uniform_layout(&wgpu.device);
 
         let bind_group = Self::make_bind_group(&layout, buffer.as_entire_binding(), wgpu);
+        dbg!(&bind_group);
 
         engine_handle.add_to_bind_group_cache(bind_group, id);
 
@@ -107,7 +108,7 @@ impl ShaderOptions {
             .write_buffer(
                 &self.buffer,
                 0,
-                bytemuck::cast_slice(&[[0.5_f32, 0.1]]),
+                bytemuck::cast_slice(&[IDENTITY_MATRIX]),
             );
     }
 }
@@ -119,8 +120,6 @@ pub(crate) struct Shader {
 impl Shader {
     pub fn from_index(index: &ShaderIndex, wgpu_clump: &WgpuClump, config: &wgpu::SurfaceConfiguration, label: Option<&str>) -> Self {
         // double heap allocation IK but arrayvec didnt work
-        println!("bgls: {:?}", index.layouts);
-        println!("uniform layout {:?}", layouts::create_uniform_layout(&wgpu_clump.device));
         let bg_layouts = index.layouts.iter().collect::<Vec<&wgpu::BindGroupLayout>>();
 
         let shader_pipeline = make_pipeline(
@@ -149,10 +148,11 @@ pub(crate) fn create_shader(
     path: &str,
     wgpu: &WgpuClump,
     config: &wgpu::SurfaceConfiguration,
+    label: Option<&str>,
 ) -> Result<ShaderIndex, std::io::Error> {
     let shader_index = ShaderIndex::new(path, wgpu, layouts)?;
 
-    let shader = Shader::from_index(&shader_index, wgpu, config, Some("User_Shader"));
+    let shader = Shader::from_index(&shader_index, wgpu, config, label);
     
     shader_cache.add_item(shader, shader_index.id);
     Ok(shader_index)

@@ -79,8 +79,8 @@ impl Texture {
             &diffuse_rgba,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: std::num::NonZeroU32::new(4 * width),
-                rows_per_image: std::num::NonZeroU32::new(height),
+                bytes_per_row: Some(4 * width),
+                rows_per_image: Some(height),
             },
             texture_size,
         );

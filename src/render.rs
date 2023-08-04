@@ -36,6 +36,7 @@ pub struct Renderer {
     pub(crate) size: Vec2<u32>,       // goes here bc normilzing stuff
     pub(crate) bind_group_cache: ResourceCache<wgpu::BindGroup>,
     pub(crate) shader_cache: ResourceCache<Shader>
+
 }
 
 impl Renderer {
@@ -89,8 +90,8 @@ impl Renderer {
             &white_pixel_rgba,
             wgpu::ImageDataLayout {
                 offset: 0,
-                bytes_per_row: std::num::NonZeroU32::new(width * 4),
-                rows_per_image: std::num::NonZeroU32::new(height),
+                bytes_per_row: Some(width * 4),
+                rows_per_image: Some(height),
             },
             white_pixel_size,
         );
@@ -571,8 +572,8 @@ impl Renderer {
                             BindGroups::WhitePixel => (&self.white_pixel, 0),
                             BindGroups::Texture { bind_group } => (&self.bind_group_cache[bind_group].resource, 0),
                             BindGroups::ShaderOptions{ bind_group, group_num } => {
-                                println!("shader Options set {:?}, {}", self.bind_group_cache[bind_group].resource, bind_group);
-                                (&self.bind_group_cache[bind_group].resource, group_num)
+                                dbg!(&self.bind_group_cache[bind_group].resource);
+                                (&self.bind_group_cache[bind_group].resource, 2)
                             },
                         };
 

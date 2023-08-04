@@ -10,7 +10,12 @@ fn main() {
         .build()
         .unwrap();
 
-    let shader = engine.create_shader("shader.wgsl", vec![engine.texture_layout(), engine.camera_layout(), engine.uniform_layout(),]).unwrap();
+    let shader = engine.create_shader(
+        "shader.wgsl",
+        vec![engine.texture_layout(), engine.camera_layout(), engine.uniform_layout()],
+        Some("example_shader"),
+    ).unwrap();
+
     let options = ShaderOptions::new(&MousePos { x: 0.0, y: 0.0 }, &mut engine);
 
     let s = ShaderExample {
