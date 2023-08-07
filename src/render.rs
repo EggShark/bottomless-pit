@@ -1,8 +1,10 @@
 //! Contains the Renderer struct which also contains all the
 //! functions and logic to draw things to the screen
 
+use std::collections::HashMap;
+use std::num::NonZeroU64;
+
 use crate::colour::Colour;
-use crate::draw_queue::{BindGroups, DrawQueues, SwitchPoint};
 use crate::engine_handle::WgpuClump;
 use crate::{matrix_math::*, IDENTITY_MATRIX, layouts};
 use crate::rect::Rectangle;
@@ -22,7 +24,6 @@ use winit::dpi::PhysicalSize;
 /// The handle used for rendering all objects
 pub struct Renderer {
     white_pixel: wgpu::BindGroup,
-    draw_queues: DrawQueues,
     line_pipeline: wgpu::RenderPipeline,
     defualt_shader: ShaderIndex,
     clear_colour: Colour,
@@ -34,8 +35,8 @@ pub struct Renderer {
     pub(crate) glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     pub(crate) wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
     pub(crate) size: Vec2<u32>,       // goes here bc normilzing stuff
-    pub(crate) bind_group_cache: ResourceCache<wgpu::BindGroup>,
-    pub(crate) shader_cache: ResourceCache<Shader>
+    pipelines: HashMap<NonZeroU64, wgpu::RenderPipeline>,
+    bindgroups: HashMap<NonZeroU64, wgpu::BindGroup>,
 
 }
 
@@ -52,7 +53,6 @@ impl Renderer {
         let texture_format = config.format;
 
         let bind_group_cache = ResourceCache::new();
-        let draw_queues = DrawQueues::new();
 
         let minecraft_mono =
             wgpu_glyph::ab_glyph::FontArc::try_from_slice(include_bytes!("../Monocraft.ttf"))
@@ -197,7 +197,6 @@ impl Renderer {
 
         Self {
             white_pixel,
-            draw_queues,
             line_pipeline,
             defualt_shader: defualt_index,
             glyph_brush,

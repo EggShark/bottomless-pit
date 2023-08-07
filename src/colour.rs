@@ -1,76 +1,116 @@
-//! Stores a convienent way to respresnt colour using rusts enums
-
-/// An enum to represent RGBA colours (spelled properly)
+//! The colour struct module
+/// A struct containing RGBA Colours (spelled properly) with some predefind colour consts
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Colour {
-    White,
-    Black,
-    Red,
-    Green,
-    Blue,
-    Yellow,
-    Orange,
-    Pink,
-    Purple,
-    Brown,
-    Rgba([f32; 4]),
-    Rgb([f32; 3]),
+pub struct Colour {
+    r: f32,
+    g: f32,
+    b: f32,
+    a: f32,
 }
 
 impl Colour {
-    /// Converts the colour into a raw `[f32' 4]` representation of the colour
-    pub fn to_raw(&self) -> [f32; 4] {
-        match self {
-            Self::White => [1.0, 1.0, 1.0, 1.0],
-            Self::Black => [0.0, 0.0, 0.0, 1.0],
-            Self::Red => [1.0, 0.0, 0.0, 1.0],
-            Self::Green => [0.0, 1.0, 0.0, 1.0],
-            Self::Blue => [0.0, 0.0, 1.0, 1.0],
-            Self::Yellow => [1.0, 1.0, 0.0, 1.0],
-            Self::Orange => [1.0, 0.64705884, 0.0, 1.0],
-            Self::Pink => [1.0, 0.7529412, 0.79607844, 1.0],
-            Self::Purple => [0.50196075, 0.0, 0.50196075, 1.0],
-            Self::Brown => [0.63529414, 0.16470589, 0.16470589, 1.0],
-            Self::Rgba(colour) => *colour,
-            Self::Rgb(rgb) => [rgb[0], rgb[1], rgb[2], 1.0],
-        }
-    }
+    const WHITE: Self = Self {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
+    };
 
-    /// Attempts to take a hex string and make a colour from it
-    pub fn from_hex(hex_str: &str) -> Result<Colour, std::num::ParseIntError> {
+    const BLACK: Self = Self {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
+    };
+
+    const RED: Self = Self {
+        r: 1.0,
+        g: 0.0,
+        b: 0.0,
+        a: 1.0,
+    };
+
+    const GREEN: Self = Self {
+        r: 0.0,
+        g: 1.0,
+        b: 0.0,
+        a: 1.0,
+    };
+
+    const BLUE: Self = Self {
+        r: 0.0,
+        g: 0.0,
+        b: 1.0,
+        a: 1.0,
+    };
+
+    const YELLOW: Self = Self {
+        r: 1.0,
+        g: 1.0,
+        b: 0.0,
+        a: 1.0,
+    };
+
+    const ORANGE: Self = Self {
+        r: 1.0,
+        g: 0.64705884,
+        b: 0.0,
+        a: 1.0,
+    };
+
+    const PINK: Self = Self {
+        r: 1.0,
+        g: 0.7529412,
+        b: 0.79607844,
+        a: 1.0,
+    };
+
+    const BROWN: Self = Self {
+        r: 0.63529414,
+        g: 0.16470589,
+        b: 0.16470589,
+        a: 1.0
+    };
+
+    pub fn from_hex(hex_str: &str) -> Result<Self, std::num::ParseIntError> {
         let colour_values = i32::from_str_radix(hex_str, 16)?;
         let b = colour_values % 0x100;
         let g = (colour_values - b) / 0x100 % 0x100;
         let r = (colour_values - g) / 0x10000;
-        Ok(Self::Rgba([
-            r as f32 / 255.0,
-            g as f32 / 255.0,
-            b as f32 / 255.0,
-            1.0,
-        ]))
+        Ok(Self {
+            r: r as f32 / 255.0,
+            g: g as f32 / 255.0,
+            b: b as f32 / 255.0,
+            a: 1.0,
+        })
     }
-}
 
-impl From<Colour> for wgpu::Color {
-    fn from(val: Colour) -> Self {
-        let raw = val.to_raw();
-        wgpu::Color {
-            r: raw[0] as f64,
-            g: raw[1] as f64,
-            b: raw[2] as f64,
-            a: raw[3] as f64,
+    pub fn from_rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
+        Self {
+            r,
+            g,
+            b,
+            a,
+        }
+    }
+
+    pub fn linear_interpolation(start: Colour, end: Colour, fraction: f32) -> Self {
+        Self {
+            r: (end.r - start.r) * fraction + start.r,
+            g: (end.g - start.g) * fraction + start.g,
+            b: (end.b - start.b) * fraction + start.b,
+            a: (end.a - start.a) * fraction + start.a,
         }
     }
 }
 
-pub fn linear_interpolation(start: Colour, end: Colour, fraction: f32) -> Colour {
-    let start = start.to_raw();
-    let end = end.to_raw();
-    let end_colour = [
-        (end[0] - start[0]) * fraction + start[0],
-        (end[1] - start[1]) * fraction + start[1],
-        (end[2] - start[2]) * fraction + start[2],
-        (end[3] - start[3]) * fraction + start[3],
-    ];
-    Colour::Rgba(end_colour)
+impl From<Colour> for wgpu::Color {
+    fn from(value: Colour) -> Self {
+        wgpu::Color {
+            r: value.r as f64,
+            g: value.g as f64, 
+            b: value.b as f64,
+            a: value.a as f64,
+        }
+    }
 }
