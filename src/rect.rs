@@ -140,7 +140,7 @@ impl Rectangle {
         Self { points }
     }
 
-    pub fn get_vertices(&self) -> [Vertex; 4] {
+    pub fn into_vertices(self) -> [Vertex; 4] {
         self.points
     }
 }

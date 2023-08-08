@@ -6,6 +6,7 @@ use bottomless_pit::vectors::Vec2;
 
 fn main() {
     let engine = EngineBuilder::new()
+        .set_clear_colour(Colour::BLACK)
     	.set_target_fps(12)
         .build()
         .unwrap();
@@ -23,11 +24,11 @@ struct Position {
 
 impl Game for Position {
     fn render(&self, render_handle: &mut Renderer) {
-        render_handle.draw_rectangle(self.pos, 10.0, 20.0, Colour::Red);
+        render_handle.draw_rectangle(self.pos, 100.0, 100.0, Colour::RED);
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
-        let dt = engine_handle.get_frame_delta_time();
-        self.pos.x += 100.0 * dt;
+        // let dt = engine_handle.get_frame_delta_time();
+        // self.pos.x += 100.0 * dt;
     }
 }

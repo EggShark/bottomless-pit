@@ -8,7 +8,6 @@ use crate::resource_cache::ResourceCache;
 use crate::texture::Texture;
 use crate::vertex::Vertex;
 use crate::render::make_pipeline;
-use std::slice::Iter;
 
 pub struct ShaderIndex {
     shader: ShaderModule,
@@ -140,20 +139,4 @@ impl Shader {
     pub fn get_pipeline(&self) -> &wgpu::RenderPipeline {
         &self.pipeline
     }
-}
-
-pub(crate) fn create_shader(
-    shader_cache: &mut ResourceCache<Shader>,
-    layouts: Vec<wgpu::BindGroupLayout>,
-    path: &str,
-    wgpu: &WgpuClump,
-    config: &wgpu::SurfaceConfiguration,
-    label: Option<&str>,
-) -> Result<ShaderIndex, std::io::Error> {
-    let shader_index = ShaderIndex::new(path, wgpu, layouts)?;
-
-    let shader = Shader::from_index(&shader_index, wgpu, config, label);
-    
-    shader_cache.add_item(shader, shader_index.id);
-    Ok(shader_index)
 }

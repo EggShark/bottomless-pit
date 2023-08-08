@@ -9,63 +9,63 @@ pub struct Colour {
 }
 
 impl Colour {
-    const WHITE: Self = Self {
+    pub const WHITE: Self = Self {
         r: 1.0,
         g: 1.0,
         b: 1.0,
         a: 1.0,
     };
 
-    const BLACK: Self = Self {
-        r: 1.0,
-        g: 1.0,
-        b: 1.0,
+    pub const BLACK: Self = Self {
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
         a: 1.0,
     };
 
-    const RED: Self = Self {
+    pub const RED: Self = Self {
         r: 1.0,
         g: 0.0,
         b: 0.0,
         a: 1.0,
     };
 
-    const GREEN: Self = Self {
+    pub const GREEN: Self = Self {
         r: 0.0,
         g: 1.0,
         b: 0.0,
         a: 1.0,
     };
 
-    const BLUE: Self = Self {
+    pub const BLUE: Self = Self {
         r: 0.0,
         g: 0.0,
         b: 1.0,
         a: 1.0,
     };
 
-    const YELLOW: Self = Self {
+    pub const YELLOW: Self = Self {
         r: 1.0,
         g: 1.0,
         b: 0.0,
         a: 1.0,
     };
 
-    const ORANGE: Self = Self {
+    pub const ORANGE: Self = Self {
         r: 1.0,
         g: 0.64705884,
         b: 0.0,
         a: 1.0,
     };
 
-    const PINK: Self = Self {
+    pub const PINK: Self = Self {
         r: 1.0,
         g: 0.7529412,
         b: 0.79607844,
         a: 1.0,
     };
 
-    const BROWN: Self = Self {
+    pub const BROWN: Self = Self {
         r: 0.63529414,
         g: 0.16470589,
         b: 0.16470589,
@@ -101,6 +101,10 @@ impl Colour {
             b: (end.b - start.b) * fraction + start.b,
             a: (end.a - start.a) * fraction + start.a,
         }
+    }
+
+    pub(crate) fn to_raw(&self) -> [f32; 4] {
+        [self.r, self.g, self.b, self.a]
     }
 }
 

@@ -162,21 +162,6 @@ impl Display for TextureError {
     }
 }
 
-pub(crate) fn create_texture(
-    texture_cache: &mut ResourceCache<wgpu::BindGroup>,
-    wgpu_things: &WgpuClump,
-    path: &str,
-) -> Result<TextureIndex, TextureError> {
-    let texture = Texture::from_path(wgpu_things, None, path)?;
-    texture_cache.add_item(texture.bind_group, texture.id);
-    Ok(TextureIndex {
-        view: texture.view,
-        sampler: texture.sampler,
-        id: texture.id,
-        size: texture.size,
-    })
-}
-
 /// A texture, but more specifically a index into a cahce that stores all the textures
 pub struct TextureIndex {
     // the info needed to recrate the texture when necciscarry

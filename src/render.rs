@@ -6,6 +6,7 @@ use std::num::NonZeroU64;
 
 use crate::colour::Colour;
 use crate::engine_handle::WgpuClump;
+use crate::material::Material;
 use crate::{matrix_math::*, IDENTITY_MATRIX, layouts};
 use crate::rect::Rectangle;
 use crate::resource_cache::ResourceCache;
@@ -15,17 +16,15 @@ use crate::texture::TextureIndex;
 use crate::vectors::Vec2;
 use crate::vertex::{LineVertex, Vertex};
 use crate::wgpu_glyph;
-use crate::wgpu_glyph::{orthographic_projection, Layout};
 use crate::WHITE_PIXEL;
 
 use image::GenericImageView;
 use winit::dpi::PhysicalSize;
 
+pub(crate) type WgpuCache<T> = HashMap<wgpu::Id<T>, T>;
+
 /// The handle used for rendering all objects
 pub struct Renderer {
-    white_pixel: wgpu::BindGroup,
-    line_pipeline: wgpu::RenderPipeline,
-    defualt_shader: ShaderIndex,
     clear_colour: Colour,
     pub(crate) config: wgpu::SurfaceConfiguration,
     pub(crate) camera_matrix: [f32; 16],
@@ -35,8 +34,9 @@ pub struct Renderer {
     pub(crate) glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     pub(crate) wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
     pub(crate) size: Vec2<u32>,       // goes here bc normilzing stuff
-    pipelines: HashMap<NonZeroU64, wgpu::RenderPipeline>,
-    bindgroups: HashMap<NonZeroU64, wgpu::BindGroup>,
+    defualt_material: Material,
+    pipelines: WgpuCache<wgpu::RenderPipeline>,
+    bindgroups: WgpuCache<wgpu::BindGroup>,
 
 }
 
@@ -51,8 +51,6 @@ impl Renderer {
         config: wgpu::SurfaceConfiguration,
     ) -> Self {
         let texture_format = config.format;
-
-        let bind_group_cache = ResourceCache::new();
 
         let minecraft_mono =
             wgpu_glyph::ab_glyph::FontArc::try_from_slice(include_bytes!("../Monocraft.ttf"))
@@ -111,7 +109,7 @@ impl Renderer {
             ..Default::default()
         });
 
-        let bind_group_layout =
+        let texture_bind_group_layout =
             wgpu_clump
                 .device
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -139,7 +137,7 @@ impl Renderer {
         let white_pixel = wgpu_clump
             .device
             .create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &bind_group_layout,
+                layout: &texture_bind_group_layout,
                 entries: &[
                     wgpu::BindGroupEntry {
                         binding: 0,
@@ -167,6 +165,16 @@ impl Renderer {
                 source: wgpu::ShaderSource::Wgsl(include_str!("shaders/line_shader.wgsl").into()),
             });
 
+        let generic_pipeline = make_pipeline(
+            &wgpu_clump.device,
+            wgpu::PrimitiveTopology::TriangleList,
+            &[&texture_bind_group_layout, &camera_bind_group_layout],
+            &[Vertex::desc()],
+            &generic_shader,
+            texture_format,
+            Some("Defualt Pipeline"),
+        );
+
         let line_pipeline = make_pipeline(
             &wgpu_clump.device,
             wgpu::PrimitiveTopology::LineList,
@@ -177,28 +185,21 @@ impl Renderer {
             Some("line_renderer"),
         );
 
-        let defualt_index = ShaderIndex::from_module(
-            generic_shader,
-            0,
-            vec![
-                layouts::create_texture_layout(&wgpu_clump.device),
-                layouts::create_camera_layout(&wgpu_clump.device),
-            ],
-        );
-        let defualt_shader = Shader::from_index(
-            &defualt_index,
-            &wgpu_clump,
-            &config,
-            Some("defualt pipleline"),
-        );
+        let line_id = line_pipeline.global_id();
+        let generic_id = generic_pipeline.global_id();
+        let mut pipelines = HashMap::new();
+        pipelines.insert(line_id, line_pipeline);
+        pipelines.insert(generic_id, generic_pipeline);
 
-        let mut shader_cache = ResourceCache::new();
-        shader_cache.add_item(defualt_shader, 0);
+        println!("{:?}", line_id);
+
+        let white_pixel_id = white_pixel.global_id();
+        let mut bindgroups = HashMap::new();
+        bindgroups.insert(white_pixel_id, white_pixel);
+
+        let defualt_material = Material::new(&wgpu_clump.device, generic_id, white_pixel_id);
 
         Self {
-            white_pixel,
-            line_pipeline,
-            defualt_shader: defualt_index,
             glyph_brush,
             clear_colour,
             camera_matrix: IDENTITY_MATRIX,
@@ -207,17 +208,16 @@ impl Renderer {
             camera_buffer,
             wgpu_clump,
             size: size.into(),
-            bind_group_cache,
-            shader_cache,
             config,
+            defualt_material,
+            pipelines,
+            bindgroups,
         }
     }
 
     /// draws a textureless rectangle with a specificed colour
     pub fn draw_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, colour: Colour) {
-        let rectangle =
-            Rectangle::from_pixels(position, [width, hieght], colour.to_raw(), self.size);
-        self.draw_queues.add_rectangle(&rectangle);
+        self.defualt_material.add_rectangle(position, width, hieght, colour, self.size, &self.wgpu_clump);
     }
 
     /// Draws a rectangle in WGSL screenspace. point(-1.0, -1.0) is the bottom left corner and (0.0,0.0) is the center
@@ -230,7 +230,7 @@ impl Renderer {
         colour: Colour,
     ) {
         let rectangle = Rectangle::new(position, [width, hieght], colour.to_raw());
-        self.draw_queues.add_rectangle(&rectangle);
+
     }
 
     /// draws a textured rectangle, however it will draw the entire texture
@@ -242,13 +242,7 @@ impl Renderer {
         texture: &TextureIndex,
     ) {
         let rectangle =
-            Rectangle::from_pixels(position, [width, hieght], Colour::White.to_raw(), self.size);
-        self.draw_queues.add_textured_rectange(
-            &mut self.bind_group_cache,
-            &rectangle,
-            texture,
-            &self.wgpu_clump.device,
-        );
+            Rectangle::from_pixels(position, [width, hieght], Colour::WHITE.to_raw(), self.size);
     }
 
     /// Draws a textured rectangle in WGSL screenspace. point(-1.0, -1.0) is the bottom left corner and (0.0,0.0) is the
@@ -260,13 +254,7 @@ impl Renderer {
         hieght: f32,
         texture: &TextureIndex,
     ) {
-        let rectangle = Rectangle::new(position, [width, hieght], Colour::White.to_raw());
-        self.draw_queues.add_textured_rectange(
-            &mut self.bind_group_cache,
-            &rectangle,
-            texture,
-            &self.wgpu_clump.device,
-        );
+        let rectangle = Rectangle::new(position, [width, hieght], Colour::WHITE.to_raw());
     }
 
     /// draws a textured rectangle with the specifed UV coords.
@@ -292,7 +280,7 @@ impl Renderer {
         let rectangle = Rectangle::from_pixels_with_uv(
             position,
             [width, hieght],
-            Colour::White.to_raw(),
+            Colour::WHITE.to_raw(),
             self.size,
             uv_position,
             Vec2 {
@@ -300,12 +288,7 @@ impl Renderer {
                 y: uv_height,
             },
         );
-        self.draw_queues.add_textured_rectange(
-            &mut self.bind_group_cache,
-            &rectangle,
-            texture,
-            &self.wgpu_clump.device,
-        );
+
     }
 
     /// Draws a textured rectangle that rotates around its center point
@@ -320,17 +303,11 @@ impl Renderer {
         let rectangle = Rectangle::from_pixels_with_rotation(
             position,
             [width, hieght],
-            Colour::White.to_raw(),
+            Colour::WHITE.to_raw(),
             self.size,
             deg
         );
 
-        self.draw_queues.add_textured_rectange(
-            &mut self.bind_group_cache,
-            &rectangle,
-            texture,
-            &self.wgpu_clump.device,
-        );
     }
 
     /// Draws a textured rectangle while allowing you to sepcifiy, rotaion, and UV coridnates
@@ -350,18 +327,11 @@ impl Renderer {
         let rectangle = Rectangle::from_pixels_ex(
             position,
             [width, hieght],
-            Colour::White.to_raw(),
+            Colour::WHITE.to_raw(),
             self.size,
             deg,
             uv_position,
             uv_size,
-        );
-
-        self.draw_queues.add_textured_rectange(
-            &mut self.bind_group_cache,
-            &rectangle,
-            texture,
-            &self.wgpu_clump.device,
         );
     }
 
@@ -381,7 +351,6 @@ impl Renderer {
             Vertex::from_2d([p3.x, p3.y], tex_coords, colour)
                 .pixels_to_screenspace(self.size),
         ];
-        self.draw_queues.add_triangle(points);
     }
 
     /// Does the same as draw_triangle but lets you speicify a colour per vertex again
@@ -404,7 +373,6 @@ impl Renderer {
             Vertex::from_2d([p3.x, p3.y], tex_coords, c3.to_raw())
                 .pixels_to_screenspace(self.size)
         ];
-        self.draw_queues.add_triangle(points);
     }
 
     /// draws a regular polygon of any number of sides
@@ -415,8 +383,7 @@ impl Renderer {
         center: Vec2<f32>,
         colour: Colour,
     ) {
-        self.draw_queues
-            .add_regular_n_gon(number_of_sides, radius, center.to_raw(), colour);
+
     }
 
     /// draws a line, WILL DRAW ONTOP OF EVERTHING ELSE DUE TO BEING ITS OWN PIPELINE
@@ -425,8 +392,6 @@ impl Renderer {
             .pixels_to_screenspace(self.size);
         let end = LineVertex::new(end_point.to_raw(), colour.to_raw())
             .pixels_to_screenspace(self.size);
-
-        self.draw_queues.add_line(start, end)
     }
 
     /// Draws some text that will appear on top of all other elements due to seperate pipelines
@@ -437,7 +402,6 @@ impl Renderer {
             scale,
             colour,
         };
-        self.draw_queues.add_text(text)
     }
 
     /// Draws text with custom transform matrix
@@ -457,37 +421,22 @@ impl Renderer {
             transformation: transform,
             bounds: (self.size.x as f32, self.size.y as f32),
         };
-        self.draw_queues.add_transfromed_text(text)
     }
 
     /// Sets the current shader to the shader supplied. Everything will be drawn from this shader untill changed or at the next loop
     pub fn set_shader(&mut self, shader: &ShaderIndex) {
-        self.draw_queues.add_shader_point(
-            &mut self.shader_cache,
-            shader,
-            &self.wgpu_clump,
-            &self.config
-        );
+
     }
 
     pub fn set_shader_options(&mut self, uniform: &ShaderOptions) {
-        self.draw_queues.add_shader_option_point(
-            &mut self.bind_group_cache,
-            uniform,
-            &self.wgpu_clump,
-        );
+
     }
 
     /// Resets the active shader back to the engines defualt. This is also done automatically at the start of 
     /// each draw call
     pub fn set_to_defualt_shader(&mut self) {
         println!("to defualt !");
-        self.draw_queues.add_shader_point(
-            &mut self.shader_cache,
-            &self.defualt_shader,
-            &self.wgpu_clump,
-            &self.config
-        )
+
     }
 
     pub(crate) fn render(
@@ -508,7 +457,7 @@ impl Renderer {
                     label: Some("Render Encoder"),
                 });
 
-        let render_items = self.draw_queues.process_queued(&self.wgpu_clump.device);
+        // let render_items = self.draw_queues.process_queued(&self.wgpu_clump.device);
 
         let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
@@ -523,149 +472,170 @@ impl Renderer {
             depth_stencil_attachment: None,
         });
 
-        match self.shader_cache.get_mut(0) {
-            Some(shader_thing) => shader_thing.time_since_used = 0,
-            None => unreachable!(),
-        }
+        let (pipe_id, texture_id) = self.defualt_material.get_ids();
+        let (vertex_buffer, index_buffer) = self.defualt_material.buffers();
+        let pipeline = self.pipelines.get(&pipe_id).unwrap();
+        let texture = self.bindgroups.get(&texture_id).unwrap();
 
-        render_pass.set_pipeline(self.shader_cache[0].resource.get_pipeline());
-        render_pass.set_bind_group(0, &self.white_pixel, &[]);
+        render_pass.set_pipeline(pipeline);
+        render_pass.set_bind_group(0, texture, &[]);
         render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+        println!("{}", self.defualt_material.vertex_count / self.defualt_material.vertex_size);
+        println!("{}", self.defualt_material.index_count / self.defualt_material.index_size);
 
-        if render_items.number_of_rectangle_indicies != 0 {
-            render_pass.set_vertex_buffer(0, render_items.rectangle_buffer.slice(..));
-            render_pass.set_index_buffer(
-                render_items.rectangle_index_buffer.slice(..),
-                wgpu::IndexFormat::Uint16,
-            );
+        render_pass.set_vertex_buffer(0, vertex_buffer.slice(0..self.defualt_material.vertex_count));
+        render_pass.set_index_buffer(
+            index_buffer.slice(0..self.defualt_material.vertex_count),
+            wgpu::IndexFormat::Uint16,
+        );
 
-            let mut current_texture = BindGroups::WhitePixel;
+        render_pass.draw_indexed(0..(self.defualt_material.index_count / self.defualt_material.index_size) as u32, 0, 0..1);
+        // match self.shader_cache.get_mut(0) {
+        //     Some(shader_thing) => shader_thing.time_since_used = 0,
+        //     None => unreachable!(),
+        // }
 
-            for (idx, switch_point) in render_items
-                .general_switches
-                .iter()
-                .enumerate()
-            {
-                println!("switch point {:?}", switch_point);
-                match switch_point {
-                    SwitchPoint::Shader { id, point} => {
-                        render_pass.set_pipeline(self.shader_cache[*id].resource.get_pipeline());
-                        println!("shader switched id: {}", id);
-                        let draw_range = match render_items.general_switches.get(idx + 1) {
-                            Some(switch_point) => {
-                                *point as u32..switch_point.get_point() as u32
-                            }
-                            None => {
-                                *point as u32..render_items.number_of_rectangle_indicies
-                            }
-                        };
-                        println!("draw_rangeSS: {:?}", draw_range);
-                        render_pass.draw_indexed(draw_range, 0, 0..1);
-                    },
-                    SwitchPoint::BindGroup { bind_group, point } => {
-                        if *bind_group != current_texture {
-                            current_texture= *bind_group;
-                        }
+        // render_pass.set_pipeline(self.shader_cache[0].resource.get_pipeline());
+        // render_pass.set_bind_group(0, &self.white_pixel, &[]);
+        // render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+
+        // if render_items.number_of_rectangle_indicies != 0 {
+        //     render_pass.set_vertex_buffer(0, render_items.rectangle_buffer.slice(..));
+        //     render_pass.set_index_buffer(
+        //         render_items.rectangle_index_buffer.slice(..),
+        //         wgpu::IndexFormat::Uint16,
+        //     );
+
+        //     let mut current_texture = BindGroups::WhitePixel;
+
+        //     for (idx, switch_point) in render_items
+        //         .general_switches
+        //         .iter()
+        //         .enumerate()
+        //     {
+        //         println!("switch point {:?}", switch_point);
+        //         match switch_point {
+        //             SwitchPoint::Shader { id, point} => {
+        //                 render_pass.set_pipeline(self.shader_cache[*id].resource.get_pipeline());
+        //                 println!("shader switched id: {}", id);
+        //                 let draw_range = match render_items.general_switches.get(idx + 1) {
+        //                     Some(switch_point) => {
+        //                         *point as u32..switch_point.get_point() as u32
+        //                     }
+        //                     None => {
+        //                         *point as u32..render_items.number_of_rectangle_indicies
+        //                     }
+        //                 };
+        //                 println!("draw_rangeSS: {:?}", draw_range);
+        //                 render_pass.draw_indexed(draw_range, 0, 0..1);
+        //             },
+        //             SwitchPoint::BindGroup { bind_group, point } => {
+        //                 if *bind_group != current_texture {
+        //                     current_texture= *bind_group;
+        //                 }
                 
-                        let (bind_group, index) = match current_texture {
-                            BindGroups::WhitePixel => (&self.white_pixel, 0),
-                            BindGroups::Texture { bind_group } => (&self.bind_group_cache[bind_group].resource, 0),
-                            BindGroups::ShaderOptions{ bind_group, group_num } => {
-                                dbg!(&self.bind_group_cache[bind_group].resource);
-                                (&self.bind_group_cache[bind_group].resource, 2)
-                            },
-                        };
+        //                 let (bind_group, index) = match current_texture {
+        //                     BindGroups::WhitePixel => (&self.white_pixel, 0),
+        //                     BindGroups::Texture { bind_group } => (&self.bind_group_cache[bind_group].resource, 0),
+        //                     BindGroups::ShaderOptions{ bind_group, group_num } => {
+        //                         dbg!(&self.bind_group_cache[bind_group].resource);
+        //                         (&self.bind_group_cache[bind_group].resource, 2)
+        //                     },
+        //                 };
 
-                        println!("index: {}, has been set", index);
+        //                 println!("index: {}, has been set", index);
                 
-                        render_pass.set_bind_group(index, bind_group, &[]);
+        //                 render_pass.set_bind_group(index, bind_group, &[]);
                     
-                        let draw_range = match render_items.general_switches.get(idx + 1) {
-                            Some(switch_point) => {
-                                *point as u32..switch_point.get_point() as u32
-                            }
-                            None => {
-                                *point as u32..render_items.number_of_rectangle_indicies
-                            }
-                        };
-                        println!("draw_rage: {:?}", draw_range);
+        //                 let draw_range = match render_items.general_switches.get(idx + 1) {
+        //                     Some(switch_point) => {
+        //                         *point as u32..switch_point.get_point() as u32
+        //                     }
+        //                     None => {
+        //                         *point as u32..render_items.number_of_rectangle_indicies
+        //                     }
+        //                 };
+        //                 println!("draw_rage: {:?}", draw_range);
 
-                        render_pass.draw_indexed(draw_range, 0, 0..1);
-                    }
-                }
-            }
-        }
+        //                 render_pass.draw_indexed(draw_range, 0, 0..1);
+        //             }
+        //         }
+        //     }
+        // }
 
         // line rendering uses diffrent shader have to shift over
-        render_pass.set_pipeline(&self.line_pipeline);
-        render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
-        render_pass.set_vertex_buffer(0, render_items.line_buffer.slice(..));
-        render_pass.draw(0..render_items.number_of_line_verticies, 0..1);
+        // render_pass.set_pipeline(&self.line_pipeline);
+        // render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+        // render_pass.set_vertex_buffer(0, render_items.line_buffer.slice(..));
+        // render_pass.draw(0..render_items.number_of_line_verticies, 0..1);
         drop(render_pass);
 
-        let mut staging_belt = wgpu::util::StagingBelt::new(1024);
+        self.defualt_material.vertex_count = 0;
+        self.defualt_material.index_count = 0;
 
-        render_items
-            .transformed_text
-            .iter()
-            .map(|text| {
-                (
-                    wgpu_glyph::Section {
-                        screen_position: (text.position.x, text.position.y),
-                        bounds: text.bounds,
-                        text: vec![wgpu_glyph::Text::new(&text.text)
-                            .with_scale(text.scale)
-                            .with_color(text.colour.to_raw())],
-                        layout: Layout::default_single_line()
-                            .line_breaker(wgpu_glyph::BuiltInLineBreaker::AnyCharLineBreaker),
-                    },
-                    text.transformation,
-                )
-            })
-            .for_each(|(section, transform)| {
-                let text_transform = unflatten_matrix(transform);
-                let ortho = unflatten_matrix(orthographic_projection(size.x, size.y));
-                let transform = flatten_matrix(ortho * text_transform);
-                self.glyph_brush.queue(section);
-                self.glyph_brush
-                    .draw_queued_with_transform(
-                        &self.wgpu_clump.device,
-                        &mut staging_belt,
-                        &mut encoder,
-                        &view,
-                        &self.camera_bind_group,
-                        transform,
-                    )
-                    .unwrap();
-            });
+        // let mut staging_belt = wgpu::util::StagingBelt::new(1024);
 
-        render_items
-            .text
-            .iter()
-            .map(|text| wgpu_glyph::Section {
-                screen_position: (text.position.x, text.position.y),
-                bounds: (size.x as f32, size.y as f32),
-                text: vec![wgpu_glyph::Text::new(&text.text)
-                    .with_scale(text.scale)
-                    .with_color(text.colour.to_raw())],
-                layout: Layout::default_single_line()
-                    .line_breaker(wgpu_glyph::BuiltInLineBreaker::AnyCharLineBreaker),
-            })
-            .for_each(|s| self.glyph_brush.queue(s));
+        // render_items
+        //     .transformed_text
+        //     .iter()
+        //     .map(|text| {
+        //         (
+        //             wgpu_glyph::Section {
+        //                 screen_position: (text.position.x, text.position.y),
+        //                 bounds: text.bounds,
+        //                 text: vec![wgpu_glyph::Text::new(&text.text)
+        //                     .with_scale(text.scale)
+        //                     .with_color(text.colour.to_raw())],
+        //                 layout: Layout::default_single_line()
+        //                     .line_breaker(wgpu_glyph::BuiltInLineBreaker::AnyCharLineBreaker),
+        //             },
+        //             text.transformation,
+        //         )
+        //     })
+        //     .for_each(|(section, transform)| {
+        //         let text_transform = unflatten_matrix(transform);
+        //         let ortho = unflatten_matrix(orthographic_projection(size.x, size.y));
+        //         let transform = flatten_matrix(ortho * text_transform);
+        //         self.glyph_brush.queue(section);
+        //         self.glyph_brush
+        //             .draw_queued_with_transform(
+        //                 &self.wgpu_clump.device,
+        //                 &mut staging_belt,
+        //                 &mut encoder,
+        //                 &view,
+        //                 &self.camera_bind_group,
+        //                 transform,
+        //             )
+        //             .unwrap();
+        //     });
 
-        self.glyph_brush
-            .draw_queued(
-                &self.wgpu_clump.device,
-                &mut staging_belt,
-                &mut encoder,
-                &view,
-                &self.camera_bind_group,
-                size.x,
-                size.y,
-            )
-            .unwrap();
+        // render_items
+        //     .text
+        //     .iter()
+        //     .map(|text| wgpu_glyph::Section {
+        //         screen_position: (text.position.x, text.position.y),
+        //         bounds: (size.x as f32, size.y as f32),
+        //         text: vec![wgpu_glyph::Text::new(&text.text)
+        //             .with_scale(text.scale)
+        //             .with_color(text.colour.to_raw())],
+        //         layout: Layout::default_single_line()
+        //             .line_breaker(wgpu_glyph::BuiltInLineBreaker::AnyCharLineBreaker),
+        //     })
+        //     .for_each(|s| self.glyph_brush.queue(s));
 
-        staging_belt.finish();
+        // self.glyph_brush
+        //     .draw_queued(
+        //         &self.wgpu_clump.device,
+        //         &mut staging_belt,
+        //         &mut encoder,
+        //         &view,
+        //         &self.camera_bind_group,
+        //         size.x,
+        //         size.y,
+        //     )
+        //     .unwrap();
+
+        // staging_belt.finish();
         self.wgpu_clump
             .queue
             .submit(std::iter::once(encoder.finish()));

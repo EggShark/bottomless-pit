@@ -16,8 +16,8 @@ use winit::window::{BadIcon, Window};
 use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
 use crate::render::Renderer;
-use crate::shader::{ShaderIndex, create_shader};
-use crate::texture::{create_texture, TextureError, TextureIndex};
+use crate::shader::ShaderIndex;
+use crate::texture::{TextureError, TextureIndex};
 use crate::vectors::Vec2;
 use crate::{text, Game, IDENTITY_MATRIX, layouts};
 
@@ -168,23 +168,12 @@ impl Engine {
 
     /// Attempts to create a texture
     pub fn create_texture(&mut self, path: &str) -> Result<TextureIndex, TextureError> {
-        create_texture(
-            &mut self.renderer.bind_group_cache,
-            &self.renderer.wgpu_clump,
-            path,
-        )
+        todo!()
     }
 
     /// Loads in the shader to the cache and returns the index
     pub fn create_shader(&mut self, path: &str, layouts: Vec<wgpu::BindGroupLayout>, label: Option<&str>) -> Result<ShaderIndex, std::io::Error> {
-        create_shader(
-            &mut self.renderer.shader_cache,
-            layouts,
-            path,
-            &self.renderer.wgpu_clump,
-            &self.renderer.config,
-            label,
-        )
+        todo!()
     }
 
     /// Checks if a key is down
@@ -402,7 +391,7 @@ impl Engine {
 
     /// Used when adding shader options into the bindgroup cahce !
     pub(crate) fn add_to_bind_group_cache(&mut self, bind_group: wgpu::BindGroup, key: u32) {
-        self.renderer.bind_group_cache.add_item(bind_group, key);
+       
     }
 
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
@@ -462,7 +451,7 @@ impl Engine {
 
     fn update(&mut self) {
         self.last_frame = Instant::now();
-        self.renderer.bind_group_cache.cache_update();
+        // self.renderer.bind_group_cache.cache_update();
         self.input_handle.end_of_frame_refresh();
         if let Some(key) = self.close_key {
             if self.input_handle.is_key_down(key) {
@@ -514,7 +503,7 @@ impl EngineBuilder {
     ///     full_screen: false,
     ///     target_fps: 30,
     ///     close_key: None,
-    ///     clear_colour: Colour::Black,
+    ///     clear_colour: Colour::BLACK,
     ///     window_icon: None,
     ///     window_title: "".into(),
     ///     resizable: true,
@@ -525,7 +514,7 @@ impl EngineBuilder {
             full_screen: false,
             target_fps: None,
             close_key: None,
-            clear_colour: Colour::Black,
+            clear_colour: Colour::BLACK,
             window_icon: None,
             window_title: "".into(),
             resizable: true,
