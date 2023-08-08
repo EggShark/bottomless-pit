@@ -56,34 +56,32 @@ impl Material {
     pub(crate) fn add_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, colour: Colour, window_size: Vec2<u32>, wgpu: &WgpuClump) {
         let verts =
             Rectangle::from_pixels(position, [width, hieght], colour.to_raw(), window_size).into_vertices();
-        println!("verts: {:?}", verts);
 
-        let max_verts = self.vertex_buffer.size() / self.vertex_size;
-        if self.vertex_count + 4 > max_verts {
+        let max_verts = self.vertex_buffer.size();
+
+        if self.vertex_count + (4 * self.vertex_size) > max_verts {
             self.grow_vertex_buffer(&wgpu);
         }
 
-        let num_indicies = (self.index_count / self.index_size) as u16;
+        let num_verts = self.get_vertex_number() as u16;
         let indicies = [
-            num_indicies, 1 + num_indicies, 2 + num_indicies,
-            3 + num_indicies, num_indicies, 2 + num_indicies,
+            num_verts, 1 + num_verts, 2 + num_verts,
+            3 + num_verts, num_verts, 2 + num_verts,
         ];
-        println!("indicies: {:?}", indicies);
 
-
-        let max_indicies = self.index_buffer.size() / self.index_size;
-        if self.index_count + 6 > max_indicies {
+        let max_indicies = self.index_buffer.size();
+        if self.index_count + (6 * self.index_size) > max_indicies {
             self.grow_index_buffer(&wgpu);
         }
-        
+
         wgpu.queue.write_buffer(
             &self.vertex_buffer,
-            self.vertex_count * self.vertex_size,
+            self.vertex_count,
             bytemuck::cast_slice(&verts),
         );
         wgpu.queue.write_buffer(
             &self.index_buffer,
-            self.index_count * self.index_size,
+            self.index_count,
             bytemuck::cast_slice(&indicies),
         );
 
@@ -98,6 +96,14 @@ impl Material {
     /// Returns a refrence to the vertex and index buffer in that order.
     pub(crate) fn buffers(&self) -> (&wgpu::Buffer, &wgpu::Buffer) {
         (&self.vertex_buffer, &self.index_buffer)
+    }
+
+    pub fn get_vertex_number(&self) -> u64 {
+        self.vertex_count / self.vertex_size
+    }
+
+    pub fn get_index_number(&self) -> u64 {
+        self.index_count / self.index_size
     }
 
     fn grow_vertex_buffer(&mut self, wgpu: &WgpuClump) {

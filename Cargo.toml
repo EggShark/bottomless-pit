@@ -19,10 +19,8 @@ log = "0.4.17"
 pollster = "0.2.5"
 winit = "0.28.2"
 cgmath = "0.18.0"
-crc32fast = "1.3.2"
 glyph_brush = "0.7"
 spin_sleep = "1.1.1"
-crevice = "0.13.0"
 
 [dependencies.wgpu]
 version = "0.17"

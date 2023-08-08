@@ -444,8 +444,6 @@ impl Renderer {
         size: Vec2<u32>,
         surface: &wgpu::Surface,
     ) -> Result<(), wgpu::SurfaceError> {
-        println!("RENDER !");
-
         let output = surface.get_current_texture()?;
         let view = output
             .texture
@@ -480,8 +478,6 @@ impl Renderer {
         render_pass.set_pipeline(pipeline);
         render_pass.set_bind_group(0, texture, &[]);
         render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-        println!("{}", self.defualt_material.vertex_count / self.defualt_material.vertex_size);
-        println!("{}", self.defualt_material.index_count / self.defualt_material.index_size);
 
         render_pass.set_vertex_buffer(0, vertex_buffer.slice(0..self.defualt_material.vertex_count));
         render_pass.set_index_buffer(

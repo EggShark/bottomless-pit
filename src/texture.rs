@@ -3,9 +3,7 @@
 
 use crate::engine_handle::WgpuClump;
 use crate::layouts;
-use crate::resource_cache::ResourceCache;
 use crate::vectors::Vec2;
-use crc32fast::Hasher;
 use image::{GenericImageView, ImageError};
 use std::fmt::Display;
 use std::io::Error;
@@ -14,7 +12,6 @@ pub(crate) struct Texture {
     pub view: wgpu::TextureView,
     pub sampler: wgpu::Sampler,
     pub(crate) bind_group: wgpu::BindGroup,
-    pub(crate) id: u32, //checksum used for hashing
     pub(crate) size: Vec2<f32>,
 }
 
@@ -24,11 +21,8 @@ impl Texture {
         label: Option<&str>,
         bytes: &[u8],
     ) -> Result<Self, TextureError> {
-        let mut hasher = Hasher::new();
-        hasher.update(bytes);
-        let checksum = hasher.finalize();
         let img = image::load_from_memory(bytes)?;
-        Ok(Self::from_image(wgpu_things, img, label, checksum))
+        Ok(Self::from_image(wgpu_things, img, label))
     }
 
     pub fn from_path(
@@ -45,7 +39,6 @@ impl Texture {
         wgpu_things: &WgpuClump,
         img: image::DynamicImage,
         label: Option<&str>,
-        id: u32,
     ) -> Self {
         let diffuse_rgba = img.to_rgba8();
         let (width, height) = img.dimensions();
@@ -127,7 +120,6 @@ impl Texture {
             view,
             sampler,
             bind_group,
-            id,
             size,
         }
     }
@@ -167,7 +159,6 @@ pub struct TextureIndex {
     // the info needed to recrate the texture when necciscarry
     view: wgpu::TextureView,
     sampler: wgpu::Sampler,
-    pub(crate) id: u32, //crc32 checksum
     pub size: Vec2<f32>,
 }
 

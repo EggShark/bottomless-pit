@@ -28,7 +28,8 @@ impl Game for Position {
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
-        // let dt = engine_handle.get_frame_delta_time();
-        // self.pos.x += 100.0 * dt;
+        let dt = engine_handle.get_frame_delta_time();
+        println!("dt: {}", dt);
+        self.pos.x += 100.0 * dt;
     }
 }

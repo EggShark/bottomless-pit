@@ -1,5 +1,3 @@
-use crc32fast::Hasher;
-use crevice::std140::{AsStd140, Std140};
 use wgpu::util::DeviceExt;
 use wgpu::{ShaderModule, RenderPipeline};
 use crate::engine_handle::{WgpuClump, Engine};
@@ -12,15 +10,12 @@ use crate::render::make_pipeline;
 pub struct ShaderIndex {
     shader: ShaderModule,
     layouts: Vec<wgpu::BindGroupLayout>,
-    pub(crate) id: u32,
 }
 
 impl ShaderIndex {
     pub(crate) fn new(path: &str, wgpu: &WgpuClump, layouts: Vec<wgpu::BindGroupLayout>) -> Result<Self, std::io::Error> {
         let file = std::fs::read(path)?;
-        let mut hasher = Hasher::new();
-        hasher.update(&file);
-        let id = hasher.finalize();
+
         let shader_module = wgpu
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -31,7 +26,6 @@ impl ShaderIndex {
         Ok(Self {
             shader: shader_module,
             layouts,
-            id,
         })
     }
 
@@ -39,7 +33,6 @@ impl ShaderIndex {
         Self {
             shader: moudle,
             layouts,
-            id,
         }
     }
 }
@@ -55,7 +48,7 @@ pub struct ShaderOptions {
 }
 
 impl ShaderOptions {
-    pub fn new<Uniform: AsStd140>(uniform: &Uniform, engine_handle: &mut Engine) -> Self {
+    pub fn new(engine_handle: &mut Engine) -> Self {
         // needs to add to resource cache
         let id = 12348901; // just for testing
 
@@ -100,7 +93,7 @@ impl ShaderOptions {
         Self::make_bind_group(&self.layout, self.buffer.as_entire_binding(), wgpu)
     }
 
-    pub fn update_uniform<Uniform: AsStd140>(&self, uniform: &Uniform, engine_handle: &mut Engine) {
+    pub fn update_uniform(&self, engine_handle: &mut Engine) {
         engine_handle
             .get_wgpu()
             .queue

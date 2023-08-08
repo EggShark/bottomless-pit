@@ -56,7 +56,6 @@ pub mod shader;
 mod vertex;
 mod wgpu_glyph;
 
-pub use crevice;
 use engine_handle::Engine;
 use render::Renderer;
 /// The Trait needed for structs to be used in with the Engine
