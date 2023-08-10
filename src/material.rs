@@ -1,9 +1,11 @@
 use crate::render::Renderer;
+use crate::texture::Texture;
 use crate::vertex::Vertex;
-use crate::engine_handle::WgpuClump;
+use crate::engine_handle::{WgpuClump, Engine};
 use crate::vectors::Vec2;
 use crate::colour::Colour;
 use crate::rect::Rectangle;
+use crate::layouts::{self, create_texture_layout};
 
 // potentially just store ids to a hashmap to 
 // avoid reproductions
@@ -53,6 +55,16 @@ impl Material {
         }
     }
 
+    fn from_builder(builder: MaterialBuilder, engine: &mut Engine) -> Self {
+        let bind_group_id = match builder.texture_change {
+            Some(bg) => {
+                todo!()
+            },
+            None => engine.renderer.defualt_material_bg_id()
+        };
+        todo!();
+    }
+
     pub(crate) fn add_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, colour: Colour, window_size: Vec2<u32>, wgpu: &WgpuClump) {
         let verts =
             Rectangle::from_pixels(position, [width, hieght], colour.to_raw(), window_size).into_vertices();
@@ -89,8 +101,17 @@ impl Material {
         self.index_count += 6 * self.index_size;
     }
 
+    /// Gives the Id to the pipeline and texture in that order
     pub(crate) fn get_ids(&self) -> (wgpu::Id<wgpu::RenderPipeline>, wgpu::Id<wgpu::BindGroup>) {
         (self.pipeline_id, self.texture_id)
+    }
+
+    pub(crate) fn texutre_bindgoup_id(&self) -> wgpu::Id<wgpu::BindGroup> {
+        self.texture_id
+    }
+
+    pub(crate) fn pipeline_id(&self) -> wgpu::Id<wgpu::RenderPipeline> {
+        self.pipeline_id
     }
 
     /// Returns a refrence to the vertex and index buffer in that order.
@@ -166,6 +187,37 @@ impl Material {
     }
 }
 
-struct MaterialBuilder {
+// uniform support??
+pub struct MaterialBuilder <'a> {
+    // using options to denote a change from the default
+    // in the case of a texture the defualt is just the White_Pixel
+    texture_change: Option<Texture>,
+    pipeline_layouts: &'a [wgpu::BindGroupLayout]
+}
 
+impl<'a> MaterialBuilder<'a> {
+    pub fn new() -> Self {
+        Self {
+            texture_change: None,
+            pipeline_layouts: &[],
+        }
+    }
+
+    pub fn add_texture(self, texture: Texture) -> Self {
+        Self {
+            texture_change: Some(texture),
+            pipeline_layouts: self.pipeline_layouts,
+        }
+    }
+
+    pub fn set_layouts(self, layouts: &'a [wgpu::BindGroupLayout]) -> Self {
+        Self {
+            texture_change: self.texture_change,
+            pipeline_layouts: layouts,
+        }
+    }
+
+    pub fn build(self, engine_handle: &mut Engine) -> Material {
+        Material::from_builder(self, engine_handle)
+    }
 }

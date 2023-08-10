@@ -16,8 +16,6 @@ pub(crate) fn create_uniform_layout(device: &wgpu::Device) -> wgpu::BindGroupLay
         }]
     });
 
-    dbg!(&s);
-
     s
 }
 

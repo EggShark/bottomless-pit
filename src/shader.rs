@@ -67,7 +67,7 @@ impl ShaderOptions {
         let bind_group = Self::make_bind_group(&layout, buffer.as_entire_binding(), wgpu);
         dbg!(&bind_group);
 
-        engine_handle.add_to_bind_group_cache(bind_group, id);
+
 
         Self {
             buffer,

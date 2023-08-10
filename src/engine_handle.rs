@@ -17,13 +17,12 @@ use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
 use crate::render::Renderer;
 use crate::shader::ShaderIndex;
-use crate::texture::{TextureError, TextureIndex};
 use crate::vectors::Vec2;
 use crate::{text, Game, IDENTITY_MATRIX, layouts};
 
 /// The thing that makes the computer go
 pub struct Engine {
-    renderer: Renderer,
+    pub(crate) renderer: Renderer,
     input_handle: InputHandle,
     window: Window,
     surface: wgpu::Surface,
@@ -35,6 +34,7 @@ pub struct Engine {
     last_frame: Instant,
     spin_sleeper: SpinSleeper,
     current_frametime: Instant,
+    texture_sampler: wgpu::Sampler,
 }
 
 impl Engine {
@@ -117,6 +117,19 @@ impl Engine {
         };
         surface.configure(&wgpu_clump.device, &config);
 
+        let texture_sampler = wgpu_clump.device.create_sampler(&wgpu::SamplerDescriptor {
+            // what to do when given cordinates outside the textures height/width
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            // what do when give less or more than 1 pixel to sample
+            // linear interprelates between all of them nearest gives the closet colour
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
         let camera_matrix = IDENTITY_MATRIX;
         let camera_buffer =
             wgpu_clump
@@ -163,12 +176,8 @@ impl Engine {
             last_frame: Instant::now(),
             current_frametime: Instant::now(),
             spin_sleeper: SpinSleeper::default(),
+            texture_sampler,
         })
-    }
-
-    /// Attempts to create a texture
-    pub fn create_texture(&mut self, path: &str) -> Result<TextureIndex, TextureError> {
-        todo!()
     }
 
     /// Loads in the shader to the cache and returns the index
@@ -389,9 +398,13 @@ impl Engine {
         &self.renderer.wgpu_clump
     }
 
+    pub(crate) fn get_texture_sampler(&self) -> &wgpu::Sampler {
+        &self.texture_sampler
+    }
+
     /// Used when adding shader options into the bindgroup cahce !
-    pub(crate) fn add_to_bind_group_cache(&mut self, bind_group: wgpu::BindGroup, key: u32) {
-       
+    pub(crate) fn add_to_bind_group_cache(&mut self, bind_group: wgpu::BindGroup, key: wgpu::Id<wgpu::BindGroup>) {
+        self.renderer.add_bindgroup(bind_group, key);
     }
 
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
@@ -404,6 +417,7 @@ impl Engine {
             match event {
                 Event::RedrawRequested(window_id) if window_id == self.window.id() => {
                     self.current_frametime = Instant::now();
+
                     game.render(&mut self.renderer);
                     match self.renderer.render(
                         self.window.inner_size().into(),
@@ -415,6 +429,7 @@ impl Engine {
                         Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                         Err(e) => eprintln!("{:?}", e),
                     }
+
                     game.update(&mut self);
                     self.update();
                     if self.should_close {

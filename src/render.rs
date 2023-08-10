@@ -12,7 +12,6 @@ use crate::rect::Rectangle;
 use crate::resource_cache::ResourceCache;
 use crate::shader::{Shader, ShaderIndex, ShaderOptions};
 use crate::text::{Text, TransformedText};
-use crate::texture::TextureIndex;
 use crate::vectors::Vec2;
 use crate::vertex::{LineVertex, Vertex};
 use crate::wgpu_glyph;
@@ -234,28 +233,28 @@ impl Renderer {
     }
 
     /// draws a textured rectangle, however it will draw the entire texture
-    pub fn draw_textured_rectangle(
-        &mut self,
-        position: Vec2<f32>,
-        width: f32,
-        hieght: f32,
-        texture: &TextureIndex,
-    ) {
-        let rectangle =
-            Rectangle::from_pixels(position, [width, hieght], Colour::WHITE.to_raw(), self.size);
-    }
+    // pub fn draw_textured_rectangle(
+    //     &mut self,
+    //     position: Vec2<f32>,
+    //     width: f32,
+    //     hieght: f32,
+    //     texture: &TextureIndex,
+    // ) {
+    //     let rectangle =
+    //         Rectangle::from_pixels(position, [width, hieght], Colour::WHITE.to_raw(), self.size);
+    // }
 
     /// Draws a textured rectangle in WGSL screenspace. point(-1.0, -1.0) is the bottom left corner and (0.0,0.0) is the
     /// center of the screen.
-    pub fn draw_textured_screenspace_rectangle(
-        &mut self,
-        position: Vec2<f32>,
-        width: f32,
-        hieght: f32,
-        texture: &TextureIndex,
-    ) {
-        let rectangle = Rectangle::new(position, [width, hieght], Colour::WHITE.to_raw());
-    }
+    // pub fn draw_textured_screenspace_rectangle(
+    //     &mut self,
+    //     position: Vec2<f32>,
+    //     width: f32,
+    //     hieght: f32,
+    //     texture: &TextureIndex,
+    // ) {
+    //     let rectangle = Rectangle::new(position, [width, hieght], Colour::WHITE.to_raw());
+    // }
 
     /// draws a textured rectangle with the specifed UV coords.
     /// The image coords are not relative terms but the pixels of the image.
@@ -264,76 +263,75 @@ impl Renderer {
     /// ```rust
     /// renderer.draw_textured_rectangle_with_uv(position, 100.0, 100.0, texture, Vec2{x: 0.0, y: 0.0}, Vec2{x: 100.0, y: 100.0})
     /// ```
-    pub fn draw_textured_rectangle_with_uv(
-        &mut self,
-        position: Vec2<f32>,
-        width: f32,
-        hieght: f32,
-        texture: &TextureIndex,
-        uv_position: Vec2<f32>,
-        uv_size: Vec2<f32>,
-    ) {
-        let uv_position = normalize_points(uv_position, texture.size.x, texture.size.y);
-        let uv_width = uv_size.x / texture.size.x;
-        let uv_height = uv_size.y / texture.size.y;
+    // pub fn draw_textured_rectangle_with_uv(
+    //     &mut self,
+    //     position: Vec2<f32>,
+    //     width: f32,
+    //     hieght: f32,
+    //     texture: &TextureIndex,
+    //     uv_position: Vec2<f32>,
+    //     uv_size: Vec2<f32>,
+    // ) {
+    //     let uv_position = normalize_points(uv_position, texture.size.x, texture.size.y);
+    //     let uv_width = uv_size.x / texture.size.x;
+    //     let uv_height = uv_size.y / texture.size.y;
 
-        let rectangle = Rectangle::from_pixels_with_uv(
-            position,
-            [width, hieght],
-            Colour::WHITE.to_raw(),
-            self.size,
-            uv_position,
-            Vec2 {
-                x: uv_width,
-                y: uv_height,
-            },
-        );
-
-    }
+    //     let rectangle = Rectangle::from_pixels_with_uv(
+    //         position,
+    //         [width, hieght],
+    //         Colour::WHITE.to_raw(),
+    //         self.size,
+    //         uv_position,
+    //         Vec2 {
+    //             x: uv_width,
+    //             y: uv_height,
+    //         },
+    //     );
+    //}
 
     /// Draws a textured rectangle that rotates around its center point
-    pub fn draw_textured_rect_with_rotation(
-        &mut self,
-        position: Vec2<f32>,
-        width: f32,
-        hieght: f32,
-        texture: &TextureIndex,
-        deg: f32,
-    ) {
-        let rectangle = Rectangle::from_pixels_with_rotation(
-            position,
-            [width, hieght],
-            Colour::WHITE.to_raw(),
-            self.size,
-            deg
-        );
+    // pub fn draw_textured_rect_with_rotation(
+    //     &mut self,
+    //     position: Vec2<f32>,
+    //     width: f32,
+    //     hieght: f32,
+    //     texture: &TextureIndex,
+    //     deg: f32,
+    // ) {
+    //     let rectangle = Rectangle::from_pixels_with_rotation(
+    //         position,
+    //         [width, hieght],
+    //         Colour::WHITE.to_raw(),
+    //         self.size,
+    //         deg
+    //     );
 
-    }
+    // }
 
     /// Draws a textured rectangle while allowing you to sepcifiy, rotaion, and UV coridnates
-    pub fn draw_textured_rectangle_ex(
-        &mut self,
-        position: Vec2<f32>,
-        width: f32,
-        hieght: f32,
-        texture: &TextureIndex,
-        deg: f32,
-        uv_position: Vec2<f32>,
-        uv_size: Vec2<f32>,
-    ) {
-        let uv_position = normalize_points(uv_position, texture.size.x, texture.size.y);
-        let uv_size = Vec2{x: uv_size.x / texture.size.x, y: uv_size.y / texture.size.y};
+    // pub fn draw_textured_rectangle_ex(
+    //     &mut self,
+    //     position: Vec2<f32>,
+    //     width: f32,
+    //     hieght: f32,
+    //     texture: &TextureIndex,
+    //     deg: f32,
+    //     uv_position: Vec2<f32>,
+    //     uv_size: Vec2<f32>,
+    // ) {
+    //     let uv_position = normalize_points(uv_position, texture.size.x, texture.size.y);
+    //     let uv_size = Vec2{x: uv_size.x / texture.size.x, y: uv_size.y / texture.size.y};
 
-        let rectangle = Rectangle::from_pixels_ex(
-            position,
-            [width, hieght],
-            Colour::WHITE.to_raw(),
-            self.size,
-            deg,
-            uv_position,
-            uv_size,
-        );
-    }
+    //     let rectangle = Rectangle::from_pixels_ex(
+    //         position,
+    //         [width, hieght],
+    //         Colour::WHITE.to_raw(),
+    //         self.size,
+    //         deg,
+    //         uv_position,
+    //         uv_size,
+    //     );
+    // }
 
     /// draws a triangle at the specificed coordniates with the specified colour
     /// verticies MUST be in CLOCKWISE rotation ex:
@@ -437,6 +435,14 @@ impl Renderer {
     pub fn set_to_defualt_shader(&mut self) {
         println!("to defualt !");
 
+    }
+
+    pub(crate) fn add_bindgroup(&mut self, bind_group: wgpu::BindGroup, key: wgpu::Id<wgpu::BindGroup>) {
+        self.bindgroups.insert(key, bind_group);
+    }
+
+    pub(crate) fn defualt_material_bg_id(&self) -> wgpu::Id<wgpu::BindGroup> {
+        self.defualt_material.texutre_bindgoup_id()
     }
 
     pub(crate) fn render(

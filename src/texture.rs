@@ -1,45 +1,45 @@
 //! Cointains the interface into the texture cache and by
 //! extension accsss the texture interface
 
-use crate::engine_handle::WgpuClump;
+use crate::engine_handle::Engine;
 use crate::layouts;
 use crate::vectors::Vec2;
 use image::{GenericImageView, ImageError};
 use std::fmt::Display;
 use std::io::Error;
 
-pub(crate) struct Texture {
+pub struct Texture {
     pub view: wgpu::TextureView,
-    pub sampler: wgpu::Sampler,
     pub(crate) bind_group: wgpu::BindGroup,
     pub(crate) size: Vec2<f32>,
 }
 
 impl Texture {
     pub fn from_bytes(
-        wgpu_things: &WgpuClump,
+        engine: &Engine,
         label: Option<&str>,
         bytes: &[u8],
     ) -> Result<Self, TextureError> {
         let img = image::load_from_memory(bytes)?;
-        Ok(Self::from_image(wgpu_things, img, label))
+        Ok(Self::from_image(engine, img, label))
     }
 
     pub fn from_path(
-        wgpu_things: &WgpuClump,
+        engine: &Engine,
         label: Option<&str>,
         path: &str,
     ) -> Result<Self, TextureError> {
         let bytes = std::fs::read(path)?;
-        let out = Self::from_bytes(wgpu_things, label, &bytes)?;
+        let out = Self::from_bytes(engine, label, &bytes)?;
         Ok(out)
     }
 
     fn from_image(
-        wgpu_things: &WgpuClump,
+        engine: &Engine,
         img: image::DynamicImage,
         label: Option<&str>,
     ) -> Self {
+        let wgpu = engine.get_wgpu();
         let diffuse_rgba = img.to_rgba8();
         let (width, height) = img.dimensions();
 
@@ -49,7 +49,7 @@ impl Texture {
             depth_or_array_layers: 1,
         };
 
-        let texture = wgpu_things.device.create_texture(&wgpu::TextureDescriptor {
+        let texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
             size: texture_size,
             mip_level_count: 1,
             sample_count: 1,
@@ -62,7 +62,7 @@ impl Texture {
             label,
         });
 
-        wgpu_things.queue.write_texture(
+        wgpu.queue.write_texture(
             wgpu::ImageCopyTextureBase {
                 texture: &texture,
                 mip_level: 0,
@@ -79,22 +79,9 @@ impl Texture {
         );
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let sampler = wgpu_things.device.create_sampler(&wgpu::SamplerDescriptor {
-            // what to do when given cordinates outside the textures height/width
-            address_mode_u: wgpu::AddressMode::Repeat,
-            address_mode_v: wgpu::AddressMode::Repeat,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            // what do when give less or more than 1 pixel to sample
-            // linear interprelates between all of them nearest gives the closet colour
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
-        });
+        let bind_group_layout = layouts::create_texture_layout(&wgpu.device);
 
-        let bind_group_layout = layouts::create_texture_layout(&wgpu_things.device);
-
-        let bind_group = wgpu_things
+        let bind_group = wgpu
             .device
             .create_bind_group(&wgpu::BindGroupDescriptor {
                 layout: &bind_group_layout,
@@ -105,7 +92,7 @@ impl Texture {
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&sampler),
+                        resource: wgpu::BindingResource::Sampler(engine.get_texture_sampler()),
                     },
                 ],
                 label: Some("diffuse_bind_group"),
@@ -118,7 +105,6 @@ impl Texture {
 
         Self {
             view,
-            sampler,
             bind_group,
             size,
         }
@@ -151,23 +137,5 @@ impl Display for TextureError {
             Self::IoError(e) => write!(f, "{}", e),
             Self::ImageError(e) => write!(f, "{}", e),
         }
-    }
-}
-
-/// A texture, but more specifically a index into a cahce that stores all the textures
-pub struct TextureIndex {
-    // the info needed to recrate the texture when necciscarry
-    view: wgpu::TextureView,
-    sampler: wgpu::Sampler,
-    pub size: Vec2<f32>,
-}
-
-impl TextureIndex {
-    pub(crate) fn get_view(&self) -> &wgpu::TextureView {
-        &self.view
-    }
-
-    pub(crate) fn get_sampler(&self) -> &wgpu::Sampler {
-        &self.sampler
     }
 }
