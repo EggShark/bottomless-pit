@@ -445,6 +445,10 @@ impl Renderer {
         self.defualt_material.texutre_bindgoup_id()
     }
 
+    pub(crate) fn defualt_pipe_id(&self) -> wgpu::Id<wgpu::RenderPipeline> {
+        self.defualt_material.pipeline_id()
+    }
+
     pub(crate) fn render(
         &mut self,
         size: Vec2<u32>,
@@ -476,22 +480,15 @@ impl Renderer {
             depth_stencil_attachment: None,
         });
 
-        let (pipe_id, texture_id) = self.defualt_material.get_ids();
-        let (vertex_buffer, index_buffer) = self.defualt_material.buffers();
-        let pipeline = self.pipelines.get(&pipe_id).unwrap();
-        let texture = self.bindgroups.get(&texture_id).unwrap();
-
-        render_pass.set_pipeline(pipeline);
-        render_pass.set_bind_group(0, texture, &[]);
         render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
 
-        render_pass.set_vertex_buffer(0, vertex_buffer.slice(0..self.defualt_material.vertex_count));
-        render_pass.set_index_buffer(
-            index_buffer.slice(0..self.defualt_material.vertex_count),
-            wgpu::IndexFormat::Uint16,
-        );
+        let mut stuff = RenderInformation {
+            render_pass,
+            bind_groups: &self.bindgroups,
+            pipelines: &self.pipelines,
+        };
 
-        render_pass.draw_indexed(0..(self.defualt_material.index_count / self.defualt_material.index_size) as u32, 0, 0..1);
+        self.defualt_material.draw(&mut stuff);
         // match self.shader_cache.get_mut(0) {
         //     Some(shader_thing) => shader_thing.time_since_used = 0,
         //     None => unreachable!(),
@@ -570,7 +567,7 @@ impl Renderer {
         // render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
         // render_pass.set_vertex_buffer(0, render_items.line_buffer.slice(..));
         // render_pass.draw(0..render_items.number_of_line_verticies, 0..1);
-        drop(render_pass);
+        drop(stuff);
 
         self.defualt_material.vertex_count = 0;
         self.defualt_material.index_count = 0;
@@ -703,4 +700,10 @@ pub(crate) fn make_pipeline(
         },
         multiview: None,
     })
+}
+
+pub(crate) struct RenderInformation<'pass, 'others> {
+    pub(crate) render_pass: wgpu::RenderPass<'pass>,
+    pub(crate) bind_groups: &'others WgpuCache<wgpu::BindGroup>,
+    pub(crate) pipelines: &'others WgpuCache<wgpu::RenderPipeline>,
 }

@@ -1,11 +1,10 @@
-use crate::render::Renderer;
 use crate::texture::Texture;
 use crate::vertex::Vertex;
 use crate::engine_handle::{WgpuClump, Engine};
 use crate::vectors::Vec2;
 use crate::colour::Colour;
 use crate::rect::Rectangle;
-use crate::layouts::{self, create_texture_layout};
+use crate::render::RenderInformation;
 
 // potentially just store ids to a hashmap to 
 // avoid reproductions
@@ -20,6 +19,7 @@ pub struct Material {
     pub(crate) index_count: u64,
     pub(crate) index_size: u64,
     texture_id: wgpu::Id<wgpu::BindGroup>,
+    texture_size: Vec2<f32>,
 }
 
 impl Material {
@@ -52,17 +52,37 @@ impl Material {
             index_count: 0,
             index_size,
             texture_id,
+            texture_size: Vec2{x: 1.0, y: 1.0},
         }
     }
 
     fn from_builder(builder: MaterialBuilder, engine: &mut Engine) -> Self {
-        let bind_group_id = match builder.texture_change {
+        let pipeline_id = engine.renderer.defualt_pipe_id();
+        let (texture_id, texture_size) = match builder.texture_change {
             Some(bg) => {
-                todo!()
+                let id = bg.bind_group.global_id();
+                engine.renderer.add_bindgroup(bg.bind_group, id);
+                (id, bg.size)
             },
-            None => engine.renderer.defualt_material_bg_id()
+            // should just be the size of the white pixel
+            None => (engine.renderer.defualt_material_bg_id(), Vec2{x: 1.0, y: 1.0})
         };
-        todo!();
+
+        let vertex_size = std::mem::size_of::<Vertex>() as u64;
+        let index_size = std::mem::size_of::<u16>() as u64;
+        let (vertex_buffer, index_buffer) = Self::create_buffers(&engine.get_wgpu().device, vertex_size, index_size);
+
+        Self {
+            pipeline_id,
+            vertex_buffer,
+            vertex_count: 0,
+            vertex_size,
+            index_buffer,
+            index_count: 0,
+            index_size,
+            texture_id,
+            texture_size,
+        }
     }
 
     pub(crate) fn add_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, colour: Colour, window_size: Vec2<u32>, wgpu: &WgpuClump) {
@@ -184,6 +204,42 @@ impl Material {
             .submit(std::iter::once(encoder.finish()));
 
         self.index_buffer = new_buffer;
+    }
+
+    // there where 'others: 'pass notation says that 'others lives longer than 'pass
+    pub(crate) fn draw<'pass, 'others>(&'others self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
+        let pipeline = information.pipelines.get(&self.pipeline_id).unwrap();
+        let texture = information.bind_groups.get(&self.texture_id).unwrap();
+
+        information.render_pass.set_pipeline(pipeline);
+        information.render_pass.set_bind_group(0, texture, &[]);
+
+        information.render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
+        information.render_pass.set_index_buffer(
+            self.index_buffer.slice(0..self.vertex_count),
+            wgpu::IndexFormat::Uint16,
+        );
+
+        information.render_pass.draw_indexed(0..self.get_index_number() as u32, 0, 0..1);
+    }
+
+    fn create_buffers(device: &wgpu::Device, vertex_size: u64, index_size: u64) -> (wgpu::Buffer, wgpu::Buffer) {
+        let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Vertex_Buffer"),
+            size: vertex_size * 100,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        // this is just 200 bytes pretty small
+        let index_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Index_Buffer"),
+            size: index_size * 100,
+            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        (vertex_buffer, index_buffer)
     }
 }
 

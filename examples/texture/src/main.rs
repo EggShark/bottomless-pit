@@ -1,5 +1,6 @@
+use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::{*, engine_handle::EngineBuilder};
-use bottomless_pit::texture::TextureIndex;
+use bottomless_pit::texture::Texture;
 use bottomless_pit::input::MouseKey;
 use vectors::Vec2;
 use colour::Colour;
@@ -10,12 +11,13 @@ fn main() {
         .with_resolution((400, 400))
         .build()
         .unwrap();
-    let texture = engine.create_texture("bplogo.png").unwrap();
-    let s = Unit(texture, true);
+    let texture = Texture::from_path(&engine, Some("texture"), "bplogo.png").unwrap();
+    let material = MaterialBuilder::new().add_texture(texture).build(&mut engine);
+    let s = Unit(material, true);
     engine.run(s);
 }
 
-struct Unit(TextureIndex, bool);
+struct Unit(Material, bool);
 
 impl Game for Unit {
     fn render(&self, render_handle: &mut render::Renderer) {
