@@ -57,15 +57,15 @@ impl Material {
     }
 
     fn from_builder(builder: MaterialBuilder, engine: &mut Engine) -> Self {
-        let pipeline_id = engine.renderer.defualt_pipe_id();
+        let pipeline_id = engine.defualt_pipe_id();
         let (texture_id, texture_size) = match builder.texture_change {
             Some(bg) => {
                 let id = bg.bind_group.global_id();
-                engine.renderer.add_bindgroup(bg.bind_group, id);
+                engine.add_to_bind_group_cache(bg.bind_group, id);
                 (id, bg.size)
             },
             // should just be the size of the white pixel
-            None => (engine.renderer.defualt_material_bg_id(), Vec2{x: 1.0, y: 1.0})
+            None => (engine.defualt_material_bg_id(), Vec2{x: 1.0, y: 1.0})
         };
 
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
@@ -85,14 +85,16 @@ impl Material {
         }
     }
 
-    pub(crate) fn add_rectangle(&mut self, position: Vec2<f32>, width: f32, hieght: f32, colour: Colour, window_size: Vec2<u32>, wgpu: &WgpuClump) {
+    pub fn add_rectangle(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
+        let window_size = render.size;
+        let wgpu = render.wgpu;
         let verts =
-            Rectangle::from_pixels(position, [width, hieght], colour.to_raw(), window_size).into_vertices();
+            Rectangle::from_pixels(position, [size.x, size.y], colour.to_raw(), window_size).into_vertices();
 
         let max_verts = self.vertex_buffer.size();
 
         if self.vertex_count + (4 * self.vertex_size) > max_verts {
-            self.grow_vertex_buffer(&wgpu);
+            self.grow_vertex_buffer(wgpu);
         }
 
         let num_verts = self.get_vertex_number() as u16;
@@ -103,7 +105,7 @@ impl Material {
 
         let max_indicies = self.index_buffer.size();
         if self.index_count + (6 * self.index_size) > max_indicies {
-            self.grow_index_buffer(&wgpu);
+            self.grow_index_buffer(wgpu);
         }
 
         wgpu.queue.write_buffer(
@@ -207,7 +209,7 @@ impl Material {
     }
 
     // there where 'others: 'pass notation says that 'others lives longer than 'pass
-    pub(crate) fn draw<'pass, 'others>(&'others self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
+    pub fn draw<'pass, 'others>(&'others mut self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
         let pipeline = information.pipelines.get(&self.pipeline_id).unwrap();
         let texture = information.bind_groups.get(&self.texture_id).unwrap();
 
@@ -221,6 +223,9 @@ impl Material {
         );
 
         information.render_pass.draw_indexed(0..self.get_index_number() as u32, 0, 0..1);
+
+        self.vertex_count = 0;
+        self.index_count = 0;
     }
 
     fn create_buffers(device: &wgpu::Device, vertex_size: u64, index_size: u64) -> (wgpu::Buffer, wgpu::Buffer) {

@@ -93,11 +93,11 @@ impl LineVertex {
         }
     }
 
-    pub(crate) fn new(pos: [f32; 2], colour: [f32; 4]) -> Self {
+    pub fn new(pos: [f32; 2], colour: [f32; 4]) -> Self {
         Self { pos, colour }
     }
 
-    pub(crate) fn pixels_to_screenspace(mut self, screen_size: Vec2<u32>) -> Self {
+    pub fn pixels_to_screenspace(mut self, screen_size: Vec2<u32>) -> Self {
         let width = screen_size.x as f32;
         let height = screen_size.y as f32;
         self.pos[0] = (2.0 * self.pos[0] / width) - 1.0;

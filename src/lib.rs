@@ -57,11 +57,11 @@ mod vertex;
 mod wgpu_glyph;
 
 use engine_handle::Engine;
-use render::Renderer;
+use render::RenderInformation;
 /// The Trait needed for structs to be used in with the Engine
 pub trait Game {
     /// Rendering code goes here
-    fn render(&self, render_handle: &mut Renderer);
+    fn render<'pass, 'others>(&'others mut self, render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass;
     /// updating code goes here
     fn update(&mut self, engine_handle: &mut Engine);
     /// Things to do when the window closes

@@ -3,7 +3,7 @@
 //! builder lets you customize the engine at the start, and the
 //! Engine gives you access to all the crucial logic functions
 
-use image::ImageError;
+use image::{GenericImageView, ImageError};
 use spin_sleep::SpinSleeper;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
@@ -12,17 +12,23 @@ use winit::error::OsError;
 use winit::event::*;
 use winit::event_loop::{ControlFlow, EventLoop};
 use winit::window::{BadIcon, Window};
+use std::collections::HashMap;
 
 use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
-use crate::render::Renderer;
+use crate::material::Material;
+use crate::render::{make_pipeline, RenderInformation, render};
 use crate::shader::ShaderIndex;
 use crate::vectors::Vec2;
+use crate::vertex::{Vertex, LineVertex};
+use crate::WHITE_PIXEL;
+use crate::wgpu_glyph;
 use crate::{text, Game, IDENTITY_MATRIX, layouts};
+
+pub(crate) type WgpuCache<T> = HashMap<wgpu::Id<T>, T>;
 
 /// The thing that makes the computer go
 pub struct Engine {
-    pub(crate) renderer: Renderer,
     input_handle: InputHandle,
     window: Window,
     surface: wgpu::Surface,
@@ -35,6 +41,19 @@ pub struct Engine {
     spin_sleeper: SpinSleeper,
     current_frametime: Instant,
     texture_sampler: wgpu::Sampler,
+    clear_colour: Colour,
+    config: wgpu::SurfaceConfiguration,
+    camera_matrix: [f32; 16],
+    camera_bind_group: wgpu::BindGroup,
+    camera_bind_group_layout: wgpu::BindGroupLayout, // used for making shaders
+    camera_buffer: wgpu::Buffer,
+    glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
+    wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
+    size: Vec2<u32>,       // goes here bc normilzing stuff
+    defualt_bind_group_id: wgpu::Id<wgpu::BindGroup>,
+    default_pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
+    pub(crate) pipelines: WgpuCache<wgpu::RenderPipeline>,
+    pub(crate) bindgroups: WgpuCache<wgpu::BindGroup>,
 }
 
 impl Engine {
@@ -153,18 +172,155 @@ impl Engine {
                 label: Some("camera_bind_group"),
             });
 
-        let renderer = Renderer::new(
-            wgpu_clump,
-            window.inner_size(),
-            camera_bind_group,
-            camera_bind_group_layout,
-            camera_buffer,
-            builder.clear_colour,
-            config,
+        let texture_format = config.format;
+
+        let minecraft_mono =
+            wgpu_glyph::ab_glyph::FontArc::try_from_slice(include_bytes!("../Monocraft.ttf"))
+                .unwrap();
+        let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(minecraft_mono)
+            .build(&wgpu_clump.device, wgpu::TextureFormat::Bgra8UnormSrgb);
+
+        let white_pixel_image = image::load_from_memory(WHITE_PIXEL).unwrap();
+        let white_pixel_rgba = white_pixel_image.to_rgba8();
+        let (width, height) = white_pixel_image.dimensions();
+        let white_pixel_size = wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
+
+        let white_pixel_texture = wgpu_clump.device.create_texture(&wgpu::TextureDescriptor {
+            size: white_pixel_size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            view_formats: &[],
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            label: Some("White_Pixel"),
+        });
+
+        wgpu_clump.queue.write_texture(
+            wgpu::ImageCopyTextureBase {
+                texture: &white_pixel_texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            &white_pixel_rgba,
+            wgpu::ImageDataLayout {
+                offset: 0,
+                bytes_per_row: Some(width * 4),
+                rows_per_image: Some(height),
+            },
+            white_pixel_size,
         );
 
+        let white_pixel_view =
+            white_pixel_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let white_pixel_sampler = wgpu_clump.device.create_sampler(&wgpu::SamplerDescriptor {
+            // what to do when given cordinates outside the textures height/width
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            // what do when give less or more than 1 pixel to sample
+            // linear interprelates between all of them nearest gives the closet colour
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let texture_bind_group_layout =
+            wgpu_clump
+                .device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    entries: &[
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Texture {
+                                multisampled: false,
+                                view_dimension: wgpu::TextureViewDimension::D2,
+                                sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            },
+                            count: None,
+                        },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 1,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                            count: None,
+                        },
+                    ],
+                    label: Some("white_pixel_bind_group_layout"),
+                });
+
+        let white_pixel = wgpu_clump
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &texture_bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&white_pixel_view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&white_pixel_sampler),
+                    },
+                ],
+                label: Some("texture_bind_group"),
+            });
+
+        let generic_shader = wgpu_clump
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Shader"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),
+            });
+
+        let line_shader = wgpu_clump
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Line_Shader"),
+                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/line_shader.wgsl").into()),
+            });
+
+        let generic_pipeline = make_pipeline(
+            &wgpu_clump.device,
+            wgpu::PrimitiveTopology::TriangleList,
+            &[&texture_bind_group_layout, &camera_bind_group_layout],
+            &[Vertex::desc()],
+            &generic_shader,
+            texture_format,
+            Some("Defualt Pipeline"),
+        );
+
+        let line_pipeline = make_pipeline(
+            &wgpu_clump.device,
+            wgpu::PrimitiveTopology::LineList,
+            &[&camera_bind_group_layout],
+            &[LineVertex::desc()],
+            &line_shader,
+            texture_format,
+            Some("line_renderer"),
+        );
+    
+        let line_id = line_pipeline.global_id();
+        let generic_id = generic_pipeline.global_id();
+        let mut pipelines = HashMap::new();
+        pipelines.insert(line_id, line_pipeline);
+        pipelines.insert(generic_id, generic_pipeline);
+
+        println!("{:?}", line_id);
+
+        let white_pixel_id = white_pixel.global_id();
+        let mut bindgroups = HashMap::new();
+        bindgroups.insert(white_pixel_id, white_pixel);
+
+
         Ok(Self {
-            renderer,
             input_handle,
             window,
             surface,
@@ -177,6 +333,19 @@ impl Engine {
             current_frametime: Instant::now(),
             spin_sleeper: SpinSleeper::default(),
             texture_sampler,
+            clear_colour: builder.clear_colour,
+            config,
+            camera_matrix,
+            camera_bind_group,
+            camera_bind_group_layout, // used for making shaders
+            camera_buffer,
+            glyph_brush,
+            wgpu_clump,
+            size,
+            defualt_bind_group_id: white_pixel_id,
+            default_pipeline_id: generic_id,
+            pipelines,
+            bindgroups,
         })
     }
 
@@ -303,7 +472,7 @@ impl Engine {
 
     /// Gets the phyisical size of the window,
     pub fn get_window_size(&self) -> Vec2<u32> {
-        self.renderer.size
+        self.size
     }
 
     /// Gets the scale factor to help handle diffrence between phyiscial and logical pixels
@@ -337,36 +506,40 @@ impl Engine {
     /// Will update the camera matrix as of version 0.1.0 it will effect
     /// all things drawn is also 3D
     pub fn change_camera_matrix(&mut self, matrix: [f32; 16]) {
-        self.renderer.camera_matrix = matrix;
-        self.renderer.wgpu_clump.queue.write_buffer(
-            &self.renderer.camera_buffer,
+        self.camera_matrix = matrix;
+        self.wgpu_clump.queue.write_buffer(
+            &self.camera_buffer,
             0,
-            bytemuck::cast_slice(&[self.renderer.camera_matrix]),
+            bytemuck::cast_slice(&[self.camera_matrix]),
         );
     }
 
     /// nessicary for creating shaders and wanting to include the camera in the layouts
     /// this is required if you would like to use the camera in the shader
     pub fn camera_layout(&self) -> wgpu::BindGroupLayout {
-        layouts::create_camera_layout(&self.renderer.wgpu_clump.device)
+        layouts::create_camera_layout(&self.wgpu_clump.device)
+    }
+
+    pub(crate) fn camera_bindgroup(&self) -> &wgpu::BindGroup {
+        &self.camera_bind_group
     }
 
     /// nessicary for creating shaders and wanting to include textures in the layouts
     /// this is required if you would like to use textures in your shader
     pub fn texture_layout(&self) -> wgpu::BindGroupLayout {
-        layouts::create_texture_layout(&self.renderer.wgpu_clump.device)
+        layouts::create_texture_layout(&self.wgpu_clump.device)
     }
 
     /// nessicary for creating shaders and wanting to use your own unifroms
     /// this should be pretty generic as it is exposed to both the vertex 
     /// and fragment stage
     pub fn uniform_layout(&self) -> wgpu::BindGroupLayout {
-        layouts::create_uniform_layout(&self.renderer.wgpu_clump.device)
+        layouts::create_uniform_layout(&self.wgpu_clump.device)
     }
 
     /// Measures a peice of text and gives a Vec2 of the width and height
     pub fn measure_text(&mut self, text: &str, scale: f32) -> Vec2<f32> {
-        text::measure_text(text, &mut self.renderer.glyph_brush, scale)
+        text::measure_text(text, &mut self.glyph_brush, scale)
     }
 
     /// Gets the time since the previous frame or change in time between now and last frame
@@ -395,7 +568,7 @@ impl Engine {
     }
 
     pub(crate) fn get_wgpu(&self) -> &WgpuClump {
-        &self.renderer.wgpu_clump
+        &self.wgpu_clump
     }
 
     pub(crate) fn get_texture_sampler(&self) -> &wgpu::Sampler {
@@ -404,7 +577,23 @@ impl Engine {
 
     /// Used when adding shader options into the bindgroup cahce !
     pub(crate) fn add_to_bind_group_cache(&mut self, bind_group: wgpu::BindGroup, key: wgpu::Id<wgpu::BindGroup>) {
-        self.renderer.add_bindgroup(bind_group, key);
+        self.bindgroups.insert(key, bind_group);
+    }
+
+    pub(crate) fn defualt_material_bg_id(&self) -> wgpu::Id<wgpu::BindGroup> {
+        self.defualt_bind_group_id
+    }
+
+    pub(crate) fn defualt_pipe_id(&self) -> wgpu::Id<wgpu::RenderPipeline> {
+        self.default_pipeline_id
+    }
+
+    pub(crate) fn get_current_texture(&self) -> Result<wgpu::SurfaceTexture, wgpu::SurfaceError> {
+        self.surface.get_current_texture()
+    }
+
+    pub(crate) fn wgpu_colour(&self) -> wgpu::Color {
+        self.clear_colour.into()
     }
 
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
@@ -418,14 +607,10 @@ impl Engine {
                 Event::RedrawRequested(window_id) if window_id == self.window.id() => {
                     self.current_frametime = Instant::now();
 
-                    game.render(&mut self.renderer);
-                    match self.renderer.render(
-                        self.window.inner_size().into(),
-                        &self.surface,
-                    ) {
+                    match render(&mut game, &mut self) {
                         Ok(_) => {}
                         // reconfigure surface if lost
-                        Err(wgpu::SurfaceError::Lost) => self.resize(self.renderer.size),
+                        Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
                         Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                         Err(e) => eprintln!("{:?}", e),
                     }
@@ -489,11 +674,11 @@ impl Engine {
 
     fn resize(&mut self, new_size: Vec2<u32>) {
         if new_size.x > 0 && new_size.y > 0 {
-            self.renderer.config.width = new_size.x;
-            self.renderer.config.height = new_size.y;
+            self.config.width = new_size.x;
+            self.config.height = new_size.y;
             self.surface
-                .configure(&self.renderer.wgpu_clump.device, &self.renderer.config);
-            self.renderer.size = new_size;
+                .configure(&self.wgpu_clump.device, &self.config);
+            self.size = new_size;
         }
     }
 }
