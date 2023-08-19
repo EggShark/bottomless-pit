@@ -118,3 +118,9 @@ impl From<Colour> for wgpu::Color {
         }
     }
 }
+
+impl From<Colour> for [f32; 4] {
+    fn from(value: Colour) -> Self {
+        [value.r, value.g, value.b, value.a]
+    }
+}

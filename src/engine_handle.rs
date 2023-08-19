@@ -5,6 +5,7 @@
 
 use image::{GenericImageView, ImageError};
 use spin_sleep::SpinSleeper;
+use std::borrow::BorrowMut;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
@@ -16,14 +17,13 @@ use std::collections::HashMap;
 
 use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
-use crate::material::Material;
-use crate::render::{make_pipeline, RenderInformation, render};
-use crate::shader::ShaderIndex;
+use crate::render::{make_pipeline, render};
+use crate::text;
 use crate::vectors::Vec2;
 use crate::vertex::{Vertex, LineVertex};
 use crate::WHITE_PIXEL;
 use crate::wgpu_glyph;
-use crate::{text, Game, IDENTITY_MATRIX, layouts};
+use crate::{Game, IDENTITY_MATRIX, layouts};
 
 pub(crate) type WgpuCache<T> = HashMap<wgpu::Id<T>, T>;
 
@@ -47,7 +47,6 @@ pub struct Engine {
     camera_bind_group: wgpu::BindGroup,
     camera_bind_group_layout: wgpu::BindGroupLayout, // used for making shaders
     camera_buffer: wgpu::Buffer,
-    glyph_brush: wgpu_glyph::GlyphBrush<(), wgpu_glyph::ab_glyph::FontArc>,
     wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
     size: Vec2<u32>,       // goes here bc normilzing stuff
     defualt_bind_group_id: wgpu::Id<wgpu::BindGroup>,
@@ -173,12 +172,6 @@ impl Engine {
             });
 
         let texture_format = config.format;
-
-        let minecraft_mono =
-            wgpu_glyph::ab_glyph::FontArc::try_from_slice(include_bytes!("../Monocraft.ttf"))
-                .unwrap();
-        let glyph_brush = wgpu_glyph::GlyphBrushBuilder::using_font(minecraft_mono)
-            .build(&wgpu_clump.device, wgpu::TextureFormat::Bgra8UnormSrgb);
 
         let white_pixel_image = image::load_from_memory(WHITE_PIXEL).unwrap();
         let white_pixel_rgba = white_pixel_image.to_rgba8();
@@ -339,7 +332,6 @@ impl Engine {
             camera_bind_group,
             camera_bind_group_layout, // used for making shaders
             camera_buffer,
-            glyph_brush,
             wgpu_clump,
             size,
             defualt_bind_group_id: white_pixel_id,
@@ -347,11 +339,6 @@ impl Engine {
             pipelines,
             bindgroups,
         })
-    }
-
-    /// Loads in the shader to the cache and returns the index
-    pub fn create_shader(&mut self, path: &str, layouts: Vec<wgpu::BindGroupLayout>, label: Option<&str>) -> Result<ShaderIndex, std::io::Error> {
-        todo!()
     }
 
     /// Checks if a key is down
@@ -539,7 +526,7 @@ impl Engine {
 
     /// Measures a peice of text and gives a Vec2 of the width and height
     pub fn measure_text(&mut self, text: &str, scale: f32) -> Vec2<f32> {
-        text::measure_text(text, &mut self.glyph_brush, scale)
+        todo!()
     }
 
     /// Gets the time since the previous frame or change in time between now and last frame

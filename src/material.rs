@@ -6,8 +6,6 @@ use crate::colour::Colour;
 use crate::rect::Rectangle;
 use crate::render::RenderInformation;
 
-// potentially just store ids to a hashmap to 
-// avoid reproductions
 pub struct Material {
     pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
     vertex_buffer: wgpu::Buffer,
@@ -68,9 +66,11 @@ impl Material {
             None => (engine.defualt_material_bg_id(), Vec2{x: 1.0, y: 1.0})
         };
 
+        let wgpu = engine.get_wgpu();
+
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
         let index_size = std::mem::size_of::<u16>() as u64;
-        let (vertex_buffer, index_buffer) = Self::create_buffers(&engine.get_wgpu().device, vertex_size, index_size);
+        let (vertex_buffer, index_buffer) = Self::create_buffers(&wgpu.device, vertex_size, index_size);
 
         Self {
             pipeline_id,
@@ -123,22 +123,8 @@ impl Material {
         self.index_count += 6 * self.index_size;
     }
 
-    /// Gives the Id to the pipeline and texture in that order
-    pub(crate) fn get_ids(&self) -> (wgpu::Id<wgpu::RenderPipeline>, wgpu::Id<wgpu::BindGroup>) {
-        (self.pipeline_id, self.texture_id)
-    }
+    pub fn add_text(&mut self, text: &str, position: Vec2<f32>, scale: f32, colour: Colour) {
 
-    pub(crate) fn texutre_bindgoup_id(&self) -> wgpu::Id<wgpu::BindGroup> {
-        self.texture_id
-    }
-
-    pub(crate) fn pipeline_id(&self) -> wgpu::Id<wgpu::RenderPipeline> {
-        self.pipeline_id
-    }
-
-    /// Returns a refrence to the vertex and index buffer in that order.
-    pub(crate) fn buffers(&self) -> (&wgpu::Buffer, &wgpu::Buffer) {
-        (&self.vertex_buffer, &self.index_buffer)
     }
 
     pub fn get_vertex_number(&self) -> u64 {
@@ -147,6 +133,10 @@ impl Material {
 
     pub fn get_index_number(&self) -> u64 {
         self.index_count / self.index_size
+    }
+
+    pub fn get_texture_size(&self) -> Vec2<f32> {
+        self.texture_size
     }
 
     fn grow_vertex_buffer(&mut self, wgpu: &WgpuClump) {

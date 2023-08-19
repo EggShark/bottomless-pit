@@ -8,7 +8,6 @@ use bottomless_pit::vectors::Vec2;
 fn main() {
     let mut engine = EngineBuilder::new()
         .set_clear_colour(Colour::BLACK)
-        .set_target_fps(12)
         .build()
         .unwrap();
 

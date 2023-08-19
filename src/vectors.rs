@@ -19,6 +19,18 @@ impl<T> Vec2<T> {
     }
 }
 
+impl<T> From<Vec2<T>> for (T, T) {
+    fn from(value: Vec2<T>) -> Self {
+        (value.x, value.y)
+    }
+}
+
+impl From<Vec2<u32>> for glyphon::Resolution {
+    fn from(value: Vec2<u32>) -> Self {
+        Self {width: value.x, height: value.y}
+    }
+}
+
 /// A generic representation of 3D data
 #[derive(Clone, Copy, Debug)]
 pub struct Vec3<T> {

@@ -4,7 +4,7 @@
 use crate::colour::Colour;
 use crate::engine_handle::{Engine, WgpuCache, WgpuClump};
 use crate::Game;
-use crate::material::Material;
+use crate::text::Text;
 use crate::vectors::Vec2;
 
     /// draws a textured rectangle, however it will draw the entire texture

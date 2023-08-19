@@ -1,48 +1,47 @@
+use glyphon::{Edit, FontSystem, SwashCache, TextAtlas, TextArea, TextBounds};
+
 use crate::colour::Colour;
+use crate::render::RenderInformation;
 use crate::vectors::Vec2;
-use crate::wgpu_glyph;
-use crate::wgpu_glyph::GlyphCruncher;
-#[derive(Debug)]
-pub(crate) struct Text {
-    pub(crate) text: String,
-    pub(crate) scale: f32,
-    pub(crate) position: Vec2<f32>,
-    pub(crate) colour: Colour,
+
+pub struct TextRenderer {
+    font_system: FontSystem,
+    cache: SwashCache,
+    atlas: TextAtlas,
+    text_renderer: glyphon::TextRenderer,
 }
 
-#[derive(Debug)]
-pub(crate) struct TransformedText {
-    pub(crate) text: String,
-    pub(crate) scale: f32,
-    pub(crate) position: Vec2<f32>,
-    pub(crate) colour: Colour,
-    pub(crate) bounds: (f32, f32),
-    pub(crate) transformation: [f32; 16],
-}
-
-pub(crate) fn measure_text(
-    text: &str,
-    brush: &mut wgpu_glyph::GlyphBrush<()>,
-    scale: f32,
-) -> Vec2<f32> {
-    let section = wgpu_glyph::Section {
-        text: vec![wgpu_glyph::Text::new(text).with_scale(scale)],
-        screen_position: (1.0, 1.0),
-        bounds: (f32::MAX, f32::MAX),
-        ..Default::default()
-    };
-
-    let rect = brush
-        .glyph_bounds(section)
-        .unwrap_or(wgpu_glyph::ab_glyph::Rect {
-            max: wgpu_glyph::ab_glyph::point(0.0, 0.0),
-            min: wgpu_glyph::ab_glyph::point(0.0, 0.0),
-        });
-
-    let width = rect.width();
-    let height = rect.height();
-    Vec2 {
-        x: width,
-        y: height,
+impl TextRenderer {
+    pub fn draw_text<'pass, 'others>(&mut self, text: &'others Text, renderer: &'others mut RenderInformation<'pass, 'others>) where 'others: 'pass {
+        let device = &renderer.wgpu.device;
+        let queue = &renderer.wgpu.queue;
+        self.text_renderer.prepare(
+            device,
+            queue,
+            &mut self.font_system,
+            &mut self.atlas,
+            renderer.size.into(),
+            [TextArea {
+                buffer: &text.text_buffer,
+                left: text.pos.x,
+                top: text.pos.y,
+                scale: text.scale,
+                bounds: TextBounds {
+                    left: text.bounds.x.x,
+                    top: text.bounds.x.y,
+                    right: text.bounds.y.x,
+                    bottom: text.bounds.y.y,
+                },
+                default_color: glyphon::Color::rgb(255, 255, 255),
+            }],
+            &mut self.cache,
+        );
     }
+}
+
+pub struct Text {
+    pos: Vec2<f32>,
+    scale: f32,
+    bounds: Vec2<Vec2<i32>>,
+    text_buffer: glyphon::Buffer,
 }
