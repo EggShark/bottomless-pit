@@ -87,10 +87,10 @@ impl Colour {
 
     pub fn from_rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self {
-            r,
-            g,
-            b,
-            a,
+            r: r / 255.0,
+            g: g / 255.0,
+            b: b / 255.0,
+            a: a / 255.0,
         }
     }
 
@@ -116,6 +116,17 @@ impl From<Colour> for wgpu::Color {
             b: value.b as f64,
             a: value.a as f64,
         }
+    }
+}
+
+impl From<Colour> for glyphon::Color {
+    fn from(value: Colour) -> Self {
+        // should work as it is always a number betweeon 1-0
+        let r = (value.r * 255.0) as u8;
+        let g = (value.g * 255.0) as u8;
+        let b = (value.b * 255.0) as u8;
+        let a = (value.a * 255.0) as u8;
+        Self::rgba(r, g, b, a)
     }
 }
 

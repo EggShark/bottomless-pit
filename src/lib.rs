@@ -49,7 +49,7 @@ pub mod material;
 mod rect;
 mod resource_cache;
 pub mod render;
-mod text;
+pub mod text;
 pub mod texture;
 pub mod vectors;
 pub mod shader;

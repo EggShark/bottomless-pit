@@ -21,7 +21,7 @@ winit = "0.28.2"
 cgmath = "0.18.0"
 glyph_brush = "0.7"
 spin_sleep = "1.1.1"
-glyphon = "0.3.0"
+glyphon = {git="https://github.com/grovesNL/glyphon/", branch = "main"}
 
 [dependencies.wgpu]
 version = "0.17"
