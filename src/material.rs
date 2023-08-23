@@ -21,39 +21,6 @@ pub struct Material {
 }
 
 impl Material {
-    pub(crate) fn new(device: &wgpu::Device, pipe_id: wgpu::Id<wgpu::RenderPipeline>, texture_id: wgpu::Id<wgpu::BindGroup>) -> Self {
-        let vertex_size = std::mem::size_of::<Vertex>() as u64;
-        let index_size = std::mem::size_of::<u16>() as u64;
-        // draw 100 verticies and indicies before you need to re-allocate I think this is reasonable
-        // buffer is 3.2 killobytes with current config
-        let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Vertex_Buffer"),
-            size: vertex_size * 100,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        // this is just 200 bytes pretty small
-        let index_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Index_Buffer"),
-            size: index_size * 100,
-            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        Self {
-            pipeline_id: pipe_id,
-            vertex_buffer,
-            vertex_count: 0,
-            vertex_size,
-            index_buffer,
-            index_count: 0,
-            index_size,
-            texture_id,
-            texture_size: Vec2{x: 1.0, y: 1.0},
-        }
-    }
-
     fn from_builder(builder: MaterialBuilder, engine: &mut Engine) -> Self {
         let pipeline_id = engine.defualt_pipe_id();
         let (texture_id, texture_size) = match builder.texture_change {
@@ -89,10 +56,109 @@ impl Material {
         let window_size = render.size;
         let wgpu = render.wgpu;
         let verts =
-            Rectangle::from_pixels(position, [size.x, size.y], colour.to_raw(), window_size).into_vertices();
+            Rectangle::from_pixels(position, size, colour.to_raw(), window_size).into_vertices();
 
+        self.push_rectangle(wgpu, verts);
+    }
+
+    pub fn add_screenspace_rectangle(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
+        let wgpu = render.wgpu;
+
+        let verts = Rectangle::new(position, size, colour.to_raw());
+        self.push_rectangle(wgpu, verts.into_vertices());
+    }
+
+    pub fn add_rectangle_with_uv(&mut self, position: Vec2<f32>, size: Vec2<f32>, uv_position: Vec2<f32>, uv_size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
+        let wgpu = render.wgpu;
+        let window_size = render.size;
+
+        let verts = 
+            Rectangle::from_pixels_with_uv(position, size, colour.to_raw(), window_size, uv_position, uv_size)
+            .into_vertices();
+
+        self.push_rectangle(wgpu, verts);
+    }
+
+    pub fn add_rectangle_rotation(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, render: &RenderInformation) {
+        let wgpu = render.wgpu;
+        let window_size = render.size;
+
+        let verts = Rectangle::from_pixels_with_rotation(position, size, colour.to_raw(), window_size, rotation)
+            .into_vertices();
+
+        self.push_rectangle(wgpu, verts);
+    }
+
+    pub fn add_rectangle_ex(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, uv_position: Vec2<f32>, uv_size: Vec2<f32>, render: &RenderInformation) {
+        let wgpu = render.wgpu;
+        let window_size = render.size;
+
+        let verts = 
+            Rectangle::from_pixels_ex(position, size, colour.to_raw(), window_size, rotation, uv_position, uv_size)
+            .into_vertices();
+
+        self.push_rectangle(wgpu, verts);
+    }
+    
+    pub fn add_triangle(&mut self, p1: Vec2<f32>, p2: Vec2<f32>, p3: Vec2<f32>, colour: Colour, render: &RenderInformation) {
+        let window_size = render.size;
+        let wgpu = render.wgpu;
+
+        let colour = colour.to_raw();
+        let tex_coords = [0.0, 0.0];
+
+        let verts = [
+            Vertex::from_2d([p1.x, p1.y], tex_coords, colour)
+                .pixels_to_screenspace(window_size),
+            Vertex::from_2d([p2.x, p2.y], tex_coords, colour)
+                .pixels_to_screenspace(window_size),
+            Vertex::from_2d([p3.x, p3.y], tex_coords, colour)
+                .pixels_to_screenspace(window_size),
+        ];
+
+        self.push_triangle(wgpu, verts);
+    }
+
+    pub fn add_triangle_with_coloured_verticies(
+        &mut self,
+        p1: Vec2<f32>,
+        p2: Vec2<f32>,
+        p3: Vec2<f32>,
+        c1: Colour,
+        c2: Colour,
+        c3: Colour,
+        render: &RenderInformation,
+    ) {
+        let window_size = render.size;
+        let wgpu = render.wgpu;
+
+        let tex_coords = [0.0, 0.0];
+        let verts = [
+            Vertex::from_2d([p1.x, p1.y], tex_coords, c1.to_raw())
+                .pixels_to_screenspace(window_size),
+            Vertex::from_2d([p2.x, p2.y], tex_coords, c2.to_raw())
+                .pixels_to_screenspace(window_size),
+            Vertex::from_2d([p3.x, p3.y], tex_coords, c3.to_raw())
+                .pixels_to_screenspace(window_size)
+        ];
+
+        self.push_triangle(wgpu, verts);
+    }
+
+    pub fn get_vertex_number(&self) -> u64 {
+        self.vertex_count / self.vertex_size
+    }
+
+    pub fn get_index_number(&self) -> u64 {
+        self.index_count / self.index_size
+    }
+
+    pub fn get_texture_size(&self) -> Vec2<f32> {
+        self.texture_size
+    }
+
+    fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {
         let max_verts = self.vertex_buffer.size();
-
         if self.vertex_count + (4 * self.vertex_size) > max_verts {
             self.grow_vertex_buffer(wgpu);
         }
@@ -123,20 +189,38 @@ impl Material {
         self.index_count += 6 * self.index_size;
     }
 
-    pub fn add_text(&mut self, text: &str, position: Vec2<f32>, scale: f32, colour: Colour) {
+    fn push_triangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 3]) {
+        let max_verts = self.vertex_buffer.size();
+        if self.vertex_count + (3 * self.vertex_size) > max_verts {
+            self.grow_vertex_buffer(wgpu);
+        }
 
-    }
+        let num_verts = self.get_vertex_number() as u16;
+        // yes its wastefull to do this but this is the only way to not have
+        // it mess up other drawings while also allowing triangles
+        let indicies = [
+            num_verts, 1 + num_verts, 2 + num_verts,
+            num_verts, 1 + num_verts, 2 + num_verts,
+        ];
 
-    pub fn get_vertex_number(&self) -> u64 {
-        self.vertex_count / self.vertex_size
-    }
+        let max_indicies = self.index_buffer.size();
+        if self.index_count + (6 * self.index_size) > max_indicies {
+            self.grow_index_buffer(wgpu);
+        }
 
-    pub fn get_index_number(&self) -> u64 {
-        self.index_count / self.index_size
-    }
+        wgpu.queue.write_buffer(
+            &self.vertex_buffer,
+            self.vertex_count,
+            bytemuck::cast_slice(&verts),
+        );
+        wgpu.queue.write_buffer(
+            &self.index_buffer,
+            self.index_count,
+            bytemuck::cast_slice(&indicies),
+        );
 
-    pub fn get_texture_size(&self) -> Vec2<f32> {
-        self.texture_size
+        self.vertex_count += 3 * self.vertex_size;
+        self.index_count += 6 * self.index_size;
     }
 
     fn grow_vertex_buffer(&mut self, wgpu: &WgpuClump) {
@@ -239,7 +323,7 @@ impl Material {
 }
 
 // uniform support??
-pub struct MaterialBuilder <'a> {
+pub struct MaterialBuilder<'a> {
     // using options to denote a change from the default
     // in the case of a texture the defualt is just the White_Pixel
     texture_change: Option<Texture>,

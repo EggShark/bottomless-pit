@@ -18,11 +18,9 @@ use std::collections::HashMap;
 use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
 use crate::render::{make_pipeline, render};
-use crate::text;
 use crate::vectors::Vec2;
 use crate::vertex::{Vertex, LineVertex};
 use crate::WHITE_PIXEL;
-use crate::wgpu_glyph;
 use crate::{Game, IDENTITY_MATRIX, layouts};
 
 pub(crate) type WgpuCache<T> = HashMap<wgpu::Id<T>, T>;

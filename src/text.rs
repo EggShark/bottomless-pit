@@ -88,6 +88,10 @@ impl Text {
         self.text_buffer.set_text(&mut text_handle.font_system, text, Attrs::new().color(colour.into()), Shaping::Basic);
     }
 
+    pub fn set_bounds(&mut self, position: Vec2<i32>, size: Vec2<i32>) {
+        self.bounds = Vec2{x: position, y: position + size};
+    }
+
     pub fn set_font_size(&mut self, new_size: f32, text_handle: &mut TextRenderer) {
         self.font_size = new_size;
         let metrics = Metrics::new(self.font_size, self.line_height);

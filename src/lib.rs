@@ -54,7 +54,6 @@ pub mod texture;
 pub mod vectors;
 pub mod shader;
 mod vertex;
-mod wgpu_glyph;
 
 use engine_handle::Engine;
 use render::RenderInformation;
