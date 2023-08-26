@@ -28,6 +28,22 @@ impl TextRenderer {
         }
     }
 
+    pub fn measure_str(&mut self, text: &str, font_size: f32, line_height: f32, engine: &Engine) -> Vec2<f32> {
+        let mut buffer = glyphon::Buffer::new(&mut self.font_system, Metrics::new(font_size, line_height));
+        let size = engine.get_window_size();
+        let scale_factor = engine.get_window_scale_factor();
+        let phyisical_width = (size.x as f64 * scale_factor) as f32;
+        let phyiscal_hieght = (size.y as f64 * scale_factor) as f32;
+
+        buffer.set_size(&mut self.font_system, phyisical_width, phyiscal_hieght);
+        buffer.set_text(&mut self.font_system, text, Attrs::new(), Shaping::Basic);
+
+        let hieght = buffer.lines.len() as f32 * buffer.metrics().line_height;
+        let run_width = buffer.layout_runs().map(|run| run.line_w).max_by(f32::total_cmp).unwrap_or(0.0);
+
+        Vec2{x: run_width, y: hieght}
+    }
+
     pub fn draw_text<'pass, 'others>(&'others mut self, text: &'others Text, renderer: &mut RenderInformation<'pass, 'others>) where 'others: 'pass {
         let device = &renderer.wgpu.device;
         let queue = &renderer.wgpu.queue;
@@ -102,5 +118,12 @@ impl Text {
         self.line_height = new_height;
         let metrics = Metrics::new(self.font_size, self.line_height);
         self.text_buffer.set_metrics(&mut text_handle.font_system, metrics);
+    }
+
+    pub fn get_measurements(&self) -> Vec2<f32> {
+        let hieght = self.text_buffer.lines.len() as f32 * self.text_buffer.metrics().line_height;
+        let run_width = self.text_buffer.layout_runs().map(|run| run.line_w).max_by(f32::total_cmp).unwrap_or(0.0);
+
+        Vec2{x: run_width, y: hieght}
     }
 }

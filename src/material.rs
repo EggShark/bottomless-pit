@@ -1,3 +1,4 @@
+use crate::matrix_math::normalize_points;
 use crate::texture::Texture;
 use crate::vertex::Vertex;
 use crate::engine_handle::{WgpuClump, Engine};
@@ -71,6 +72,8 @@ impl Material {
     pub fn add_rectangle_with_uv(&mut self, position: Vec2<f32>, size: Vec2<f32>, uv_position: Vec2<f32>, uv_size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
         let wgpu = render.wgpu;
         let window_size = render.size;
+        let uv_size = normalize_points(uv_size, self.texture_size.x, self.texture_size.y);
+        let uv_position = normalize_points(uv_position, self.texture_size.x, self.texture_size.y);
 
         let verts = 
             Rectangle::from_pixels_with_uv(position, size, colour.to_raw(), window_size, uv_position, uv_size)
@@ -79,7 +82,7 @@ impl Material {
         self.push_rectangle(wgpu, verts);
     }
 
-    pub fn add_rectangle_rotation(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, render: &RenderInformation) {
+    pub fn add_rectangle_with_rotation(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, render: &RenderInformation) {
         let wgpu = render.wgpu;
         let window_size = render.size;
 
@@ -92,6 +95,8 @@ impl Material {
     pub fn add_rectangle_ex(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, uv_position: Vec2<f32>, uv_size: Vec2<f32>, render: &RenderInformation) {
         let wgpu = render.wgpu;
         let window_size = render.size;
+        let uv_size = normalize_points(uv_size, self.texture_size.x, self.texture_size.y);
+        let uv_position = normalize_points(uv_position, self.texture_size.x, self.texture_size.y);
 
         let verts = 
             Rectangle::from_pixels_ex(position, size, colour.to_raw(), window_size, rotation, uv_position, uv_size)
