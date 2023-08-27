@@ -47,12 +47,10 @@ mod layouts;
 pub mod matrix_math;
 pub mod material;
 mod rect;
-mod resource_cache;
 pub mod render;
 pub mod text;
 pub mod texture;
 pub mod vectors;
-pub mod shader;
 mod vertex;
 
 use engine_handle::Engine;

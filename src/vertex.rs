@@ -1,6 +1,5 @@
-use crate::IDENTITY_MATRIX;
 use crate::vectors::Vec2;
-use crate::matrix_math::{calculate_rotation_matrix, unflatten_matrix};
+use crate::matrix_math::calculate_rotation_matrix;
 use cgmath::{Vector4, Matrix4, Transform};
 
 #[repr(C)]
@@ -53,9 +52,15 @@ impl Vertex {
     }
 
     pub(crate) fn rotate(mut self, rotation: f32, center: Vec2<f32>) -> Self {
-        let rotaion_matrix = unflatten_matrix(calculate_rotation_matrix(rotation));
+        let rotaion_matrix = calculate_rotation_matrix(rotation);
         let translation_matrix = Matrix4::from_translation(cgmath::vec3(center.x, center.y, 0.0));
-        let inverse_translation = translation_matrix.inverse_transform().unwrap_or(unflatten_matrix(IDENTITY_MATRIX));
+        let inverse_translation = translation_matrix.inverse_transform()
+            .unwrap_or(cgmath::Matrix4::new(
+                1.0, 0.0, 0.0, 0.0,
+                0.0, 1.0, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0,
+            ));
         let vec4 = Vector4::new(self.position[0], self.position[1], 1.0, 1.0);
         let out = translation_matrix * rotaion_matrix * inverse_translation * vec4;
 

@@ -7,6 +7,8 @@ use crate::colour::Colour;
 use crate::rect::Rectangle;
 use crate::render::RenderInformation;
 
+/// A material represents a unique combination of a Texture
+/// and RenderPipeline, while also containing all nessicary buffers
 pub struct Material {
     pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
     vertex_buffer: wgpu::Buffer,
@@ -22,6 +24,7 @@ pub struct Material {
 }
 
 impl Material {
+    /// Takes a MaterialBuilder and turns it into a Material
     fn from_builder(builder: MaterialBuilder, engine: &mut Engine) -> Self {
         let pipeline_id = engine.defualt_pipe_id();
         let (texture_id, texture_size) = match builder.texture_change {
@@ -53,6 +56,7 @@ impl Material {
         }
     }
 
+    /// Will queue a Rectangle to be draw.
     pub fn add_rectangle(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
         let window_size = render.size;
         let wgpu = render.wgpu;
@@ -62,6 +66,7 @@ impl Material {
         self.push_rectangle(wgpu, verts);
     }
 
+    /// Queues a rectangle using WGSL cordinate space. (0, 0) is the center of the screen and (-1, 1) is the top left corner
     pub fn add_screenspace_rectangle(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
         let wgpu = render.wgpu;
 
@@ -69,6 +74,8 @@ impl Material {
         self.push_rectangle(wgpu, verts.into_vertices());
     }
 
+    /// Queues a rectagnle with UV coordniates. The position and size of the UV cordniates are the same as the pixels in the 
+    /// actaul image.
     pub fn add_rectangle_with_uv(&mut self, position: Vec2<f32>, size: Vec2<f32>, uv_position: Vec2<f32>, uv_size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
         let wgpu = render.wgpu;
         let window_size = render.size;
@@ -82,6 +89,7 @@ impl Material {
         self.push_rectangle(wgpu, verts);
     }
 
+    /// Queues a rectangle that will be rotated around its centerpoint. Rotation is in degrees
     pub fn add_rectangle_with_rotation(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, render: &RenderInformation) {
         let wgpu = render.wgpu;
         let window_size = render.size;
@@ -92,6 +100,7 @@ impl Material {
         self.push_rectangle(wgpu, verts);
     }
 
+    /// Queues a rectangle with both UV, and Rotation,
     pub fn add_rectangle_ex(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, uv_position: Vec2<f32>, uv_size: Vec2<f32>, render: &RenderInformation) {
         let wgpu = render.wgpu;
         let window_size = render.size;
@@ -105,6 +114,18 @@ impl Material {
         self.push_rectangle(wgpu, verts);
     }
     
+    /// Queues a rectangle with both UV, and Rotation, but will draw the rectangle in WGSL screenspace
+    pub fn add_screenspace_rectangle_ex(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, uv_position: Vec2<f32>, uv_size: Vec2<f32>, render: &RenderInformation) {
+        let wgpu = render.wgpu;
+        
+        let verts = 
+            Rectangle::new_ex(position, size, colour.to_raw(), rotation, uv_position, uv_size)
+            .into_vertices();
+
+        self.push_rectangle(wgpu, verts);
+    }
+
+    /// Queues a traingle, the points must be provided in clockwise order
     pub fn add_triangle(&mut self, p1: Vec2<f32>, p2: Vec2<f32>, p3: Vec2<f32>, colour: Colour, render: &RenderInformation) {
         let window_size = render.size;
         let wgpu = render.wgpu;
@@ -124,6 +145,8 @@ impl Material {
         self.push_triangle(wgpu, verts);
     }
 
+    /// Queues a triangle where each vertex is given its own colour. Points must be given
+    /// in clockwise order
     pub fn add_triangle_with_coloured_verticies(
         &mut self,
         p1: Vec2<f32>,
@@ -150,14 +173,17 @@ impl Material {
         self.push_triangle(wgpu, verts);
     }
 
+    /// Returns the number of verticies in the buffer
     pub fn get_vertex_number(&self) -> u64 {
         self.vertex_count / self.vertex_size
     }
 
+    /// Returns the number if indincies in the buffer
     pub fn get_index_number(&self) -> u64 {
         self.index_count / self.index_size
     }
 
+    // Returns the size of the texture in pixels
     pub fn get_texture_size(&self) -> Vec2<f32> {
         self.texture_size
     }
@@ -327,7 +353,7 @@ impl Material {
     }
 }
 
-// uniform support??
+/// A builder struct used to create Materials
 pub struct MaterialBuilder<'a> {
     // using options to denote a change from the default
     // in the case of a texture the defualt is just the White_Pixel
@@ -336,6 +362,7 @@ pub struct MaterialBuilder<'a> {
 }
 
 impl<'a> MaterialBuilder<'a> {
+    /// Creates a new MaterialBuilder
     pub fn new() -> Self {
         Self {
             texture_change: None,
@@ -343,6 +370,7 @@ impl<'a> MaterialBuilder<'a> {
         }
     }
 
+    /// Adds a Texture to the Material
     pub fn add_texture(self, texture: Texture) -> Self {
         Self {
             texture_change: Some(texture),
@@ -350,6 +378,8 @@ impl<'a> MaterialBuilder<'a> {
         }
     }
 
+    /// Sets the bindgroup layouts for the pipeline, used if you want to create
+    /// your own shader
     pub fn set_layouts(self, layouts: &'a [wgpu::BindGroupLayout]) -> Self {
         Self {
             texture_change: self.texture_change,
@@ -357,6 +387,7 @@ impl<'a> MaterialBuilder<'a> {
         }
     }
 
+    /// Turns the builder into a Material
     pub fn build(self, engine_handle: &mut Engine) -> Material {
         Material::from_builder(self, engine_handle)
     }

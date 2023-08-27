@@ -5,6 +5,8 @@ use crate::engine_handle::Engine;
 use crate::render::RenderInformation;
 use crate::vectors::Vec2;
 
+/// Stores Important information nessicary to rendering text. Only on of these should
+/// be created per application.
 pub struct TextRenderer {
     font_system: FontSystem,
     cache: SwashCache,
@@ -28,6 +30,7 @@ impl TextRenderer {
         }
     }
 
+    /// Takes an &str with measurments and gives out the width and hieght of the possible text
     pub fn measure_str(&mut self, text: &str, font_size: f32, line_height: f32, engine: &Engine) -> Vec2<f32> {
         let mut buffer = glyphon::Buffer::new(&mut self.font_system, Metrics::new(font_size, line_height));
         let size = engine.get_window_size();
@@ -44,6 +47,7 @@ impl TextRenderer {
         Vec2{x: run_width, y: hieght}
     }
 
+    /// Takes an refrence to Text and renders it to the screen
     pub fn draw_text<'pass, 'others>(&'others mut self, text: &'others Text, renderer: &mut RenderInformation<'pass, 'others>) where 'others: 'pass {
         let device = &renderer.wgpu.device;
         let queue = &renderer.wgpu.queue;
@@ -73,6 +77,7 @@ impl TextRenderer {
     }
 }
 
+/// Represents a section of Text. One should be created per widget of text
 pub struct Text {
     pos: Vec2<f32>,
     font_size: f32,
@@ -100,26 +105,32 @@ impl Text {
         }
     }
 
+    /// Sets the text for the widget. This only needs to be done once, not every frame like Materials
     pub fn set_text(&mut self, text: &str, colour: Colour, text_handle: &mut TextRenderer) {
         self.text_buffer.set_text(&mut text_handle.font_system, text, Attrs::new().color(colour.into()), Shaping::Basic);
     }
 
+    /// Sets bounds for the text. Any text drawn outside of the bounds will be cropped
     pub fn set_bounds(&mut self, position: Vec2<i32>, size: Vec2<i32>) {
-        self.bounds = Vec2{x: position, y: position + size};
+        self.bounds = Vec2{x: position, y: size};
     }
 
+
+    /// Sets the font size of the text
     pub fn set_font_size(&mut self, new_size: f32, text_handle: &mut TextRenderer) {
         self.font_size = new_size;
         let metrics = Metrics::new(self.font_size, self.line_height);
         self.text_buffer.set_metrics(&mut text_handle.font_system, metrics)
     }
 
+    /// Sets the line hieght of the tex
     pub fn set_line_height(&mut self, new_height: f32, text_handle: &mut TextRenderer) {
         self.line_height = new_height;
         let metrics = Metrics::new(self.font_size, self.line_height);
         self.text_buffer.set_metrics(&mut text_handle.font_system, metrics);
     }
 
+    /// Measuers the text contained within the widget
     pub fn get_measurements(&self) -> Vec2<f32> {
         let hieght = self.text_buffer.lines.len() as f32 * self.text_buffer.metrics().line_height;
         let run_width = self.text_buffer.layout_runs().map(|run| run.line_w).max_by(f32::total_cmp).unwrap_or(0.0);

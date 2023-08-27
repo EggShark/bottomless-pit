@@ -72,6 +72,8 @@ impl Colour {
         a: 1.0
     };
 
+    /// Takes a hex string like `#805E4E` and turns into a colour. Can fail if an 
+    /// invaild string is provided
     pub fn from_hex(hex_str: &str) -> Result<Self, std::num::ParseIntError> {
         let colour_values = i32::from_str_radix(hex_str, 16)?;
         let b = colour_values % 0x100;
@@ -85,6 +87,7 @@ impl Colour {
         })
     }
 
+    /// Creates a colour from seperate values beteen 0.0 and 255.0
     pub fn from_rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self {
             r: r / 255.0,
@@ -94,6 +97,8 @@ impl Colour {
         }
     }
 
+    /// Interpolates between two colours by the specified fraction which should be between 1.0 
+    /// and 0.0
     pub fn linear_interpolation(start: Colour, end: Colour, fraction: f32) -> Self {
         Self {
             r: (end.r - start.r) * fraction + start.r,

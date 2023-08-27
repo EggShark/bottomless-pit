@@ -8,13 +8,16 @@ use image::{GenericImageView, ImageError};
 use std::fmt::Display;
 use std::io::Error;
 
+/// Contains all the information need to render an image/texture to the screen.
+/// In order to be used it must be put inside a Material
 pub struct Texture {
-    pub view: wgpu::TextureView,
+    pub(crate) _view: wgpu::TextureView,
     pub(crate) bind_group: wgpu::BindGroup,
     pub(crate) size: Vec2<f32>,
 }
 
 impl Texture {
+    /// Attempts to load an image from a byte array
     pub fn from_bytes(
         engine: &Engine,
         label: Option<&str>,
@@ -24,6 +27,7 @@ impl Texture {
         Ok(Self::from_image(engine, img, label))
     }
 
+    /// Attempts to both read a file at the specified path and turn it into an iamge
     pub fn from_path(
         engine: &Engine,
         label: Option<&str>,
@@ -104,13 +108,15 @@ impl Texture {
         };
 
         Self {
-            view,
+            _view: view,
             bind_group,
             size,
         }
     }
 }
 
+/// Loading a texture can fail in two senarios. Either the file cant be opened, or the
+/// file loaded is not a supported image file type.
 #[derive(Debug)]
 pub enum TextureError {
     IoError(Error),

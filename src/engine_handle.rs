@@ -5,7 +5,6 @@
 
 use image::{GenericImageView, ImageError};
 use spin_sleep::SpinSleeper;
-use std::borrow::BorrowMut;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
@@ -43,7 +42,6 @@ pub struct Engine {
     config: wgpu::SurfaceConfiguration,
     camera_matrix: [f32; 16],
     camera_bind_group: wgpu::BindGroup,
-    camera_bind_group_layout: wgpu::BindGroupLayout, // used for making shaders
     camera_buffer: wgpu::Buffer,
     wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
     size: Vec2<u32>,       // goes here bc normilzing stuff
@@ -328,7 +326,6 @@ impl Engine {
             config,
             camera_matrix,
             camera_bind_group,
-            camera_bind_group_layout, // used for making shaders
             camera_buffer,
             wgpu_clump,
             size,
@@ -520,11 +517,6 @@ impl Engine {
     /// and fragment stage
     pub fn uniform_layout(&self) -> wgpu::BindGroupLayout {
         layouts::create_uniform_layout(&self.wgpu_clump.device)
-    }
-
-    /// Measures a peice of text and gives a Vec2 of the width and height
-    pub fn measure_text(&mut self, text: &str, scale: f32) -> Vec2<f32> {
-        todo!()
     }
 
     /// Gets the time since the previous frame or change in time between now and last frame
