@@ -660,7 +660,8 @@ impl Engine {
     }
 }
 
-/// The main entry point for the Engine
+/// A builder class that helps create an application
+/// with specific details
 pub struct EngineBuilder {
     resolution: (u32, u32),
     full_screen: bool,

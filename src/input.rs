@@ -1,3 +1,16 @@
+//! Contains Both the MouseKey and Key Enums for input
+//! ```rust,no_run
+//! impl Game For Struct {
+//!     fn update(&mut self, engine_handle: &mut Engine) {
+//!         if engine_handle.is_key_down(Key::W) {
+//!             // do something
+//!         }
+//!         if engine_handle.is_mouse_key_down(MouseKey::Left) {
+//!             // do more things
+//!         }
+//!     }
+//! }
+
 use winit::event::{ElementState, KeyboardInput, MouseButton, VirtualKeyCode, WindowEvent};
 
 use crate::vectors::Vec2;

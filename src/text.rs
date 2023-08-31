@@ -1,3 +1,39 @@
+//! Contains the Text Struct used for text widgets and the TextRender which is needed for rendering 
+//! Text widgets
+//! 
+//! How Text Rendering Works
+//! ---
+//! Text rendering works diffrently compared to standard rendering. One of the main diffrences is that
+//! you do not need to set the text buffer every single frame unlike [Material](../material/struct.Material.html)
+//! buffers.
+//!  
+//! Example:
+//! ```rust,no_run
+//! fn main() {
+//!     // assuming you've made a engine handle already
+//!     let mut text_handle = TextRenderer::new(&engine);
+//!     let mut text = Text::new(Vec2{x: 0.0, y: 0.0}, 30.0, 28.0, &mut text_handle, &engine);
+//!     text.set_text("Hello World", Color::WHITE, &mut text_handle);
+//!     
+//!     // construct any struct that implements Game
+//!     let game = UserStruct::new(text, text_buffer);
+//! 
+//!     egnine.run(game);
+//! }
+//! 
+//! impl Game for UserStruct {
+//!     fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
+//!         // notice how you dont need to set the text every frame
+//!         self.text_handle.draw_text(&self.text, &mut render_handle);
+//!     }
+//! 
+//!     fn update(&mut self, engine_handle: &mut Engine) {
+//!         // nothing, you dont need to update the text buffer
+//!     }
+//! }
+//! 
+//! ```
+
 use glyphon::{FontSystem, SwashCache, TextAtlas, TextArea, TextBounds, Metrics, Attrs, Shaping};
 
 use crate::colour::Colour;

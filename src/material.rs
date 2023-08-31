@@ -1,3 +1,16 @@
+//! Contains the Material and MaterialBuilder struct which are needed
+//! for anything to be rendered
+//! ```rust,no_run
+//! // Simple code to draw a 100x100 red rectangle to the screen
+//! let defualt_material = MaterialBuilder::new().build();
+//! 
+//! impl Game for Struct {
+//!     fn render<'pass, 'others>(&mut Self, mut renderer: RenderInformation<'pass, 'others>) where 'others: 'pass {
+//!         self.defualt_material.add_rectangle(Vec2{x: 0.0, y: 0.0}, Vec2{x: 100.0, y: 100.0}, Colour::RED, &renderer);
+//!         self.default_material.draw(&mut renderer);
+//!     }
+//! }
+
 use crate::matrix_math::normalize_points;
 use crate::texture::Texture;
 use crate::vertex::Vertex;

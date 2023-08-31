@@ -9,7 +9,7 @@ use std::fmt::Display;
 use std::io::Error;
 
 /// Contains all the information need to render an image/texture to the screen.
-/// In order to be used it must be put inside a Material
+/// In order to be used it must be put inside a [Material](../material/struct.Material.html)
 pub struct Texture {
     pub(crate) _view: wgpu::TextureView,
     pub(crate) bind_group: wgpu::BindGroup,
