@@ -7,6 +7,7 @@ use crate::vectors::Vec2;
 use image::{GenericImageView, ImageError};
 use std::fmt::Display;
 use std::io::Error;
+use std::path::Path;
 
 /// Contains all the information need to render an image/texture to the screen.
 /// In order to be used it must be put inside a [Material](../material/struct.Material.html)
@@ -28,11 +29,11 @@ impl Texture {
     }
 
     /// Attempts to both read a file at the specified path and turn it into an iamge
-    pub fn from_path(
+    pub fn from_path<P>(
         engine: &Engine,
         label: Option<&str>,
-        path: &str,
-    ) -> Result<Self, TextureError> {
+        path: P,
+    ) -> Result<Self, TextureError> where P: AsRef<Path> {
         let bytes = std::fs::read(path)?;
         let out = Self::from_bytes(engine, label, &bytes)?;
         Ok(out)
@@ -113,6 +114,37 @@ impl Texture {
             size,
         }
     }
+
+    /// Adds a texture to the internal cache this step must be done
+    /// to add a texture to a [Material](../material/struct.Material.html)
+    /// ```rust
+    /// let texture = Texture::from_path("assets/image.png")?
+    ///     .register(&mut engine);
+    /// 
+    /// let material = MaterialBuilder::new()
+    ///     .add_texture(texutre)
+    ///     .build();
+    /// ```
+    pub fn register(self, engine: &mut Engine) -> RegisteredTexture {
+        let id = self.bind_group.global_id();
+        let size = self.size;
+
+        engine.add_to_bind_group_cache(self.bind_group, id);
+
+        RegisteredTexture {
+            bindgroup_id: id,
+            texture_size: size,
+        }
+    }
+}
+
+/// A struct that contains an Id and the size of a texture stored interally. This
+/// can only be obtained after registering a texture and its only purpose is to 
+/// be added to a [Material](../material/struct.Material.html).
+#[derive(Clone, Copy, Debug)]
+pub struct RegisteredTexture {
+    pub(crate) bindgroup_id: wgpu::Id<wgpu::BindGroup>,
+    pub(crate) texture_size: Vec2<f32>,
 }
 
 /// Loading a texture can fail in two senarios. Either the file cant be opened, or the

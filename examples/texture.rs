@@ -12,7 +12,10 @@ fn main() {
         .with_resolution((400, 400))
         .build()
         .unwrap();
-    let texture = Texture::from_path(&engine, Some("texture"), "../bplogo.png").unwrap();
+    let texture = Texture::from_path(&engine, Some("texture"), "../bplogo.png")
+        .unwrap()
+        .register(&mut engine);
+
     let texture = MaterialBuilder::new().add_texture(texture).build(&mut engine);
     let defualt = MaterialBuilder::new().build(&mut engine);
     

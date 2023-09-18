@@ -48,6 +48,7 @@ pub mod matrix_math;
 pub mod material;
 mod rect;
 pub mod render;
+pub mod shader;
 pub mod text;
 pub mod texture;
 pub mod vectors;

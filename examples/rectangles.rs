@@ -12,7 +12,9 @@ fn main() {
         .build()
         .unwrap();
 
-    let texture = Texture::from_path(&engine, Some("texture"), "../bplogo.png").unwrap();
+    let texture = Texture::from_path(&engine, Some("texture"), "examples/bplogo.png")
+        .unwrap()
+        .register(&mut engine);
     let texture_material = MaterialBuilder::new().add_texture(texture).build(&mut engine);
     let regular_material = MaterialBuilder::new().build(&mut engine);
 

@@ -3,7 +3,7 @@ struct CameraUniform {
 }
 
 struct MousePos {
-    stuff: mat4x4<f32>,
+    stuff: vec2<f32>,
 }
 
 @group(1) @binding(0)
@@ -29,7 +29,7 @@ struct VertexOutput {
 fn vs_main(model: VertexInput) -> VertexOutput {
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
-    out.clip_position = camera.view_proj * mouse.stuff * vec4<f32>(model.position, 1.0); // the vectors on the right the matrices go on the left in order of importance
+    out.clip_position = camera.view_proj * vec4<f32>(model.position, 1.0); // the vectors on the right the matrices go on the left in order of importance
     out.colour = vec4(1.0, 1.0, 1.0, 0.0);
     return out;
 }
@@ -40,5 +40,5 @@ fn vs_main(model: VertexInput) -> VertexOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let pain = mouse.stuff;
-    return vec4(0.1, 0.4, 0.2, 1.0);
+    return vec4(pain.x, pain.y, 1.0, 1.0);
 }

@@ -552,9 +552,17 @@ impl Engine {
         &self.texture_sampler
     }
 
-    /// Used when adding shader options into the bindgroup cahce !
+    pub(crate) fn get_texture_format(&self) -> wgpu::TextureFormat {
+        self.config.format
+    }
+
+    /// Used when adding shader options, and textures into the bindgroup cahce !
     pub(crate) fn add_to_bind_group_cache(&mut self, bind_group: wgpu::BindGroup, key: wgpu::Id<wgpu::BindGroup>) {
         self.bindgroups.insert(key, bind_group);
+    }
+
+    pub(crate) fn add_to_pipeline_cache(&mut self, pipeline: wgpu::RenderPipeline, key: wgpu::Id<wgpu::RenderPipeline>) {
+        self.pipelines.insert(key, pipeline);
     }
 
     pub(crate) fn defualt_material_bg_id(&self) -> wgpu::Id<wgpu::BindGroup> {

@@ -11,14 +11,18 @@
 //!     }
 //! }
 
+use encase::private::WriteInto;
+use encase::ShaderType;
+
 use crate::matrix_math::normalize_points;
-use crate::texture::Texture;
+use crate::texture::RegisteredTexture;
 use crate::vertex::Vertex;
 use crate::engine_handle::{WgpuClump, Engine};
 use crate::vectors::Vec2;
 use crate::colour::Colour;
 use crate::rect::Rectangle;
 use crate::render::RenderInformation;
+use crate::shader::{UniformData, RegisteredShader};
 
 /// A material represents a unique combination of a Texture
 /// and RenderPipeline, while also containing all nessicary buffers
@@ -34,23 +38,33 @@ pub struct Material {
     pub(crate) index_size: u64,
     texture_id: wgpu::Id<wgpu::BindGroup>,
     texture_size: Vec2<f32>,
+    uniform_buffer: Option<wgpu::Buffer>,
+    uniform_bindgroup: Option<wgpu::BindGroup>,
 }
 
 impl Material {
     /// Takes a MaterialBuilder and turns it into a Material
     fn from_builder(builder: MaterialBuilder, engine: &mut Engine) -> Self {
-        let pipeline_id = engine.defualt_pipe_id();
+        let pipeline_id = match builder.shader_change {
+            Some(rs) => rs.pipeline_id,
+            None => engine.defualt_pipe_id(),
+        };
+
         let (texture_id, texture_size) = match builder.texture_change {
-            Some(bg) => {
-                let id = bg.bind_group.global_id();
-                engine.add_to_bind_group_cache(bg.bind_group, id);
-                (id, bg.size)
-            },
+            Some(rt) => (rt.bindgroup_id, rt.texture_size),
             // should just be the size of the white pixel
             None => (engine.defualt_material_bg_id(), Vec2{x: 1.0, y: 1.0})
         };
 
         let wgpu = engine.get_wgpu();
+
+        let uniform_information = match builder.uniform_data {
+            Some(data) => {
+                let (buffer, bg) = data.extract_buffer_and_bindgroup(wgpu);
+                (Some(buffer), Some(bg))
+            },
+            None => (None, None),
+        };
 
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
         let index_size = std::mem::size_of::<u16>() as u64;
@@ -66,6 +80,8 @@ impl Material {
             index_size,
             texture_id,
             texture_size,
+            uniform_buffer: uniform_information.0,
+            uniform_bindgroup: uniform_information.1,
         }
     }
 
@@ -184,6 +200,20 @@ impl Material {
         ];
 
         self.push_triangle(wgpu, verts);
+    }
+
+    pub fn update_uniform_data<T: ShaderType + WriteInto>(&mut self, data: &T, engine: &Engine) {
+        match &self.uniform_buffer {
+            Some(uniform_buffer) => {
+                let wgpu = engine.get_wgpu();
+                let mut buffer = encase::UniformBuffer::new(Vec::new());
+                buffer.write(&data).unwrap();
+                let byte_array = buffer.into_inner();
+
+                wgpu.queue.write_buffer(&uniform_buffer, 0, &byte_array);
+            },
+            None => {},
+        }
     }
 
     /// Returns the number of verticies in the buffer
@@ -334,6 +364,11 @@ impl Material {
         information.render_pass.set_pipeline(pipeline);
         information.render_pass.set_bind_group(0, texture, &[]);
 
+        match &self.uniform_bindgroup {
+            Some(bg) => information.render_pass.set_bind_group(2, bg, &[]),
+            None => {},
+        }
+
         information.render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
         information.render_pass.set_index_buffer(
             self.index_buffer.slice(0..self.vertex_count),
@@ -370,33 +405,45 @@ impl Material {
 pub struct MaterialBuilder<'a> {
     // using options to denote a change from the default
     // in the case of a texture the defualt is just the White_Pixel
-    texture_change: Option<Texture>,
-    pipeline_layouts: &'a [wgpu::BindGroupLayout]
+    texture_change: Option<RegisteredTexture>,
+    shader_change: Option<RegisteredShader>,
+    uniform_data: Option<&'a UniformData>,
 }
 
 impl<'a> MaterialBuilder<'a> {
-    /// Creates a new MaterialBuilder
+    /// Creates a new MaterialBuilder, that contains no texture, custom shaders, or
+    /// uniforms 
     pub fn new() -> Self {
         Self {
             texture_change: None,
-            pipeline_layouts: &[],
+            shader_change: None,
+            uniform_data: None,
         }
     }
 
     /// Adds a Texture to the Material
-    pub fn add_texture(self, texture: Texture) -> Self {
+    pub fn add_texture(self, texture: RegisteredTexture) -> Self {
         Self {
             texture_change: Some(texture),
-            pipeline_layouts: self.pipeline_layouts,
+            shader_change: self.shader_change,
+            uniform_data: self.uniform_data,
         }
     }
 
-    /// Sets the bindgroup layouts for the pipeline, used if you want to create
-    /// your own shader
-    pub fn set_layouts(self, layouts: &'a [wgpu::BindGroupLayout]) -> Self {
+
+    pub fn set_uniform(self, data: &'a UniformData) -> Self {
         Self {
             texture_change: self.texture_change,
-            pipeline_layouts: layouts,
+            shader_change: self.shader_change,
+            uniform_data: Some(data),
+        }
+    }
+
+    pub fn set_shader(self, shader: RegisteredShader) -> Self {
+        Self {
+            texture_change: self.texture_change,
+            shader_change: Some(shader),
+            uniform_data: self.uniform_data,
         }
     }
 
