@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bottomless_pit::Game;
 use bottomless_pit::colour::Colour;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
@@ -9,25 +11,39 @@ use encase::ShaderType;
 
 fn main() {
     let mut engine = EngineBuilder::new()
+        .set_clear_colour(Colour::WHITE)
         .build()
         .unwrap();
 
-    let shader = ShaderBuilder::new(&engine, "examples/solidcolour.wgsl")
+    let mouse_shader = ShaderBuilder::new(&engine, "examples/solidcolour.wgsl")
+        .unwrap()
+        .set_layouts(&[&engine.texture_layout(), &engine.camera_layout(), &engine.uniform_layout()])
+        .register(&mut engine);
+
+    let circle_shader = ShaderBuilder::new(&engine, "examples/circularmovment.wgsl")
         .unwrap()
         .set_layouts(&[&engine.texture_layout(), &engine.camera_layout(), &engine.uniform_layout()])
         .register(&mut engine);
 
     let data = MousePos{x: 0.0, y: 0.0};
-    let uniform_data = UniformData::new(&engine, &data);
+    let mouse_uniform_data = UniformData::new(&engine, &data);
+    let circle_uniform_data = UniformData::new(&engine, &0.0_f32);
 
-    let material = MaterialBuilder::new()
-        .set_shader(shader)
-        .set_uniform(&uniform_data)
+    let mouse_material = MaterialBuilder::new()
+        .set_shader(mouse_shader)
+        .set_uniform(&mouse_uniform_data)
+        .build(&mut engine);
+
+    let circle_material = MaterialBuilder::new()
+        .set_shader(circle_shader)
+        .set_uniform(&circle_uniform_data)
         .build(&mut engine);
 
     let game = ShaderExample {
         data,
-        regular_material: material,
+        mouse_material,
+        circle_material,
+        theta: 0.0,
     };
 
     engine.run(game);
@@ -40,18 +56,27 @@ struct MousePos {
 }
 
 struct ShaderExample {
-    regular_material: Material,
+    mouse_material: Material,
+    circle_material: Material,
     data: MousePos,
+    theta: f32,
 }
 
 impl Game for ShaderExample {
     fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
-        self.regular_material.add_rectangle(Vec2{x: 0.0, y: 0.0}, Vec2{x: 100.0, y: 100.0}, Colour::RED, &render_handle);
+        self.mouse_material.add_rectangle(Vec2{x: 0.0, y: 0.0}, Vec2{x: 100.0, y: 100.0}, Colour::RED, &render_handle);
+        self.circle_material.add_rectangle(Vec2{x: 100.0, y: 100.0}, Vec2{x: 100.0, y: 100.0}, Colour::RED, &render_handle);
 
-        self.regular_material.draw(&mut render_handle);
+
+        self.mouse_material.draw(&mut render_handle);
+        self.circle_material.draw(&mut render_handle);
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
+        let dt = engine_handle.get_frame_delta_time();
+
+        self.theta = (self.theta + dt) % (2.0*PI);
+
         let size = engine_handle.get_window_size();
         let mouse_pos = engine_handle.get_mouse_position();
         let new_data = MousePos{
@@ -59,6 +84,7 @@ impl Game for ShaderExample {
             y: mouse_pos.y/size.y as f32,
         };
         self.data = new_data;
-        self.regular_material.update_uniform_data(&self.data, &engine_handle);
+        self.mouse_material.update_uniform_data(&self.data, &engine_handle);
+        self.circle_material.update_uniform_data(&self.theta, &engine_handle);
     }
 }
