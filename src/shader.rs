@@ -9,13 +9,16 @@ use crate::engine_handle::{Engine, WgpuClump};
 use crate::vertex::Vertex;
 use crate::{layouts, render};
 
-pub struct ShaderBuilder<'a> {
-    shader: wgpu::ShaderModule,
-    layouts: &'a [&'a wgpu::BindGroupLayout],
+/// An internal representation of an WGSL Shader. Under the hood this creates
+/// a new pipeline with or without the support for any extra uniforms. To be utilze 
+/// the shader it must be added to a material
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct Shader {
+    pub(crate) pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
 }
 
-impl<'a> ShaderBuilder<'a> {
-    pub fn new<P: AsRef<Path>>(engine: &Engine, path: P) -> Result<Self, std::io::Error> {
+impl Shader {
+    pub fn new<P: AsRef<Path>>(path: P, has_uniforms: bool, engine: &mut Engine) -> Result<Self, std::io::Error> {
         let wgpu = engine.get_wgpu();
 
         let shader = wgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -23,50 +26,48 @@ impl<'a> ShaderBuilder<'a> {
             source: wgpu::ShaderSource::Wgsl(fs::read_to_string(path)?.into())
         });
 
+        let pipeline = if has_uniforms {
+            render::make_pipeline(
+                &wgpu.device,
+                wgpu::PrimitiveTopology::TriangleList,
+                &[
+                    &layouts::create_texture_layout(&wgpu.device),
+                    &layouts::create_camera_layout(&wgpu.device),
+                    &layouts::create_uniform_layout(&wgpu.device),
+                ],
+                &[Vertex::desc()],
+                &shader,
+                engine.get_texture_format(),
+                Some("User Shader Pipeline"),
+            )
+        } else {
+            render::make_pipeline(
+                &wgpu.device,
+                wgpu::PrimitiveTopology::TriangleList,
+                &[
+                    &layouts::create_texture_layout(&wgpu.device),
+                    &layouts::create_camera_layout(&wgpu.device),
+                ],
+                &[Vertex::desc()],
+                &shader,
+                engine.get_texture_format(),
+                Some("User Shader Pipeline"),
+            )
+        };
+
+        let id = pipeline.global_id();
+        engine.add_to_pipeline_cache(pipeline, id);
+
         Ok(Self {
-            shader,
-            layouts: &[],
+            pipeline_id: id,
         })
     }
-
-    pub fn set_layouts(self, layouts: &'a[&'a wgpu::BindGroupLayout]) -> Self {
-        Self {
-            shader: self.shader,
-            layouts,
-        }
-    }
-
-    pub fn register(self, engine: &mut Engine) -> RegisteredShader {
-        RegisteredShader::from_builder(self, engine)
-    }
 }
 
-pub struct RegisteredShader {
-    pub(crate) pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
-}
-
-impl RegisteredShader {
-    fn from_builder(builder: ShaderBuilder, engine: &mut Engine) -> Self {
-        let device = &engine.get_wgpu().device;
-        let pipeline = render::make_pipeline(
-            device,
-            wgpu::PrimitiveTopology::TriangleList,
-            builder.layouts,
-            &[Vertex::desc()],
-            &builder.shader,
-            engine.get_texture_format(),
-            Some("User Shader Pipeline"),
-        );
-        let pipeline_id = pipeline.global_id();
-
-        engine.add_to_pipeline_cache(pipeline, pipeline_id);
-
-        Self {
-            pipeline_id,
-        }
-    }
-}
-
+/// `UniformData` contains the byte data of any struct that implements
+/// [ShaderType](https://docs.rs/encase/latest/encase/trait.ShaderType.html) which 
+/// can be derived. This data needs to be added to a Material upon creation.
+#[derive(Debug)]
 pub struct UniformData {
     initial_data: Vec<u8>,
     bind_group_layout: wgpu::BindGroupLayout,

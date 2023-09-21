@@ -40,7 +40,7 @@ impl Game for DebugTriangle {
         self.material.draw(&mut render_handle);
     }
 
-    fn update(&mut self, engine_handle: &mut Engine) {
+    fn update(&mut self, _engine_handle: &mut Engine) {
 
     }
 }

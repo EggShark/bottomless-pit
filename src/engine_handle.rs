@@ -43,8 +43,8 @@ pub struct Engine {
     camera_matrix: [f32; 16],
     camera_bind_group: wgpu::BindGroup,
     camera_buffer: wgpu::Buffer,
-    wgpu_clump: WgpuClump, // its very cringe storing this here and not in engine however texture chace requires it
-    size: Vec2<u32>,       // goes here bc normilzing stuff
+    wgpu_clump: WgpuClump,
+    size: Vec2<u32>,
     defualt_bind_group_id: wgpu::Id<wgpu::BindGroup>,
     default_pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
     pub(crate) pipelines: WgpuCache<wgpu::RenderPipeline>,

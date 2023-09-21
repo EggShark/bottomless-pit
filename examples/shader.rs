@@ -5,7 +5,7 @@ use bottomless_pit::colour::Colour;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::material::{MaterialBuilder, Material};
 use bottomless_pit::render::RenderInformation;
-use bottomless_pit::shader::{ShaderBuilder, UniformData};
+use bottomless_pit::shader::{Shader, UniformData};
 use bottomless_pit::vectors::Vec2;
 use encase::ShaderType;
 
@@ -15,15 +15,11 @@ fn main() {
         .build()
         .unwrap();
 
-    let mouse_shader = ShaderBuilder::new(&engine, "examples/solidcolour.wgsl")
-        .unwrap()
-        .set_layouts(&[&engine.texture_layout(), &engine.camera_layout(), &engine.uniform_layout()])
-        .register(&mut engine);
+    let mouse_shader = Shader::new("examples/mouse.wgsl", true, &mut engine)
+        .unwrap();
 
-    let circle_shader = ShaderBuilder::new(&engine, "examples/circularmovment.wgsl")
-        .unwrap()
-        .set_layouts(&[&engine.texture_layout(), &engine.camera_layout(), &engine.uniform_layout()])
-        .register(&mut engine);
+    let circle_shader = Shader::new("examples/movement.wgsl", true, &mut engine)
+        .unwrap();
 
     let data = MousePos{x: 0.0, y: 0.0};
     let mouse_uniform_data = UniformData::new(&engine, &data);

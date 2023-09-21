@@ -22,7 +22,7 @@ use crate::vectors::Vec2;
 use crate::colour::Colour;
 use crate::rect::Rectangle;
 use crate::render::RenderInformation;
-use crate::shader::{UniformData, RegisteredShader};
+use crate::shader::{UniformData, Shader};
 
 /// A material represents a unique combination of a Texture
 /// and RenderPipeline, while also containing all nessicary buffers
@@ -202,6 +202,8 @@ impl Material {
         self.push_triangle(wgpu, verts);
     }
 
+    /// Updates the uniform buffer to contain the same type but new data. You can write in a diffrent
+    /// type from before but this could cause undefinded behavoir
     pub fn update_uniform_data<T: ShaderType + WriteInto>(&mut self, data: &T, engine: &Engine) {
         match &self.uniform_buffer {
             Some(uniform_buffer) => {
@@ -406,7 +408,7 @@ pub struct MaterialBuilder<'a> {
     // using options to denote a change from the default
     // in the case of a texture the defualt is just the White_Pixel
     texture_change: Option<RegisteredTexture>,
-    shader_change: Option<RegisteredShader>,
+    shader_change: Option<Shader>,
     uniform_data: Option<&'a UniformData>,
 }
 
@@ -439,7 +441,7 @@ impl<'a> MaterialBuilder<'a> {
         }
     }
 
-    pub fn set_shader(self, shader: RegisteredShader) -> Self {
+    pub fn set_shader(self, shader: Shader) -> Self {
         Self {
             texture_change: self.texture_change,
             shader_change: Some(shader),

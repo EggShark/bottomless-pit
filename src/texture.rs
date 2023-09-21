@@ -141,7 +141,7 @@ impl Texture {
 /// A struct that contains an Id and the size of a texture stored interally. This
 /// can only be obtained after registering a texture and its only purpose is to 
 /// be added to a [Material](../material/struct.Material.html).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RegisteredTexture {
     pub(crate) bindgroup_id: wgpu::Id<wgpu::BindGroup>,
     pub(crate) texture_size: Vec2<f32>,
