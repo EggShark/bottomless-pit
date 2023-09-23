@@ -16,7 +16,7 @@ use encase::ShaderType;
 
 use crate::matrix_math::normalize_points;
 use crate::texture::RegisteredTexture;
-use crate::vertex::Vertex;
+use crate::vertex::{Vertex, LineVertex};
 use crate::engine_handle::{WgpuClump, Engine};
 use crate::vectors::Vec2;
 use crate::colour::Colour;
@@ -453,4 +453,107 @@ impl<'a> MaterialBuilder<'a> {
     pub fn build(self, engine_handle: &mut Engine) -> Material {
         Material::from_builder(self, engine_handle)
     }
+}
+
+/// A diffrent type of material used to draw WebGPU debug
+/// lines. These lines will allways be 1px wide and only one
+/// instance of this material should ever be made per programm.
+pub struct LineMaterial {
+    pipe_id: wgpu::Id<wgpu::RenderPipeline>,
+    vertex_buffer: wgpu::Buffer,
+    vertex_count: u64,
+    vertex_size: u64,
+}
+
+impl LineMaterial {
+    pub fn new(engine: &Engine) -> Self {
+        let wgpu = engine.get_wgpu();
+        let vertex_size = std::mem::size_of::<LineVertex>() as u64;
+
+        let vertex_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Line material vertex buffer"),
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            size: vertex_size * 100,
+            mapped_at_creation: false,
+        });
+
+        Self {
+            pipe_id: engine.line_pipe_id(),
+            vertex_buffer,
+            vertex_count: 0,
+            vertex_size,
+        }
+    }
+
+    pub fn add_line(&mut self, start: Vec2<f32>, end: Vec2<f32>, colour: Colour, renderer: &RenderInformation) {
+        let screen_size = renderer.size;
+        let wgpu = renderer.wgpu;
+
+        let verts = [
+            LineVertex::new(start.to_raw(), colour.to_raw())
+                .pixels_to_screenspace(screen_size),
+            LineVertex::new(end.to_raw(), colour.to_raw())
+                .pixels_to_screenspace(screen_size),
+        ];
+
+        let max_verts = self.vertex_buffer.size();
+        let vert_size = std::mem::size_of::<LineVertex>() as u64;
+        if self.vertex_count + (2 * vert_size) > max_verts {
+            self.grow_vertex_buffer(wgpu);
+        }
+
+        wgpu.queue.write_buffer(
+            &self.vertex_buffer,
+            self.vertex_count,
+            bytemuck::cast_slice(&verts),
+        );
+
+        self.vertex_count += 2 * self.vertex_size;
+    }
+    
+    pub fn draw<'pass, 'others>(&'others mut self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
+        let pipeline = information.pipelines.get(&self.pipe_id).unwrap();
+        
+        information.render_pass.set_pipeline(pipeline);
+        information.render_pass.set_bind_group(0, information.camera_bindgroup, &[]);
+        information.render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
+
+        information.render_pass.draw(0..self.get_vertex_count() as u32, 0..1);
+
+        self.vertex_count = 0;
+    }
+    
+    pub fn get_vertex_count(&self) -> u64 {
+        self.vertex_count/self.vertex_size
+    }
+
+    fn grow_vertex_buffer(&mut self, wgpu: &WgpuClump) {
+        let mut encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Line Material Buffer Grower"),
+        });
+
+        let new_size = self.vertex_buffer.size() * 2;
+        println!("growing index buffer to: {}", new_size);
+        let new_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Vertex_Buffer"),
+            size: new_size,
+            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        encoder.copy_buffer_to_buffer(
+            &self.vertex_buffer,
+            0,
+            &new_buffer,
+            0,
+            self.vertex_buffer.size(),
+        );
+
+        wgpu.
+            queue
+            .submit(std::iter::once(encoder.finish()));
+
+        self.vertex_buffer = new_buffer;
+    }
+
 }

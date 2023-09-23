@@ -71,6 +71,7 @@ pub struct RenderInformation<'pass, 'others> {
     pub(crate) render_pass: wgpu::RenderPass<'pass>,
     pub(crate) bind_groups: &'others WgpuCache<wgpu::BindGroup>,
     pub(crate) pipelines: &'others WgpuCache<wgpu::RenderPipeline>,
+    pub(crate) camera_bindgroup: &'others wgpu::BindGroup,
     pub(crate) wgpu: &'others WgpuClump,
 }
 
@@ -104,6 +105,7 @@ pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::S
         render_pass,
         bind_groups: &engine.bindgroups,
         pipelines: &engine.pipelines,
+        camera_bindgroup: engine.camera_bindgroup(),
         wgpu,
     };
 

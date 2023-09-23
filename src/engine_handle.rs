@@ -47,12 +47,14 @@ pub struct Engine {
     size: Vec2<u32>,
     defualt_bind_group_id: wgpu::Id<wgpu::BindGroup>,
     default_pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
+    line_pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
     pub(crate) pipelines: WgpuCache<wgpu::RenderPipeline>,
     pub(crate) bindgroups: WgpuCache<wgpu::BindGroup>,
 }
 
 impl Engine {
     fn new(builder: EngineBuilder) -> Result<Self, BuildError> {
+        println!("{}", std::mem::size_of::<LineVertex>() * 2);
         let cursor_visibility = true;
         let input_handle = InputHandle::new();
         let size: Vec2<u32> = builder.resolution.into();
@@ -302,8 +304,6 @@ impl Engine {
         pipelines.insert(line_id, line_pipeline);
         pipelines.insert(generic_id, generic_pipeline);
 
-        println!("{:?}", line_id);
-
         let white_pixel_id = white_pixel.global_id();
         let mut bindgroups = HashMap::new();
         bindgroups.insert(white_pixel_id, white_pixel);
@@ -331,6 +331,7 @@ impl Engine {
             size,
             defualt_bind_group_id: white_pixel_id,
             default_pipeline_id: generic_id,
+            line_pipeline_id: line_id,
             pipelines,
             bindgroups,
         })
@@ -571,6 +572,10 @@ impl Engine {
 
     pub(crate) fn defualt_pipe_id(&self) -> wgpu::Id<wgpu::RenderPipeline> {
         self.default_pipeline_id
+    }
+
+    pub(crate) fn line_pipe_id(&self) -> wgpu::Id<wgpu::RenderPipeline> {
+        self.line_pipeline_id
     }
 
     pub(crate) fn get_current_texture(&self) -> Result<wgpu::SurfaceTexture, wgpu::SurfaceError> {
