@@ -34,7 +34,11 @@
 //! 
 //! ```
 
-use glyphon::{FontSystem, SwashCache, TextAtlas, TextArea, TextBounds, Metrics, Attrs, Shaping};
+use std::path::Path;
+use std::sync::Arc;
+
+use glyphon::fontdb::Source;
+use glyphon::{FontSystem, SwashCache, TextAtlas, TextArea, TextBounds, Metrics, Attrs, Shaping, Family};
 
 use crate::colour::Colour;
 use crate::engine_handle::Engine;
@@ -48,21 +52,77 @@ pub struct TextRenderer {
     cache: SwashCache,
     atlas: TextAtlas,
     text_renderer: glyphon::TextRenderer,
+    defualt_font_name: String,
 }
 
 impl TextRenderer {
     pub fn new(engine: &Engine) -> Self {
         let wgpu = engine.get_wgpu();
-        let font_system = FontSystem::new();
+        let mut font_system = FontSystem::new();
+        let defualt_font_id = font_system
+            .db_mut()
+            .load_font_source(Source::Binary(Arc::new(include_bytes!("Monocraft.ttf"))))[0];
+
+        let defualt_font_name = font_system
+            .db()
+            .face(defualt_font_id)
+            .unwrap()
+            .families[0]
+            .0
+            .clone();
+        // its expensive but whatever
+
         let cache = SwashCache::new();
         let mut atlas = TextAtlas::new(&wgpu.device, &wgpu.queue, wgpu::TextureFormat::Bgra8UnormSrgb);
         let text_renderer = glyphon::TextRenderer::new(&mut atlas, &wgpu.device, wgpu::MultisampleState::default(), None);
-        
+
         Self {
             font_system,
             cache,
             atlas,
             text_renderer,
+            defualt_font_name,
+        }
+    }
+
+    /// Loads in a new font from a file
+    pub fn load_font_file<P: AsRef<Path>>(&mut self, path: P) -> Result<Font, std::io::Error> {
+        let data = std::fs::read(path)?;
+        let id = self
+            .font_system
+            .db_mut()
+            .load_font_source(Source::Binary(Arc::new(data)))[0];
+
+        let name = self.font_system
+            .db()
+            .face(id)
+            .unwrap()
+            .families[0]
+            .0
+            .clone();
+
+        Ok(Font {
+            name,
+        })
+    }
+
+    /// Loads in a font from a byte vector
+    pub fn load_font_from_bytes(&mut self, data: Vec<u8>) -> Font {
+        let id = self
+            .font_system
+            .db_mut()
+            .load_font_source(Source::Binary(Arc::new(data)))[0];
+
+        let name = self.font_system
+            .db()
+            .face(id)
+            .unwrap()
+            .families[0]
+            .0
+            .clone();
+
+        Font {
+            name
         }
     }
 
@@ -83,8 +143,9 @@ impl TextRenderer {
         Vec2{x: run_width, y: hieght}
     }
 
-    /// Takes an refrence to Text and renders it to the screen
-    pub fn draw_text<'pass, 'others>(&'others mut self, text: &'others Text, renderer: &mut RenderInformation<'pass, 'others>) where 'others: 'pass {
+    /// Prepares [Text](struct.Text.html) widgets for rendering, this MUST be called if you want the text to 
+    /// appear on screen when calling [render_text](#method.render_text).
+    pub fn prepare_texts(&mut self, texts: &[&Text], renderer: &RenderInformation<'_, '_>) {
         let device = &renderer.wgpu.device;
         let queue = &renderer.wgpu.queue;
         self.text_renderer.prepare(
@@ -93,22 +154,27 @@ impl TextRenderer {
             &mut self.font_system,
             &mut self.atlas,
             renderer.size.into(),
-            [TextArea {
-                buffer: &text.text_buffer,
-                left: text.pos.x,
-                top: text.pos.y,
-                scale: 1.0,
-                bounds: TextBounds {
-                    left: text.bounds.x.x,
-                    top: text.bounds.x.y,
-                    right: text.bounds.y.x,
-                    bottom: text.bounds.y.y,
-                },
-                default_color: glyphon::Color::rgb(255, 255, 255),
-            }],
+            texts.iter().map(|text| {
+                TextArea {
+                    buffer: &text.text_buffer,
+                    left: text.pos.x,
+                    top: text.pos.y,
+                    scale: 1.0,
+                    bounds: TextBounds {
+                        left: text.bounds.x.x,
+                        top: text.bounds.x.y,
+                        right: text.bounds.y.x,
+                        bottom: text.bounds.y.y},
+                    default_color: glyphon::Color::rgb(255, 255, 255),
+                }
+            }),
             &mut self.cache,
         ).unwrap();
+    }
 
+    /// Renders prepared text to the srceen pelase see at the [prepare](#method.prepare_texts)
+    /// function.
+    pub fn render_text<'pass, 'others>(&'others mut self, renderer: &mut RenderInformation<'pass, 'others>) where 'others: 'pass {
         self.text_renderer.render(&self.atlas, &mut renderer.render_pass).unwrap();
     }
 }
@@ -141,16 +207,32 @@ impl Text {
         }
     }
 
-    /// Sets the text for the widget. This only needs to be done once, not every frame like Materials
+    /// Sets the text for the widget, using the defualt font.
+    /// This only needs to be done once, not every frame like Materials.
     pub fn set_text(&mut self, text: &str, colour: Colour, text_handle: &mut TextRenderer) {
-        self.text_buffer.set_text(&mut text_handle.font_system, text, Attrs::new().color(colour.into()), Shaping::Basic);
+        self.text_buffer.set_text(
+            &mut text_handle.font_system,
+            text,
+            Attrs::new().color(colour.into()).family(Family::Name(&text_handle.defualt_font_name)),
+            Shaping::Basic
+        );
+    }
+
+    /// Sets the text for the widget, but with a font of your choosing.
+    /// This only needs to be done once, not every frame like Materials
+    pub fn set_text_with_font(&mut self, text: &str, colour: Colour, font: &Font, text_handle: &mut TextRenderer) {
+        self.text_buffer.set_text(
+            &mut text_handle.font_system,
+            text,
+            Attrs::new().color(colour.into()).family(Family::Name(&font.name)),
+            Shaping::Basic
+        );
     }
 
     /// Sets bounds for the text. Any text drawn outside of the bounds will be cropped
     pub fn set_bounds(&mut self, position: Vec2<i32>, size: Vec2<i32>) {
         self.bounds = Vec2{x: position, y: size};
     }
-
 
     /// Sets the font size of the text
     pub fn set_font_size(&mut self, new_size: f32, text_handle: &mut TextRenderer) {
@@ -173,4 +255,11 @@ impl Text {
 
         Vec2{x: run_width, y: hieght}
     }
+}
+
+/// A struct to ensure Font Families are created properly
+/// can be created by [load_font_file](struct.TextRenderer.html#method.load_font_file)
+/// or [load_font_data](struct.TextRenderer.html#method.load_font_file)
+pub struct Font {
+    name: String
 }
