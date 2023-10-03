@@ -15,7 +15,7 @@ fn main() {
     let mut text_render = TextRenderer::new(&engine);
 
     let mut text = Text::new(Vec2{x: 0.0, y: 0.0}, 20.0, 30.0, &mut text_render, &engine);
-    text.set_text("HELLO WORLD!", Colour::GREEN, &mut text_render);
+    text.set_text("AAAA", Colour::GREEN, &mut text_render);
 
     let comic_sans = text_render.load_font_from_bytes(include_bytes!("Comic.ttf").to_vec());
     let mut comic_text = Text::new(Vec2{x: 0.0, y: 40.0}, 20.0, 30.0, &mut text_render, &engine);
@@ -41,8 +41,7 @@ struct TextExample {
 
 impl Game for TextExample {
     fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
-        self.text_handle.prepare_texts(&[&self.text, &self.comic_text], &render_handle);
-        self.text_handle.render_text(&mut render_handle);
+        self.text_handle.render_texts_to_image(&[&self.text, &self.comic_text], &render_handle);
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
@@ -54,7 +53,7 @@ impl Game for TextExample {
                 Colour::GREEN
             };
 
-            self.text.set_text("HELLO WORLD!", colour, &mut self.text_handle);
+            //self.text.set_text("AAA", colour, &mut self.text_handle);
         }
     }
 }

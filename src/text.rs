@@ -44,6 +44,7 @@ use crate::colour::Colour;
 use crate::engine_handle::Engine;
 use crate::render::RenderInformation;
 use crate::vectors::Vec2;
+use crate::vertex::Vertex;
 
 /// Stores Important information nessicary to rendering text. Only on of these should
 /// be created per application.
@@ -154,20 +155,7 @@ impl TextRenderer {
             &mut self.font_system,
             &mut self.atlas,
             renderer.size.into(),
-            texts.iter().map(|text| {
-                TextArea {
-                    buffer: &text.text_buffer,
-                    left: text.pos.x,
-                    top: text.pos.y,
-                    scale: 1.0,
-                    bounds: TextBounds {
-                        left: text.bounds.x.x,
-                        top: text.bounds.x.y,
-                        right: text.bounds.y.x,
-                        bottom: text.bounds.y.y},
-                    default_color: glyphon::Color::rgb(255, 255, 255),
-                }
-            }),
+            texts.iter().map(|t| t.into_text_area()),
             &mut self.cache,
         ).unwrap();
     }
@@ -177,11 +165,107 @@ impl TextRenderer {
     pub fn render_text<'pass, 'others>(&'others mut self, renderer: &mut RenderInformation<'pass, 'others>) where 'others: 'pass {
         self.text_renderer.render(&self.atlas, &mut renderer.render_pass).unwrap();
     }
+
+    pub fn render_texts_to_image(&mut self, texts: &[&Text], renderer: &RenderInformation<'_, '_>) {
+        let wgpu = renderer.wgpu;
+
+        let mut text_encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("text encoder"),
+        });
+
+        let textures = texts
+            .iter()
+            .map(|t| t.get_measurements())
+            .map(|size| {
+                wgpu.device.create_texture(&wgpu::TextureDescriptor {
+                    label: Some("Text Texture"),
+                    size: wgpu::Extent3d {
+                        width: size.x.ceil() as u32,
+                        height: size.y.ceil() as u32,
+                        depth_or_array_layers: 1,
+                    },
+                    mip_level_count: 1,
+                    sample_count: 1,
+                    dimension: wgpu::TextureDimension::D2,
+                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                    usage: wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::RENDER_ATTACHMENT,
+                    view_formats: &[],
+                })
+            })
+            .collect::<Vec<wgpu::Texture>>();
+
+        let buffers = texts
+            .iter()
+            .map(|t| t.size)
+            .map(|size| {
+                let width = size.x.ceil() as u64;
+                let buffer_size = size.y.ceil() as u64 * ((4*width) + (256 - (4*width % 256)));
+                wgpu.device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("text texture buffer"),
+                    size: buffer_size,
+                    usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+                    mapped_at_creation: false,
+                })
+            })
+            .collect::<Vec<wgpu::Buffer>>();
+
+        for texture in textures.iter() {
+            let view = texture.create_view(&Default::default());
+
+            let mut render_pass = text_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Text texture render"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color {
+                            r: 0.0,
+                            g: 0.0,
+                            b: 0.0,
+                            a: 0.0,
+                        }),
+                        store: true
+                    },
+                })],
+                depth_stencil_attachment: None}
+            );
+
+            self.text_renderer.render(&self.atlas, &mut render_pass).unwrap();
+        }
+
+        textures
+            .iter()
+            .zip(buffers.iter())
+            .for_each(|(texture, buffer)| {
+                let bytes_per_row = (4*texture.width()) + (256 - (4*texture.width() % 256));
+                text_encoder.copy_texture_to_buffer(
+                    wgpu::ImageCopyTextureBase {
+                        texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d::ZERO,
+                        aspect: wgpu::TextureAspect::All
+                    },
+                    wgpu::ImageCopyBufferBase {
+                        buffer,
+                        layout: wgpu::ImageDataLayout {
+                            offset: 0,
+                            bytes_per_row: Some(bytes_per_row),
+                            rows_per_image: Some(texture.height()),
+                        }
+                    },
+                    texture.size(),
+                );
+            });
+
+        wgpu.queue.submit(std::iter::once(text_encoder.finish()));
+        panic!("IT SHOULD PANIC T HATS GOOD!");
+    }
 }
 
 /// Represents a section of Text. One should be created per widget of text
 pub struct Text {
     pos: Vec2<f32>,
+    size: Vec2<f32>,
     font_size: f32,
     line_height: f32,
     bounds: Vec2<Vec2<i32>>,
@@ -198,8 +282,16 @@ impl Text {
 
         text_buffer.set_size(&mut text_handle.font_system, phyisical_width, phyiscal_hieght);
 
+        let hieght = text_buffer.lines.len() as f32 * text_buffer.metrics().line_height;
+        let run_width = text_buffer
+            .layout_runs()
+            .map(|run| run.line_w)
+            .max_by(f32::total_cmp).unwrap_or(0.0);
+
+
         Self {
             pos: position,
+            size: Vec2{x: run_width, y: hieght},
             font_size,
             line_height,
             bounds: Vec2{x: Vec2{x: 0, y: 0}, y: Vec2{x: i32::MAX, y: i32::MAX}},
@@ -216,6 +308,8 @@ impl Text {
             Attrs::new().color(colour.into()).family(Family::Name(&text_handle.defualt_font_name)),
             Shaping::Basic
         );
+
+        self.update_measurements();
     }
 
     /// Sets the text for the widget, but with a font of your choosing.
@@ -227,6 +321,8 @@ impl Text {
             Attrs::new().color(colour.into()).family(Family::Name(&font.name)),
             Shaping::Basic
         );
+
+        self.update_measurements();
     }
 
     /// Sets bounds for the text. Any text drawn outside of the bounds will be cropped
@@ -238,7 +334,9 @@ impl Text {
     pub fn set_font_size(&mut self, new_size: f32, text_handle: &mut TextRenderer) {
         self.font_size = new_size;
         let metrics = Metrics::new(self.font_size, self.line_height);
-        self.text_buffer.set_metrics(&mut text_handle.font_system, metrics)
+        self.text_buffer.set_metrics(&mut text_handle.font_system, metrics);
+
+        self.update_measurements();
     }
 
     /// Sets the line hieght of the tex
@@ -246,14 +344,40 @@ impl Text {
         self.line_height = new_height;
         let metrics = Metrics::new(self.font_size, self.line_height);
         self.text_buffer.set_metrics(&mut text_handle.font_system, metrics);
+
+        self.update_measurements();
     }
 
     /// Measuers the text contained within the widget
     pub fn get_measurements(&self) -> Vec2<f32> {
-        let hieght = self.text_buffer.lines.len() as f32 * self.text_buffer.metrics().line_height;
-        let run_width = self.text_buffer.layout_runs().map(|run| run.line_w).max_by(f32::total_cmp).unwrap_or(0.0);
+        self.size
+    }
 
-        Vec2{x: run_width, y: hieght}
+    fn update_measurements(&mut self) {
+        let hieght = self.text_buffer.lines.len() as f32 * self.text_buffer.metrics().line_height;
+        let run_width = self.text_buffer
+            .layout_runs()
+            .map(|run| run.line_w)
+            .max_by(f32::total_cmp)
+            .unwrap_or(0.0);
+
+        self.size = Vec2{x: run_width, y: hieght}
+    }
+
+    fn into_text_area(&self) -> TextArea {
+        TextArea {
+            buffer: &self.text_buffer,
+            left: self.pos.x,
+            top: self.pos.y,
+            scale: 1.0,
+            bounds: TextBounds {
+                left: self.bounds.x.x,
+                top: self.bounds.x.y,
+                right: self.bounds.y.x,
+                bottom: self.bounds.y.y
+            },
+            default_color: glyphon::Color::rgb(255, 255, 255),
+        }
     }
 }
 
