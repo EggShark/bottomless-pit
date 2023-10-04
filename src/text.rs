@@ -40,6 +40,7 @@ use std::sync::Arc;
 
 use glyphon::fontdb::Source;
 use glyphon::{FontSystem, SwashCache, TextAtlas, TextArea, TextBounds, Metrics, Attrs, Shaping, Family};
+use image::EncodableLayout;
 
 use crate::colour::Colour;
 use crate::engine_handle::Engine;
@@ -75,7 +76,7 @@ impl TextRenderer {
         // its expensive but whatever
 
         let cache = SwashCache::new();
-        let mut atlas = TextAtlas::new(&wgpu.device, &wgpu.queue, wgpu::TextureFormat::Bgra8UnormSrgb);
+        let mut atlas = TextAtlas::new(&wgpu.device, &wgpu.queue, wgpu::TextureFormat::Rgba8UnormSrgb);
         let text_renderer = glyphon::TextRenderer::new(&mut atlas, &wgpu.device, wgpu::MultisampleState::default(), None);
 
         Self {
@@ -188,7 +189,7 @@ impl TextRenderer {
                     mip_level_count: 1,
                     sample_count: 1,
                     dimension: wgpu::TextureDimension::D2,
-                    format: wgpu::TextureFormat::Bgra8UnormSrgb,
+                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
                     usage: wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::RENDER_ATTACHMENT,
                     view_formats: &[],
                 })
@@ -211,12 +212,13 @@ impl TextRenderer {
             .collect::<Vec<wgpu::Buffer>>();
 
         for (texture, text) in textures.iter().zip(texts) {
+            let texture_size = glyphon::Resolution{width: texture.width(), height: texture.height()};
             self.text_renderer.prepare(
                 &wgpu.device,
                 &wgpu.queue,
                 &mut self.font_system,
                 &mut self.atlas,
-                renderer.size.into(),
+                texture_size,
                 [text.into_text_area()],
                 &mut self.cache,
             ).unwrap();
@@ -249,6 +251,7 @@ impl TextRenderer {
             .zip(buffers.iter())
             .for_each(|(texture, buffer)| {
                 let bytes_per_row = (4*texture.width()) + (256 - (4*texture.width() % 256));
+                println!("texture size: {:?}", texture.size());
                 text_encoder.copy_texture_to_buffer(
                     wgpu::ImageCopyTextureBase {
                         texture,
@@ -284,8 +287,10 @@ impl TextRenderer {
                 rx.receive().await.unwrap().unwrap();
             
                 let data = buffer_slice.get_mapped_range();
-            
+                //println!("{:?}", data.as_bytes());
+
                 use image::{ImageBuffer, Rgba};
+
                 let image_buffer =
                     ImageBuffer::<Rgba<u8>, _>::from_raw(texture.width(), texture.height(), data).unwrap();
                 image_buffer.save(format!("{idx}.png")).unwrap();
