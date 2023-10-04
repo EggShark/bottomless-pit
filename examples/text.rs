@@ -18,8 +18,8 @@ fn main() {
     text.set_text("AAAA", Colour::GREEN, &mut text_render);
 
     let comic_sans = text_render.load_font_from_bytes(include_bytes!("Comic.ttf").to_vec());
-    let mut comic_text = Text::new(Vec2{x: 0.0, y: 40.0}, 20.0, 30.0, &mut text_render, &engine);
-    comic_text.set_text_with_font("Silly Font", Colour::WHITE, &comic_sans, &mut text_render);
+    let mut comic_text = Text::new(Vec2{x: 0.0, y: 0.0}, 20.0, 30.0, &mut text_render, &engine);
+    comic_text.set_text_with_font("Silly Font\nSILLTIES OD THWE ASD", Colour::WHITE, &comic_sans, &mut text_render);
 
 
     let text_example = TextExample {
@@ -41,7 +41,7 @@ struct TextExample {
 
 impl Game for TextExample {
     fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
-        self.text_handle.render_texts_to_image(&[&self.text, &self.comic_text], &render_handle);
+        pollster::block_on(self.text_handle.render_texts_to_image(&[&self.text, &self.comic_text], &render_handle));
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {

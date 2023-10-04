@@ -34,6 +34,7 @@
 //! 
 //! ```
 
+use std::fmt::format;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -166,7 +167,7 @@ impl TextRenderer {
         self.text_renderer.render(&self.atlas, &mut renderer.render_pass).unwrap();
     }
 
-    pub fn render_texts_to_image(&mut self, texts: &[&Text], renderer: &RenderInformation<'_, '_>) {
+    pub async fn render_texts_to_image(&mut self, texts: &[&Text], renderer: &RenderInformation<'_, '_>) {
         let wgpu = renderer.wgpu;
 
         let mut text_encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -187,7 +188,7 @@ impl TextRenderer {
                     mip_level_count: 1,
                     sample_count: 1,
                     dimension: wgpu::TextureDimension::D2,
-                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                    format: wgpu::TextureFormat::Bgra8UnormSrgb,
                     usage: wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::RENDER_ATTACHMENT,
                     view_formats: &[],
                 })
@@ -209,7 +210,17 @@ impl TextRenderer {
             })
             .collect::<Vec<wgpu::Buffer>>();
 
-        for texture in textures.iter() {
+        for (texture, text) in textures.iter().zip(texts) {
+            self.text_renderer.prepare(
+                &wgpu.device,
+                &wgpu.queue,
+                &mut self.font_system,
+                &mut self.atlas,
+                renderer.size.into(),
+                [text.into_text_area()],
+                &mut self.cache,
+            ).unwrap();
+
             let view = texture.create_view(&Default::default());
 
             let mut render_pass = text_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -258,6 +269,30 @@ impl TextRenderer {
             });
 
         wgpu.queue.submit(std::iter::once(text_encoder.finish()));
+
+        for ((idx, buffer), texture) in buffers.iter().enumerate().zip(textures.iter()) {
+            {
+                let buffer_slice = buffer.slice(..);
+    
+                // NOTE: We have to create the mapping THEN device.poll() before await
+                // the future. Otherwise the application will freeze.
+                let (tx, rx) = futures_intrusive::channel::shared::oneshot_channel();
+                buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+                    tx.send(result).unwrap();
+                });
+                wgpu.device.poll(wgpu::Maintain::Wait);
+                rx.receive().await.unwrap().unwrap();
+            
+                let data = buffer_slice.get_mapped_range();
+            
+                use image::{ImageBuffer, Rgba};
+                let image_buffer =
+                    ImageBuffer::<Rgba<u8>, _>::from_raw(texture.width(), texture.height(), data).unwrap();
+                image_buffer.save(format!("{idx}.png")).unwrap();
+            }
+            buffer.unmap();
+        }
+
         panic!("IT SHOULD PANIC T HATS GOOD!");
     }
 }
