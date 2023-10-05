@@ -41,7 +41,7 @@ struct TextExample {
 
 impl Game for TextExample {
     fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
-        pollster::block_on(self.text_handle.render_texts_to_image(&[&self.text, &self.comic_text], &render_handle));
+        self.text_handle.render_texts_to_image(&[&self.text, &self.comic_text], &mut render_handle);
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
