@@ -454,9 +454,9 @@ impl Text {
     }
 }
 
-pub struct NewText {
+pub struct TextMaterial {
     pos: Vec2<f32>,
-    size: Vec2<f32>,
+    size: Vec2<u32>,
     font_size: f32,
     line_height: f32,
     bounds: Vec2<Vec2<i32>>,
@@ -464,10 +464,11 @@ pub struct NewText {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     texture: wgpu::Texture,
+    texture_view: wgpu::TextureView,
     bind_group: wgpu::BindGroup,
 }
 
-impl NewText {
+impl TextMaterial {
     pub fn new(
         position: Vec2<f32>,
         text: &str,
@@ -478,11 +479,11 @@ impl NewText {
         engine: &Engine
     ) -> Self {
         let mut text_buffer = glyphon::Buffer::new(&mut text_handle.font_system, Metrics::new(font_size, line_height));
-        let size = engine.get_window_size();
+        let window_size = engine.get_window_size();
         let scale_factor = engine.get_window_scale_factor();
         let wgpu = engine.get_wgpu();
-        let phyisical_width = (size.x as f64 * scale_factor) as f32;
-        let phyiscal_hieght = (size.y as f64 * scale_factor) as f32;
+        let phyisical_width = (window_size.x as f64 * scale_factor) as f32;
+        let phyiscal_hieght = (window_size.y as f64 * scale_factor) as f32;
 
         text_buffer.set_size(&mut text_handle.font_system, phyisical_width, phyiscal_hieght);
         text_buffer.set_text(&mut text_handle.font_system, text, Attrs::new().color(colour.into()), Shaping::Basic);
@@ -508,14 +509,58 @@ impl NewText {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
+
+        let bounds = Vec2{x: Vec2{x: 0, y: 0}, y: Vec2{x: i32::MAX, y: i32::MAX}};
+        let texture_size = Vec2{x: run_width.ceil() as u32, y: hieght.ceil() as u32};
+        let texture_view = texture.create_view(&Default::default());
     
+        render_text_to_texture(text_handle, &text_buffer, bounds, texture_size, &texture_view, engine);
+
         // Construct Index to Verticies
+        let indicies:[u16; 6] = [0,1,2,3,0,2];
+        let index_buffer = wgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Text Widget Index Buffer"),
+            contents: bytemuck::cast_slice(&indicies),
+            usage: wgpu::BufferUsages::INDEX
+        });
+
+        let vertex_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Text Widget Vertex Buffer"),
+            size: (std::mem::size_of::<Vertex>() * 4) as u64,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        let bind_group = wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Text Widget BindGroup"),
+            layout: &layouts::create_texture_layout(&wgpu.device),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(engine.get_texture_sampler()),
+                },
+            ],
+        });
 
         // render text to texture
 
-        
-
-        todo!();
+        Self {
+            pos: position,
+            size: texture_size,
+            font_size,
+            line_height,
+            bounds,
+            text_buffer,
+            vertex_buffer,
+            index_buffer,
+            texture_view,
+            texture,
+            bind_group,
+        }
     }
 }
 
@@ -524,4 +569,68 @@ impl NewText {
 /// or [load_font_data](struct.TextRenderer.html#method.load_font_file)
 pub struct Font {
     name: String
+}
+
+fn render_text_to_texture(
+    text_handle: &mut TextRenderer,
+    text: &glyphon::Buffer,
+    bounds: Vec2<Vec2<i32>>,
+    texture_size: Vec2<u32>,
+    texture_view: &wgpu::TextureView,
+    engine: &Engine,
+) {
+    let wgpu = engine.get_wgpu();
+
+    let text_area = TextArea {
+        buffer: &text,
+        left: 0.0,
+        top: 0.0,
+        scale: 1.0,
+        bounds: TextBounds {
+            left: bounds.x.x,
+            top: bounds.x.y,
+            right: bounds.y.x,
+            bottom: bounds.y.y
+        },
+        default_color: glyphon::Color::rgb(255, 255, 255),
+    };
+
+
+    text_handle.text_renderer.prepare(
+        &wgpu.device,
+        &wgpu.queue,
+        &mut text_handle.font_system,
+        &mut text_handle.atlas,
+        texture_size.into(),
+        [text_area],
+        &mut text_handle.cache,
+    ).unwrap();
+
+    let mut text_encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("text encoder"),
+    });
+
+    let mut text_pass = text_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("Text to Texture Pass"),
+        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+            view: &texture_view,
+            resolve_target: None,
+            ops: wgpu::Operations {
+                load: wgpu::LoadOp::Clear(wgpu::Color {
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 0.0,
+                }),
+                store: true
+            },
+        })],
+        depth_stencil_attachment: None
+    });
+
+    text_handle.text_renderer.render(&text_handle.atlas, &mut text_pass).unwrap();
+
+    drop(text_pass);
+
+    wgpu.queue.submit(std::iter::once(text_encoder.finish()));
 }
