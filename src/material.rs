@@ -68,7 +68,7 @@ impl Material {
 
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
         let index_size = std::mem::size_of::<u16>() as u64;
-        let (vertex_buffer, index_buffer) = Self::create_buffers(&wgpu.device, vertex_size, index_size);
+        let (vertex_buffer, index_buffer) = Self::create_buffers(&wgpu.device, vertex_size, 50, index_size, 50);
 
         Self {
             pipeline_id,
@@ -305,8 +305,6 @@ impl Material {
         });
 
         let new_size = self.vertex_buffer.size() * 2;
-        println!("Growing vertex buffer to: {}", new_size);
-
         let new_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Vertex_Buffer"),
             size: new_size,
@@ -335,7 +333,6 @@ impl Material {
         });
 
         let new_size = self.index_buffer.size() * 2;
-        println!("growing index buffer to: {}", new_size);
         let new_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Vertex_Buffer"),
             size: new_size,
@@ -373,7 +370,7 @@ impl Material {
 
         information.render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
         information.render_pass.set_index_buffer(
-            self.index_buffer.slice(0..self.vertex_count),
+            self.index_buffer.slice(0..self.index_count),
             wgpu::IndexFormat::Uint16,
         );
 
@@ -383,10 +380,10 @@ impl Material {
         self.index_count = 0;
     }
 
-    fn create_buffers(device: &wgpu::Device, vertex_size: u64, index_size: u64) -> (wgpu::Buffer, wgpu::Buffer) {
+    pub(crate) fn create_buffers(device: &wgpu::Device, vertex_size: u64, vert_count: u64, index_size: u64, index_count: u64) -> (wgpu::Buffer, wgpu::Buffer) {
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Vertex_Buffer"),
-            size: vertex_size * 100,
+            size: vertex_size * vert_count,
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
@@ -394,7 +391,7 @@ impl Material {
         // this is just 200 bytes pretty small
         let index_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Index_Buffer"),
-            size: index_size * 100,
+            size: index_size * index_count,
             usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });

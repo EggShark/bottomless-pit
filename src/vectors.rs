@@ -19,6 +19,12 @@ impl<T> Vec2<T> {
     }
 }
 
+// impl<T, U> From<Vec2<T>> for Vec2<U> where T: From<U> {
+//     fn from(value: Vec2<T>) -> Self {
+        
+//     }
+// }
+
 impl<T> From<Vec2<T>> for (T, T) {
     fn from(value: Vec2<T>) -> Self {
         (value.x, value.y)

@@ -33,19 +33,16 @@
 //! }
 //! 
 //! ```
-
-use std::fmt::format;
 use std::path::Path;
 use std::sync::Arc;
 
 use glyphon::fontdb::Source;
 use glyphon::{FontSystem, SwashCache, TextAtlas, TextArea, TextBounds, Metrics, Attrs, Shaping, Family};
-use image::EncodableLayout;
-use wgpu::util::DeviceExt;
 
 use crate::colour::Colour;
-use crate::engine_handle::Engine;
+use crate::engine_handle::{Engine, WgpuClump};
 use crate::layouts;
+use crate::material::Material;
 use crate::rect::Rectangle;
 use crate::render::RenderInformation;
 use crate::vectors::Vec2;
@@ -148,314 +145,9 @@ impl TextRenderer {
 
         Vec2{x: run_width, y: hieght}
     }
-
-    /// Prepares [Text](struct.Text.html) widgets for rendering, this MUST be called if you want the text to 
-    /// appear on screen when calling [render_text](#method.render_text).
-    pub fn prepare_texts(&mut self, texts: &[&Text], renderer: &RenderInformation<'_, '_>) {
-        let device = &renderer.wgpu.device;
-        let queue = &renderer.wgpu.queue;
-        self.text_renderer.prepare(
-            device,
-            queue,
-            &mut self.font_system,
-            &mut self.atlas,
-            renderer.size.into(),
-            texts.iter().map(|t| t.into_text_area()),
-            &mut self.cache,
-        ).unwrap();
-    }
-
-    /// Renders prepared text to the srceen pelase see at the [prepare](#method.prepare_texts)
-    /// function.
-    pub fn render_text<'pass, 'others>(&'others mut self, renderer: &mut RenderInformation<'pass, 'others>) where 'others: 'pass {
-        self.text_renderer.render(&self.atlas, &mut renderer.render_pass).unwrap();
-    }
-
-    fn render_text_to_texture(
-        &mut self,
-        text: &glyphon::Buffer,
-        bounds: Vec2<Vec2<i32>>,
-        texture_size: Vec2<u32>,
-        texture_view: &wgpu::TextureView,
-        engine: &Engine,
-    ) {
-        let wgpu = engine.get_wgpu();
-
-        let text_area = TextArea {
-            buffer: &text,
-            left: 0.0,
-            top: 0.0,
-            scale: 1.0,
-            bounds: TextBounds {
-                left: bounds.x.x,
-                top: bounds.x.y,
-                right: bounds.y.x,
-                bottom: bounds.y.y
-            },
-            default_color: glyphon::Color::rgb(255, 255, 255),
-        };
-
-
-        self.text_renderer.prepare(
-            &wgpu.device,
-            &wgpu.queue,
-            &mut self.font_system,
-            &mut self.atlas,
-            texture_size.into(),
-            [text_area],
-            &mut self.cache,
-        ).unwrap();
-
-        let mut text_encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("text encoder"),
-        });
-
-        let mut text_pass = text_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-            label: Some("Text to Texture Pass"),
-            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                view: &texture_view,
-                resolve_target: None,
-                ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color {
-                        r: 0.0,
-                        g: 0.0,
-                        b: 0.0,
-                        a: 0.0,
-                    }),
-                    store: true
-                },
-            })],
-            depth_stencil_attachment: None
-        });
-
-        self.text_renderer.render(&self.atlas, &mut text_pass).unwrap();
-
-        drop(text_pass);
-
-        wgpu.queue.submit(std::iter::once(text_encoder.finish()));
-    }
-
-    pub fn render_texts_to_image(&mut self, texts: &[&Text], renderer: &mut RenderInformation<'_, '_>){
-        let wgpu = renderer.wgpu;
-
-        let mut text_encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("text encoder"),
-        });
-
-        let textures = texts
-            .iter()
-            .map(|t| t.get_measurements())
-            .map(|size| {
-                wgpu.device.create_texture(&wgpu::TextureDescriptor {
-                    label: Some("Text Texture"),
-                    size: wgpu::Extent3d {
-                        width: size.x.ceil() as u32,
-                        height: size.y.ceil() as u32,
-                        depth_or_array_layers: 1,
-                    },
-                    mip_level_count: 1,
-                    sample_count: 1,
-                    dimension: wgpu::TextureDimension::D2,
-                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
-                    usage: wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::RENDER_ATTACHMENT,
-                    view_formats: &[],
-                })
-            })
-            .collect::<Vec<wgpu::Texture>>();
-
-        for (texture, text) in textures.iter().zip(texts) {
-            let texture_size = glyphon::Resolution{width: texture.width(), height: texture.height()};
-            self.text_renderer.prepare(
-                &wgpu.device,
-                &wgpu.queue,
-                &mut self.font_system,
-                &mut self.atlas,
-                texture_size,
-                [text.into_text_area()],
-                &mut self.cache,
-            ).unwrap();
-
-            let view = texture.create_view(&Default::default());
-
-            let mut render_pass = text_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("Text texture render"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.0,
-                            g: 0.0,
-                            b: 0.0,
-                            a: 0.0,
-                        }),
-                        store: true
-                    },
-                })],
-                depth_stencil_attachment: None}
-            );
-
-            self.text_renderer.render(&self.atlas, &mut render_pass).unwrap();
-        }
-
-        wgpu.queue.submit(std::iter::once(text_encoder.finish()));
-
-        let layout = layouts::create_texture_layout(&wgpu.device);
-
-        let bind_group = wgpu
-        .device
-        .create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&textures[0].create_view(&Default::default())),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(renderer.texture_sampler),
-                },
-            ],
-            label: Some("text_texuture_bind_group"),
-        });
-
-        let points = Rectangle::from_pixels(Vec2{x: 0.0, y: 0.0}, Vec2{x: 100.0, y: 100.0}, Colour::WHITE.to_raw(), renderer.size)
-            .into_vertices();
-        let indicies: [u16; 6] = [0, 1, 2, 3, 0, 2];
-
-        let vert_buffer = wgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Text Vert Buffer"),
-            contents: bytemuck::cast_slice(&points),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-        let index_buffer = wgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Text index buffer"),
-            contents: bytemuck::cast_slice(&indicies),
-            usage: wgpu::BufferUsages::INDEX,
-        });
-    }
-}
-
-/// Represents a section of Text. One should be created per widget of text
-pub struct Text {
-    pos: Vec2<f32>,
-    size: Vec2<f32>,
-    font_size: f32,
-    line_height: f32,
-    bounds: Vec2<Vec2<i32>>,
-    text_buffer: glyphon::Buffer,
-}
-
-impl Text {
-    pub fn new(position: Vec2<f32>, font_size: f32, line_height: f32, text_handle: &mut TextRenderer, engine: &Engine) -> Self {
-        let mut text_buffer = glyphon::Buffer::new(&mut text_handle.font_system, Metrics::new(font_size, line_height));
-        let size = engine.get_window_size();
-        let scale_factor = engine.get_window_scale_factor();
-        let phyisical_width = (size.x as f64 * scale_factor) as f32;
-        let phyiscal_hieght = (size.y as f64 * scale_factor) as f32;
-
-        text_buffer.set_size(&mut text_handle.font_system, phyisical_width, phyiscal_hieght);
-
-        let hieght = text_buffer.lines.len() as f32 * text_buffer.metrics().line_height;
-        let run_width = text_buffer
-            .layout_runs()
-            .map(|run| run.line_w)
-            .max_by(f32::total_cmp).unwrap_or(0.0);
-
-        Self {
-            pos: position,
-            size: Vec2{x: run_width, y: hieght},
-            font_size,
-            line_height,
-            bounds: Vec2{x: Vec2{x: 0, y: 0}, y: Vec2{x: i32::MAX, y: i32::MAX}},
-            text_buffer
-        }
-    }
-
-    /// Sets the text for the widget, using the defualt font.
-    /// This only needs to be done once, not every frame like Materials.
-    pub fn set_text(&mut self, text: &str, colour: Colour, text_handle: &mut TextRenderer) {
-        self.text_buffer.set_text(
-            &mut text_handle.font_system,
-            text,
-            Attrs::new().color(colour.into()).family(Family::Name(&text_handle.defualt_font_name)),
-            Shaping::Basic
-        );
-
-        self.update_measurements();
-    }
-
-    /// Sets the text for the widget, but with a font of your choosing.
-    /// This only needs to be done once, not every frame like Materials
-    pub fn set_text_with_font(&mut self, text: &str, colour: Colour, font: &Font, text_handle: &mut TextRenderer) {
-        self.text_buffer.set_text(
-            &mut text_handle.font_system,
-            text,
-            Attrs::new().color(colour.into()).family(Family::Name(&font.name)),
-            Shaping::Basic
-        );
-
-        self.update_measurements();
-    }
-
-    /// Sets bounds for the text. Any text drawn outside of the bounds will be cropped
-    pub fn set_bounds(&mut self, position: Vec2<i32>, size: Vec2<i32>) {
-        self.bounds = Vec2{x: position, y: size};
-    }
-
-    /// Sets the font size of the text
-    pub fn set_font_size(&mut self, new_size: f32, text_handle: &mut TextRenderer) {
-        self.font_size = new_size;
-        let metrics = Metrics::new(self.font_size, self.line_height);
-        self.text_buffer.set_metrics(&mut text_handle.font_system, metrics);
-
-        self.update_measurements();
-    }
-
-    /// Sets the line hieght of the tex
-    pub fn set_line_height(&mut self, new_height: f32, text_handle: &mut TextRenderer) {
-        self.line_height = new_height;
-        let metrics = Metrics::new(self.font_size, self.line_height);
-        self.text_buffer.set_metrics(&mut text_handle.font_system, metrics);
-
-        self.update_measurements();
-    }
-
-    /// Measuers the text contained within the widget
-    pub fn get_measurements(&self) -> Vec2<f32> {
-        self.size
-    }
-
-    fn update_measurements(&mut self) {
-        let hieght = self.text_buffer.lines.len() as f32 * self.text_buffer.metrics().line_height;
-        let run_width = self.text_buffer
-            .layout_runs()
-            .map(|run| run.line_w)
-            .max_by(f32::total_cmp)
-            .unwrap_or(0.0);
-
-        self.size = Vec2{x: run_width, y: hieght}
-    }
-
-    fn into_text_area(&self) -> TextArea {
-        TextArea {
-            buffer: &self.text_buffer,
-            left: self.pos.x,
-            top: self.pos.y,
-            scale: 1.0,
-            bounds: TextBounds {
-                left: self.bounds.x.x,
-                top: self.bounds.x.y,
-                right: self.bounds.y.x,
-                bottom: self.bounds.y.y
-            },
-            default_color: glyphon::Color::rgb(255, 255, 255),
-        }
-    }
 }
 
 pub struct TextMaterial {
-    pos: Vec2<f32>,
     size: Vec2<u32>,
     font_size: f32,
     line_height: f32,
@@ -466,11 +158,13 @@ pub struct TextMaterial {
     texture: wgpu::Texture,
     texture_view: wgpu::TextureView,
     bind_group: wgpu::BindGroup,
+    vertex_count: u64,
+    index_count: u64,
+    change_flag: bool,
 }
 
 impl TextMaterial {
     pub fn new(
-        position: Vec2<f32>,
         text: &str,
         colour: Colour,
         font_size: f32,
@@ -486,7 +180,12 @@ impl TextMaterial {
         let phyiscal_hieght = (window_size.y as f64 * scale_factor) as f32;
 
         text_buffer.set_size(&mut text_handle.font_system, phyisical_width, phyiscal_hieght);
-        text_buffer.set_text(&mut text_handle.font_system, text, Attrs::new().color(colour.into()), Shaping::Basic);
+        text_buffer.set_text(
+            &mut text_handle.font_system,
+            text,
+            Attrs::new().color(colour.into()).family(Family::Name(&text_handle.defualt_font_name)),
+            Shaping::Basic
+        );
 
         let hieght = text_buffer.lines.len() as f32 * text_buffer.metrics().line_height;
         let run_width = text_buffer
@@ -514,22 +213,10 @@ impl TextMaterial {
         let texture_size = Vec2{x: run_width.ceil() as u32, y: hieght.ceil() as u32};
         let texture_view = texture.create_view(&Default::default());
     
-        render_text_to_texture(text_handle, &text_buffer, bounds, texture_size, &texture_view, engine);
+        render_text_to_texture(text_handle, &text_buffer, bounds, texture_size, &texture_view, wgpu);
+        let vertex_size = std::mem::size_of::<Vertex>() as u64;
 
-        // Construct Index to Verticies
-        let indicies:[u16; 6] = [0,1,2,3,0,2];
-        let index_buffer = wgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Text Widget Index Buffer"),
-            contents: bytemuck::cast_slice(&indicies),
-            usage: wgpu::BufferUsages::INDEX
-        });
-
-        let vertex_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Text Widget Vertex Buffer"),
-            size: (std::mem::size_of::<Vertex>() * 4) as u64,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
+        let (vertex_buffer, index_buffer) = Material::create_buffers(&wgpu.device, vertex_size, 8, 2, 12);
 
         let bind_group = wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Text Widget BindGroup"),
@@ -546,10 +233,7 @@ impl TextMaterial {
             ],
         });
 
-        // render text to texture
-
         Self {
-            pos: position,
             size: texture_size,
             font_size,
             line_height,
@@ -558,9 +242,242 @@ impl TextMaterial {
             vertex_buffer,
             index_buffer,
             texture_view,
-            texture,
+            texture: texture,
             bind_group,
+            vertex_count: 0,
+            index_count: 0,
+            change_flag: false,
         }
+    }
+
+    pub fn set_text(&mut self, text: &str, colour: Colour, text_handle: &mut TextRenderer, engine: &Engine) {
+        self.text_buffer.set_text(
+            &mut text_handle.font_system,
+            text,
+            Attrs::new().color(colour.into()).family(Family::Name(&text_handle.defualt_font_name)),
+            Shaping::Basic
+        );
+
+        self.update_measurements(engine.get_wgpu());
+    }
+
+    pub fn set_text_with_font(&mut self, text: &str, colour: Colour, font: &Font, text_handle: &mut TextRenderer, engine: &Engine) {
+        self.text_buffer.set_text(
+            &mut text_handle.font_system,
+            text,
+            Attrs::new().color(colour.into()).family(Family::Name(&font.name)),
+            Shaping::Basic
+        );
+
+        self.update_measurements(engine.get_wgpu());
+    }
+
+    /// Sets bounds for the text. Any text drawn outside of the bounds will be cropped
+    pub fn set_bounds(&mut self, position: Vec2<i32>, size: Vec2<i32>) {
+        self.bounds = Vec2{x: position, y: size};
+    }
+
+    /// Sets the font size of the text
+    pub fn set_font_size(&mut self, new_size: f32, text_handle: &mut TextRenderer, engine: &Engine) {
+        self.font_size = new_size;
+        let metrics = Metrics::new(self.font_size, self.line_height);
+        self.text_buffer.set_metrics(&mut text_handle.font_system, metrics);
+
+        self.update_measurements(engine.get_wgpu());
+    }
+
+    /// Sets the line hieght of the tex
+    pub fn set_line_height(&mut self, new_height: f32, text_handle: &mut TextRenderer, engine: &Engine) {
+        self.line_height = new_height;
+        let metrics = Metrics::new(self.font_size, self.line_height);
+        self.text_buffer.set_metrics(&mut text_handle.font_system, metrics);
+
+        self.update_measurements(engine.get_wgpu());
+    }
+
+    /// Measuers the text contained within the widget
+    pub fn get_measurements(&self) -> Vec2<u32> {
+        self.size
+    }
+
+    fn update_measurements(&mut self, wgpu: &WgpuClump) {
+        let hieght = self.text_buffer.lines.len() as f32 * self.text_buffer.metrics().line_height;
+        let run_width = self.text_buffer
+            .layout_runs()
+            .map(|run| run.line_w)
+            .max_by(f32::total_cmp)
+            .unwrap_or(0.0);
+
+        self.size = Vec2{x: run_width.ceil() as u32, y: hieght.ceil() as u32};
+
+        self.texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Text Texture"),
+            size: wgpu::Extent3d {
+                width: self.size.x,
+                height: self.size.y,
+                depth_or_array_layers: 1
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+
+        self.change_flag = true;
+    }
+
+    pub fn add_instance(&mut self, position: Vec2<f32>, tint: Colour, render: &RenderInformation) {
+        let window_size = render.size;
+        let rect_size = Vec2{x: self.size.x as f32, y: self.size.y as f32};
+        let wgpu = render.wgpu;
+        let verts =
+            Rectangle::from_pixels(position, rect_size, tint.to_raw(), window_size).into_vertices();
+
+        self.push_rectangle(wgpu, verts);
+    }
+
+    pub fn add_instance_with_rotation(&mut self, position: Vec2<f32>, tint: Colour, degrees: f32, render: &RenderInformation) {
+        let window_size = render.size;
+        let rect_size = Vec2{x: self.size.x as f32, y: self.size.y as f32};
+        let wgpu = render.wgpu;
+        let verts =
+            Rectangle::from_pixels_with_rotation(position, rect_size, tint.to_raw(), window_size, degrees)
+            .into_vertices();
+
+        self.push_rectangle(wgpu, verts);
+    }
+
+    pub fn add_instance_with_uv(&mut self, position: Vec2<f32>, tint: Colour, uv_pos: Vec2<f32>, uv_size: Vec2<f32>, render: &RenderInformation) {
+        let window_size = render.size;
+        let rect_size = Vec2{x: self.size.x as f32, y: self.size.y as f32};
+        let wgpu = render.wgpu;
+        let verts =
+            Rectangle::from_pixels_with_uv(position, rect_size, tint.to_raw(), window_size, uv_pos, uv_size)
+            .into_vertices();
+
+        self.push_rectangle(wgpu, verts);
+    }
+
+    fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {
+        let vertex_size = std::mem::size_of::<Vertex>() as u64;
+        let index_size = 2;
+
+        let max_verts = self.vertex_buffer.size();
+        if self.vertex_count + (4 * vertex_size) > max_verts {
+            self.grow_vertex_buffer(wgpu);
+        }
+
+        let num_verts = self.get_vertex_number() as u16;
+        let indicies = [
+            num_verts, 1 + num_verts, 2 + num_verts,
+            3 + num_verts, num_verts, 2 + num_verts,
+        ];
+
+        let max_indicies = self.index_buffer.size();
+        if self.index_count + (6 * index_size) > max_indicies {
+            self.grow_index_buffer(wgpu);
+        }
+
+        wgpu.queue.write_buffer(
+            &self.vertex_buffer,
+            self.vertex_count,
+            bytemuck::cast_slice(&verts),
+        );
+        wgpu.queue.write_buffer(
+            &self.index_buffer,
+            self.index_count,
+            bytemuck::cast_slice(&indicies),
+        );
+
+        self.vertex_count += 4 * vertex_size;
+        self.index_count += 6 * index_size;
+    }
+
+    fn get_vertex_number(&self) -> u64 {
+        self.vertex_count / std::mem::size_of::<Vertex>() as u64
+    }
+
+    fn get_index_number(&self) -> u64 {
+        self.index_count / 2
+    }
+
+    fn grow_index_buffer(&mut self, wgpu: &WgpuClump) {
+        let mut encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Material Buffer Grower"),
+        });
+
+        let new_size = self.index_buffer.size() * 2;
+        let new_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Vertex_Buffer"),
+            size: new_size,
+            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        encoder.copy_buffer_to_buffer(
+            &self.index_buffer,
+            0,
+            &new_buffer,
+            0,
+            self.index_buffer.size(),
+        );
+
+        wgpu.
+            queue
+            .submit(std::iter::once(encoder.finish()));
+
+        self.index_buffer = new_buffer;
+    }
+
+    fn grow_vertex_buffer(&mut self, wgpu: &WgpuClump) {
+        let mut encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Material Buffer Grower"),
+        });
+
+        let new_size = self.vertex_buffer.size() * 2;
+        let new_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Vertex_Buffer"),
+            size: new_size,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        encoder.copy_buffer_to_buffer(
+            &self.vertex_buffer,
+            0,
+            &new_buffer,
+            0,
+            self.vertex_buffer.size(),
+        );
+
+        wgpu.
+            queue
+            .submit(std::iter::once(encoder.finish()));
+
+        self.vertex_buffer = new_buffer;
+    }
+
+    pub fn draw<'pass, 'others>(&'others mut self, text_handle: &mut TextRenderer, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
+        if self.change_flag {
+            render_text_to_texture(text_handle, &self.text_buffer, self.bounds, self.size, &self.texture_view, information.wgpu);
+            self.change_flag = false;
+        }
+        
+        information.render_pass.set_pipeline(information.pipelines.get(&information.defualt_id).unwrap());
+        information.render_pass.set_bind_group(0, &self.bind_group, &[]);
+
+        information.render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(0..self.get_vertex_number()));
+        information.render_pass.set_index_buffer(
+            self.index_buffer.slice(0..self.index_count),
+            wgpu::IndexFormat::Uint16
+        );
+
+        information.render_pass.draw_indexed(0..self.get_index_number() as u32, 0, 0..1);
+
+        self.vertex_count = 0;
+        self.index_count = 0;
     }
 }
 
@@ -577,10 +494,8 @@ fn render_text_to_texture(
     bounds: Vec2<Vec2<i32>>,
     texture_size: Vec2<u32>,
     texture_view: &wgpu::TextureView,
-    engine: &Engine,
+    wgpu: &WgpuClump,
 ) {
-    let wgpu = engine.get_wgpu();
-
     let text_area = TextArea {
         buffer: &text,
         left: 0.0,

@@ -54,7 +54,6 @@ pub struct Engine {
 
 impl Engine {
     fn new(builder: EngineBuilder) -> Result<Self, BuildError> {
-        println!("{}", std::mem::size_of::<LineVertex>() * 2);
         let cursor_visibility = true;
         let input_handle = InputHandle::new();
         let size: Vec2<u32> = builder.resolution.into();

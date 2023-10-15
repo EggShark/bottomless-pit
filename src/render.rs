@@ -73,7 +73,6 @@ pub struct RenderInformation<'pass, 'others> {
     pub(crate) pipelines: &'others WgpuCache<wgpu::RenderPipeline>,
     pub(crate) defualt_id: wgpu::Id<wgpu::RenderPipeline>,
     pub(crate) camera_bindgroup: &'others wgpu::BindGroup,
-    pub(crate) texture_sampler: &'others wgpu::Sampler,
     pub(crate) wgpu: &'others WgpuClump,
 }
 
@@ -109,7 +108,6 @@ pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::S
         pipelines: &engine.pipelines,
         defualt_id: engine.defualt_pipe_id(),
         camera_bindgroup: engine.camera_bindgroup(),
-        texture_sampler: engine.get_texture_sampler(),
         wgpu,
     };
 
