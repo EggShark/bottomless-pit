@@ -16,11 +16,10 @@ use encase::ShaderType;
 
 use crate::matrix_math::normalize_points;
 use crate::texture::RegisteredTexture;
-use crate::vertex::{Vertex, LineVertex};
+use crate::vertex::{self, Vertex, LineVertex};
 use crate::engine_handle::{WgpuClump, Engine};
 use crate::vectors::Vec2;
 use crate::colour::Colour;
-use crate::rect::Rectangle;
 use crate::render::RenderInformation;
 use crate::shader::{UniformData, Shader};
 
@@ -90,7 +89,7 @@ impl Material {
         let window_size = render.size;
         let wgpu = render.wgpu;
         let verts =
-            Rectangle::from_pixels(position, size, colour.to_raw(), window_size).into_vertices();
+            vertex::from_pixels(position, size, colour.to_raw(), window_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -99,8 +98,8 @@ impl Material {
     pub fn add_screenspace_rectangle(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
         let wgpu = render.wgpu;
 
-        let verts = Rectangle::new(position, size, colour.to_raw());
-        self.push_rectangle(wgpu, verts.into_vertices());
+        let verts = vertex::new(position, size, colour.to_raw());
+        self.push_rectangle(wgpu, verts);
     }
 
     /// Queues a rectagnle with UV coordniates. The position and size of the UV cordniates are the same as the pixels in the 
@@ -112,8 +111,7 @@ impl Material {
         let uv_position = normalize_points(uv_position, self.texture_size);
 
         let verts = 
-            Rectangle::from_pixels_with_uv(position, size, colour.to_raw(), window_size, uv_position, uv_size)
-            .into_vertices();
+            vertex::from_pixels_with_uv(position, size, colour.to_raw(), window_size, uv_position, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -123,8 +121,8 @@ impl Material {
         let wgpu = render.wgpu;
         let window_size = render.size;
 
-        let verts = Rectangle::from_pixels_with_rotation(position, size, colour.to_raw(), window_size, rotation)
-            .into_vertices();
+        let verts =
+            vertex::from_pixels_with_rotation(position, size, colour.to_raw(), window_size, rotation);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -137,8 +135,7 @@ impl Material {
         let uv_position = normalize_points(uv_position, self.texture_size);
 
         let verts = 
-            Rectangle::from_pixels_ex(position, size, colour.to_raw(), window_size, rotation, uv_position, uv_size)
-            .into_vertices();
+            vertex::from_pixels_ex(position, size, colour.to_raw(), window_size, rotation, uv_position, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -148,8 +145,7 @@ impl Material {
         let wgpu = render.wgpu;
         
         let verts = 
-            Rectangle::new_ex(position, size, colour.to_raw(), rotation, uv_position, uv_size)
-            .into_vertices();
+            vertex::new_ex(position, size, colour.to_raw(), rotation, uv_position, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -166,8 +162,7 @@ impl Material {
         ];
 
         let verts =
-            Rectangle::from_pixels_custom(points, uv_points, rotation, colour.to_raw(), render.size)
-            .into_vertices();
+            vertex::from_pixels_custom(points, uv_points, rotation, colour.to_raw(), render.size);
 
         self.push_rectangle(wgpu, verts);
     }

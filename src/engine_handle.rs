@@ -126,7 +126,7 @@ impl Engine {
             format: surface_format,
             width: size.x,
             height: size.y,
-            present_mode: surface_capabilities.present_modes[0],
+            present_mode: builder.vsync,
             alpha_mode: surface_capabilities.alpha_modes[0],
             view_formats: vec![],
         };
@@ -683,6 +683,7 @@ pub struct EngineBuilder {
     window_icon: Option<winit::window::Icon>,
     window_title: String,
     resizable: bool,
+    vsync: wgpu::PresentMode,
 }
 
 impl EngineBuilder {
@@ -697,6 +698,7 @@ impl EngineBuilder {
     ///     window_icon: None,
     ///     window_title: "".into(),
     ///     resizable: true,
+    ///     vysnc: false,
     /// }
     pub fn new() -> Self {
         Self {
@@ -708,6 +710,7 @@ impl EngineBuilder {
             window_icon: None,
             window_title: "".into(),
             resizable: true,
+            vsync: wgpu::PresentMode::AutoVsync,
         }
     }
 
@@ -722,6 +725,7 @@ impl EngineBuilder {
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
+            vsync: self.vsync
         }
     }
 
@@ -736,6 +740,7 @@ impl EngineBuilder {
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
+            vsync: self.vsync
         }
     }
 
@@ -753,6 +758,25 @@ impl EngineBuilder {
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
+            vsync: self.vsync
+        }
+    }
+
+    /// Will cause the framerate to be uncapped if the platform supports it using
+    /// wgpu's [PresentMode::AutoNoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html)
+    /// by defualt the engine uses
+    /// [PresentMode::AutoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html)
+    pub fn remove_vsync(self) -> Self {
+        Self {
+            resolution: self.resolution,
+            full_screen: self.full_screen,
+            target_fps: self.target_fps,
+            close_key: self.close_key,
+            clear_colour: self.clear_colour,
+            window_icon: self.window_icon,
+            window_title: self.window_title,
+            resizable: self.resizable,
+            vsync: wgpu::PresentMode::AutoNoVsync,
         }
     }
 
@@ -767,6 +791,7 @@ impl EngineBuilder {
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
+            vsync: self.vsync,
         }
     }
 
@@ -781,6 +806,7 @@ impl EngineBuilder {
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
+            vsync: self.vsync,
         }
     }
 
@@ -795,6 +821,7 @@ impl EngineBuilder {
             window_icon: self.window_icon,
             window_title: title.into(),
             resizable: self.resizable,
+            vsync: self.vsync,
         }
     }
 
@@ -809,6 +836,7 @@ impl EngineBuilder {
             window_icon: Some(icon),
             window_title: self.window_title,
             resizable: self.resizable,
+            vsync: self.vsync,
         }
     }
 
@@ -823,6 +851,7 @@ impl EngineBuilder {
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: false,
+            vsync: self.vsync,
         }
     }
 

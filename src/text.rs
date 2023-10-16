@@ -45,10 +45,9 @@ use crate::engine_handle::{Engine, WgpuClump};
 use crate::layouts;
 use crate::material::Material;
 use crate::matrix_math::normalize_points;
-use crate::rect::Rectangle;
 use crate::render::RenderInformation;
 use crate::vectors::Vec2;
-use crate::vertex::Vertex;
+use crate::vertex::{self, Vertex};
 
 /// Stores Important information nessicary to rendering text. Only on of these should
 /// be created per application.
@@ -345,7 +344,7 @@ impl TextMaterial {
         let rect_size = Vec2{x: self.size.x as f32, y: self.size.y as f32};
         let wgpu = render.wgpu;
         let verts =
-            Rectangle::from_pixels(position, rect_size, tint.to_raw(), window_size).into_vertices();
+            vertex::from_pixels(position, rect_size, tint.to_raw(), window_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -357,8 +356,7 @@ impl TextMaterial {
         let rect_size = Vec2{x: self.size.x as f32, y: self.size.y as f32};
         let wgpu = render.wgpu;
         let verts =
-            Rectangle::from_pixels_with_rotation(position, rect_size, tint.to_raw(), window_size, degrees)
-            .into_vertices();
+            vertex::from_pixels_with_rotation(position, rect_size, tint.to_raw(), window_size, degrees);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -373,8 +371,7 @@ impl TextMaterial {
         let uv_size = normalize_points(uv_size, Vec2{x: self.size.x as f32, y: self.size.y as f32});
 
         let verts =
-            Rectangle::from_pixels_with_uv(position, size, tint.to_raw(), window_size, uv_pos, uv_size)
-            .into_vertices();
+            vertex::from_pixels_with_uv(position, size, tint.to_raw(), window_size, uv_pos, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -398,8 +395,7 @@ impl TextMaterial {
 
 
         let verts = 
-            Rectangle::from_pixels_ex(position, size, tint.to_raw(), window_size, degrees, uv_pos, uv_size)
-            .into_vertices();
+            vertex::from_pixels_ex(position, size, tint.to_raw(), window_size, degrees, uv_pos, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -418,8 +414,7 @@ impl TextMaterial {
         ];
 
         let verts = 
-            Rectangle::from_pixels_custom(points, uv_points, degrees, tint.to_raw(), window_size)
-            .into_vertices();
+            vertex::from_pixels_custom(points, uv_points, degrees, tint.to_raw(), window_size);
 
         self.push_rectangle(wgpu, verts);
     }

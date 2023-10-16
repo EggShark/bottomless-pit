@@ -46,7 +46,6 @@ pub mod input;
 mod layouts;
 pub mod matrix_math;
 pub mod material;
-mod rect;
 pub mod render;
 pub mod shader;
 pub mod text;

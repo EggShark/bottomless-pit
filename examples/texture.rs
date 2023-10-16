@@ -12,7 +12,7 @@ fn main() {
         .with_resolution((400, 400))
         .build()
         .unwrap();
-    let texture = Texture::from_path(&engine, Some("texture"), "../bplogo.png")
+    let texture = Texture::from_path(&engine, Some("texture"), "examples/bplogo.png")
         .unwrap()
         .register(&mut engine);
 
