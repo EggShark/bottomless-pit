@@ -42,6 +42,21 @@ impl Game for Position {
         self.texture_material.add_rectangle_with_uv(Vec2{x: 0.0, y: 100.0}, defualt_size, Vec2{x: 311.0, y: 311.0}, Vec2{x: 311.0, y: 311.0}, Colour::WHITE, &render_handle);
         self.regular_material.add_rectangle_with_rotation(Vec2{x: 0.0, y: 150.0}, defualt_size, Colour::GREEN, 45.0, &render_handle);
 
+        let points = [
+            Vec2{x: 0.0, y: 300.0},
+            Vec2{x: 80.0, y: 290.0},
+            Vec2{x: 100.0, y: 400.0},
+            Vec2{x: 60.0, y: 400.0},
+        ];
+        let uvs = [
+            Vec2{x: 0.0, y: 0.0},
+            Vec2{x: 1.0, y: 0.0}, 
+            Vec2{x: 1.0, y: 1.0},
+            Vec2{x: 0.0, y: 1.0},
+        ];
+
+        self.regular_material.add_custom(points, uvs, 0.0 , Colour::RED, &render_handle);
+
         self.texture_material.draw(&mut render_handle);
         self.regular_material.draw(&mut render_handle);
     }

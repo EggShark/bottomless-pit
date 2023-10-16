@@ -108,8 +108,8 @@ impl Material {
     pub fn add_rectangle_with_uv(&mut self, position: Vec2<f32>, size: Vec2<f32>, uv_position: Vec2<f32>, uv_size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
         let wgpu = render.wgpu;
         let window_size = render.size;
-        let uv_size = normalize_points(uv_size, self.texture_size.x, self.texture_size.y);
-        let uv_position = normalize_points(uv_position, self.texture_size.x, self.texture_size.y);
+        let uv_size = normalize_points(uv_size, self.texture_size);
+        let uv_position = normalize_points(uv_position, self.texture_size);
 
         let verts = 
             Rectangle::from_pixels_with_uv(position, size, colour.to_raw(), window_size, uv_position, uv_size)
@@ -133,8 +133,8 @@ impl Material {
     pub fn add_rectangle_ex(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, uv_position: Vec2<f32>, uv_size: Vec2<f32>, render: &RenderInformation) {
         let wgpu = render.wgpu;
         let window_size = render.size;
-        let uv_size = normalize_points(uv_size, self.texture_size.x, self.texture_size.y);
-        let uv_position = normalize_points(uv_position, self.texture_size.x, self.texture_size.y);
+        let uv_size = normalize_points(uv_size, self.texture_size);
+        let uv_position = normalize_points(uv_position, self.texture_size);
 
         let verts = 
             Rectangle::from_pixels_ex(position, size, colour.to_raw(), window_size, rotation, uv_position, uv_size)
@@ -149,6 +149,24 @@ impl Material {
         
         let verts = 
             Rectangle::new_ex(position, size, colour.to_raw(), rotation, uv_position, uv_size)
+            .into_vertices();
+
+        self.push_rectangle(wgpu, verts);
+    }
+
+    /// Queues a 4 pointed polygon with complete control over uv coordinates and rotation. The points need to be in top left, right
+    /// bottom right and bottom left order as it will not render porperly otherwise.
+    pub fn add_custom(&mut self, points: [Vec2<f32>; 4], uv_points: [Vec2<f32>; 4], rotation: f32, colour: Colour, render: &RenderInformation) {
+        let wgpu = render.wgpu;
+        let uv_points = [
+            normalize_points(uv_points[0], self.texture_size),
+            normalize_points(uv_points[1], self.texture_size),
+            normalize_points(uv_points[2], self.texture_size),
+            normalize_points(uv_points[3], self.texture_size),
+        ];
+
+        let verts =
+            Rectangle::from_pixels_custom(points, uv_points, rotation, colour.to_raw(), render.size)
             .into_vertices();
 
         self.push_rectangle(wgpu, verts);

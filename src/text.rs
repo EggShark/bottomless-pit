@@ -12,8 +12,7 @@
 //! fn main() {
 //!     // assuming you've made a engine handle already
 //!     let mut text_handle = TextRenderer::new(&engine);
-//!     let mut text = Text::new(Vec2{x: 0.0, y: 0.0}, 30.0, 28.0, &mut text_handle, &engine);
-//!     text.set_text("Hello World", Color::WHITE, &mut text_handle);
+//!     let text_mat = TextMaterial::new("Hello World", Colour::RED, 100.0, 100.0, &mut text_render, &engine);
 //!     
 //!     // construct any struct that implements Game
 //!     let game = UserStruct::new(text, text_buffer);
@@ -23,12 +22,14 @@
 //! 
 //! impl Game for UserStruct {
 //!     fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
-//!         // notice how you dont need to set the text every frame
-//!         self.text_handle.draw_text(&self.text, &mut render_handle);
+//!         // notice how you dont need to set the text every frame, and works the same as a Material
+//!         self.text_mat.add_instance(Vec2{x: 0.0, y: 0.0}, Colour::WHITE, &render_handle);
+//! 
+//!         self.text_mat.draw(&mut self.text_handle, &mut render_handle);
 //!     }
 //! 
 //!     fn update(&mut self, engine_handle: &mut Engine) {
-//!         // nothing, you dont need to update the text buffer
+//!         // nothing, you dont need to update the text buffer every frame
 //!     }
 //! }
 //! 
@@ -43,6 +44,7 @@ use crate::colour::Colour;
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::layouts;
 use crate::material::Material;
+use crate::matrix_math::normalize_points;
 use crate::rect::Rectangle;
 use crate::render::RenderInformation;
 use crate::vectors::Vec2;
@@ -109,12 +111,13 @@ impl TextRenderer {
         })
     }
 
-    /// Loads in a font from a byte vector
-    pub fn load_font_from_bytes(&mut self, data: Vec<u8>) -> Font {
+    /// Loads in a font from a byte array
+    pub fn load_font_from_bytes(&mut self, data: &[u8]) -> Font {
         let id = self
             .font_system
             .db_mut()
-            .load_font_source(Source::Binary(Arc::new(data)))[0];
+            .load_font_source(Source::Binary(Arc::new(data.to_vec())))[0];
+        // I am lying to the user here 
 
         let name = self.font_system
             .db()
@@ -147,6 +150,9 @@ impl TextRenderer {
     }
 }
 
+/// This struct represents a piece of text. You only need to create 
+/// one peice of text per string you would like to draw
+/// as you can draw multpiple instances easily.
 pub struct TextMaterial {
     size: Vec2<u32>,
     font_size: f32,
@@ -250,6 +256,8 @@ impl TextMaterial {
         }
     }
 
+    /// Sets the text for the widget, using the defualt font.
+    /// This only needs to be done once, not every frame like Materials.
     pub fn set_text(&mut self, text: &str, colour: Colour, text_handle: &mut TextRenderer, engine: &Engine) {
         self.text_buffer.set_text(
             &mut text_handle.font_system,
@@ -261,6 +269,8 @@ impl TextMaterial {
         self.update_measurements(engine.get_wgpu());
     }
 
+    /// Sets the text for the widget, but with a font of your choosing.
+    /// This only needs to be done once, not every frame like Materials
     pub fn set_text_with_font(&mut self, text: &str, colour: Colour, font: &Font, text_handle: &mut TextRenderer, engine: &Engine) {
         self.text_buffer.set_text(
             &mut text_handle.font_system,
@@ -328,6 +338,8 @@ impl TextMaterial {
         self.change_flag = true;
     }
 
+    /// Queues a peice of text at the specified position. Its size will be the size of the entire
+    /// text.
     pub fn add_instance(&mut self, position: Vec2<f32>, tint: Colour, render: &RenderInformation) {
         let window_size = render.size;
         let rect_size = Vec2{x: self.size.x as f32, y: self.size.y as f32};
@@ -338,6 +350,8 @@ impl TextMaterial {
         self.push_rectangle(wgpu, verts);
     }
 
+    /// Queues a piece of text at the specified postion, with rotation. Its size will be the size of the
+    /// text.
     pub fn add_instance_with_rotation(&mut self, position: Vec2<f32>, tint: Colour, degrees: f32, render: &RenderInformation) {
         let window_size = render.size;
         let rect_size = Vec2{x: self.size.x as f32, y: self.size.y as f32};
@@ -349,12 +363,62 @@ impl TextMaterial {
         self.push_rectangle(wgpu, verts);
     }
 
-    pub fn add_instance_with_uv(&mut self, position: Vec2<f32>, tint: Colour, uv_pos: Vec2<f32>, uv_size: Vec2<f32>, render: &RenderInformation) {
+    /// Queues a piece of text at the specified postion. This also allows you to control the uv coordinates to the texture
+    /// that the text has been rendered to.
+    pub fn add_instance_with_uv(&mut self, position: Vec2<f32>, size: Vec2<f32>, uv_pos: Vec2<f32>, uv_size: Vec2<f32>, tint: Colour, render: &RenderInformation) {
         let window_size = render.size;
-        let rect_size = Vec2{x: self.size.x as f32, y: self.size.y as f32};
         let wgpu = render.wgpu;
+
+        let uv_pos = normalize_points(uv_pos, Vec2{x: self.size.x as f32, y: self.size.y as f32});
+        let uv_size = normalize_points(uv_size, Vec2{x: self.size.x as f32, y: self.size.y as f32});
+
         let verts =
-            Rectangle::from_pixels_with_uv(position, rect_size, tint.to_raw(), window_size, uv_pos, uv_size)
+            Rectangle::from_pixels_with_uv(position, size, tint.to_raw(), window_size, uv_pos, uv_size)
+            .into_vertices();
+
+        self.push_rectangle(wgpu, verts);
+    }
+
+    /// Queues a piece of text at the position with, uv controll, and rotation.
+    pub fn add_instace_ex(
+        &mut self,
+        position: Vec2<f32>,
+        size: Vec2<f32>,
+        uv_pos: Vec2<f32>,
+        uv_size: Vec2<f32>,
+        degrees: f32,
+        tint: Colour,
+        render: &RenderInformation
+    ) {
+        let window_size = render.size;
+        let wgpu = render.wgpu;
+
+        let uv_pos = normalize_points(uv_pos, Vec2{x: self.size.x as f32, y: self.size.y as f32});
+        let uv_size = normalize_points(uv_size, Vec2{x: self.size.x as f32, y: self.size.y as f32});
+
+
+        let verts = 
+            Rectangle::from_pixels_ex(position, size, tint.to_raw(), window_size, degrees, uv_pos, uv_size)
+            .into_vertices();
+
+        self.push_rectangle(wgpu, verts);
+    }
+
+    /// Queues a peice with complete controll over the points, rotation, and uv coordinates. This can allow for non rectanglular shapes
+    /// and the points must be in top left, top right, bottom right, bottom left order otherwise it will not draw properly.
+    pub fn add_instance_custom(&mut self, points: [Vec2<f32>; 4], uv_points: [Vec2<f32>; 4], degrees: f32, tint: Colour, render: &RenderInformation) {
+        let window_size = render.size;
+        let wgpu = render.wgpu;
+
+        let uv_points = [
+            normalize_points(uv_points[0], Vec2{x: self.size.x as f32, y: self.size.y as f32}),
+            normalize_points(uv_points[1], Vec2{x: self.size.x as f32, y: self.size.y as f32}),
+            normalize_points(uv_points[2], Vec2{x: self.size.x as f32, y: self.size.y as f32}),
+            normalize_points(uv_points[3], Vec2{x: self.size.x as f32, y: self.size.y as f32}),
+        ];
+
+        let verts = 
+            Rectangle::from_pixels_custom(points, uv_points, degrees, tint.to_raw(), window_size)
             .into_vertices();
 
         self.push_rectangle(wgpu, verts);

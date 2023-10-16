@@ -13,7 +13,7 @@ fn main() {
         .unwrap();
 
     let mut text_render = TextRenderer::new(&engine);
-    let comic = text_render.load_font_from_bytes(include_bytes!("Comic.ttf").to_vec());
+    let comic = text_render.load_font_from_bytes(include_bytes!("Comic.ttf"));
 
     let text_mat = TextMaterial::new("AA", Colour::RED, 100.0, 100.0, &mut text_render, &engine);
 
