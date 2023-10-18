@@ -10,6 +10,7 @@
 //!         self.default_material.draw(&mut renderer);
 //!     }
 //! }
+use std::f32::consts::PI;
 
 use encase::private::WriteInto;
 use encase::ShaderType;
@@ -215,6 +216,77 @@ impl Material {
         self.push_triangle(wgpu, verts);
     }
 
+    pub fn add_regular_n_gon(&mut self, number_of_sides: usize, radius: f32, center: Vec2<f32>, colour: Colour, render: &RenderInformation) {
+        if number_of_sides < 4 {
+            return;
+        }
+
+        let wgpu = render.wgpu;
+        let screen_size = render.size;
+
+        let vertices = (0..number_of_sides)
+            .map(|num| {
+                Vec2 {
+                    x: radius * (2.0 * PI * num as f32 / number_of_sides as f32).cos() + center.x,
+                    y: radius * (2.0 * PI * num as f32 / number_of_sides as f32).sin() + center.y,
+                }
+            })
+            .map(|point| {
+                Vertex::from_2d([point.x, point.y], [0.0, 0.0], colour.to_raw())
+                .pixels_to_screenspace(screen_size)   
+            })
+            .collect::<Vec<Vertex>>();
+    
+        let number_of_vertices = self.get_vertex_number() as u16;
+        let number_of_triangles = (number_of_sides - 2) as u16;
+
+        let mut indicies = (1..number_of_triangles + 1)
+            .flat_map(|i| {
+                [
+                    number_of_vertices,
+                    i + number_of_vertices,
+                    i + 1 + number_of_vertices,
+                ]
+            })
+            .collect::<Vec<u16>>();
+
+        // ensures we follow copy buffer alignment
+        let num_indicies = indicies.len();
+        let triangles_to_add = if num_indicies < 12 {
+            (12 % num_indicies) / 3
+        } else {
+            (num_indicies % 12) / 3
+        };
+
+        for _ in 0..triangles_to_add {
+            indicies.extend_from_slice(&[indicies[num_indicies-3], indicies[num_indicies-2], indicies[num_indicies-1]]);
+        }
+
+        let max_verts = self.vertex_buffer.size();
+        if self.vertex_count + (vertices.len() as u64 * self.vertex_size) > max_verts {
+            grow_buffer(&mut self.vertex_buffer, wgpu, self.vertex_count + (vertices.len() as u64 * self.vertex_size), wgpu::BufferUsages::VERTEX);
+        }
+
+        let max_indicies = self.index_buffer.size();
+        if self.index_count + (indicies.len() as u64 * self.index_size) > max_indicies {
+            grow_buffer(&mut self.index_buffer, wgpu, self.index_count + (indicies.len() as u64 * self.index_size), wgpu::BufferUsages::INDEX);
+        }
+
+        wgpu.queue.write_buffer(
+            &self.vertex_buffer,
+            self.vertex_count,
+            bytemuck::cast_slice(&vertices),
+        );
+        wgpu.queue.write_buffer(
+            &self.index_buffer,
+            self.index_count,
+            bytemuck::cast_slice(&indicies),
+        );
+
+        self.vertex_count += vertices.len() as u64 * self.vertex_size;
+        self.index_count += indicies.len() as u64 * self.index_size;
+    }
+
     /// Updates the uniform buffer to contain the same type but new data. You can write in a diffrent
     /// type from before but this could cause undefinded behavoir
     pub fn update_uniform_data<T: ShaderType + WriteInto>(&mut self, data: &T, engine: &Engine) {
@@ -249,7 +321,7 @@ impl Material {
     fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {
         let max_verts = self.vertex_buffer.size();
         if self.vertex_count + (4 * self.vertex_size) > max_verts {
-            self.grow_vertex_buffer(wgpu);
+            grow_buffer(&mut self.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
         }
 
         let num_verts = self.get_vertex_number() as u16;
@@ -260,7 +332,7 @@ impl Material {
 
         let max_indicies = self.index_buffer.size();
         if self.index_count + (6 * self.index_size) > max_indicies {
-            self.grow_index_buffer(wgpu);
+            grow_buffer(&mut self.index_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
         }
 
         wgpu.queue.write_buffer(
@@ -281,7 +353,7 @@ impl Material {
     fn push_triangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 3]) {
         let max_verts = self.vertex_buffer.size();
         if self.vertex_count + (3 * self.vertex_size) > max_verts {
-            self.grow_vertex_buffer(wgpu);
+            grow_buffer(&mut self.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
         }
 
         let num_verts = self.get_vertex_number() as u16;
@@ -294,7 +366,7 @@ impl Material {
 
         let max_indicies = self.index_buffer.size();
         if self.index_count + (6 * self.index_size) > max_indicies {
-            self.grow_index_buffer(wgpu);
+            grow_buffer(&mut self.index_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
         }
 
         wgpu.queue.write_buffer(
@@ -312,64 +384,12 @@ impl Material {
         self.index_count += 6 * self.index_size;
     }
 
-    fn grow_vertex_buffer(&mut self, wgpu: &WgpuClump) {
-        let mut encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Material Buffer Grower"),
-        });
-
-        let new_size = self.vertex_buffer.size() * 2;
-        let new_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Vertex_Buffer"),
-            size: new_size,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        encoder.copy_buffer_to_buffer(
-            &self.vertex_buffer,
-            0,
-            &new_buffer,
-            0,
-            self.vertex_buffer.size(),
-        );
-
-        wgpu.
-            queue
-            .submit(std::iter::once(encoder.finish()));
-
-        self.vertex_buffer = new_buffer;
-    }
-
-    fn grow_index_buffer(&mut self, wgpu: &WgpuClump) {
-        let mut encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Material Buffer Grower"),
-        });
-
-        let new_size = self.index_buffer.size() * 2;
-        let new_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Vertex_Buffer"),
-            size: new_size,
-            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        encoder.copy_buffer_to_buffer(
-            &self.index_buffer,
-            0,
-            &new_buffer,
-            0,
-            self.index_buffer.size(),
-        );
-
-        wgpu.
-            queue
-            .submit(std::iter::once(encoder.finish()));
-
-        self.index_buffer = new_buffer;
-    }
-
     // there where 'others: 'pass notation says that 'others lives longer than 'pass
     pub fn draw<'pass, 'others>(&'others mut self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
+        if self.vertex_count == 0 {
+            return;
+        }
+
         let pipeline = information.pipelines.get(&self.pipeline_id).unwrap();
         let texture = information.bind_groups.get(&self.texture_id).unwrap();
 
@@ -509,7 +529,7 @@ impl LineMaterial {
         let max_verts = self.vertex_buffer.size();
         let vert_size = std::mem::size_of::<LineVertex>() as u64;
         if self.vertex_count + (2 * vert_size) > max_verts {
-            self.grow_vertex_buffer(wgpu);
+            grow_buffer(&mut self.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
         }
 
         wgpu.queue.write_buffer(
@@ -537,33 +557,34 @@ impl LineMaterial {
         self.vertex_count/self.vertex_size
     }
 
-    fn grow_vertex_buffer(&mut self, wgpu: &WgpuClump) {
-        let mut encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Line Material Buffer Grower"),
-        });
+}
 
-        let new_size = self.vertex_buffer.size() * 2;
-        println!("growing index buffer to: {}", new_size);
-        let new_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Vertex_Buffer"),
-            size: new_size,
-            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
+pub(crate) fn grow_buffer(buffer: &mut wgpu::Buffer, wgpu: &WgpuClump, size_needed: u64, vert_or_index: wgpu::BufferUsages) {
+    let mut encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("Material Buffer Grower"),
+    });
 
-        encoder.copy_buffer_to_buffer(
-            &self.vertex_buffer,
-            0,
-            &new_buffer,
-            0,
-            self.vertex_buffer.size(),
-        );
+    let size_needed = size_needed + (4 - (size_needed % wgpu::COPY_BUFFER_ALIGNMENT));
 
-        wgpu.
-            queue
-            .submit(std::iter::once(encoder.finish()));
+    let new_size = std::cmp::max(buffer.size() * 2, size_needed);
+    let new_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("Vertex_Buffer"),
+        size: new_size,
+        usage: vert_or_index | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+        mapped_at_creation: false,
+    });
 
-        self.vertex_buffer = new_buffer;
-    }
+    encoder.copy_buffer_to_buffer(
+        &buffer,
+        0,
+        &new_buffer,
+        0,
+        buffer.size(),
+    );
 
+    wgpu.
+        queue
+        .submit(std::iter::once(encoder.finish()));
+
+    *buffer = new_buffer;
 }

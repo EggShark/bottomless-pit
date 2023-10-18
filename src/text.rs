@@ -43,7 +43,7 @@ use glyphon::{FontSystem, SwashCache, TextAtlas, TextArea, TextBounds, Metrics, 
 use crate::colour::Colour;
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::layouts;
-use crate::material::Material;
+use crate::material::{self, Material};
 use crate::matrix_math::normalize_points;
 use crate::render::RenderInformation;
 use crate::vectors::Vec2;
@@ -425,7 +425,7 @@ impl TextMaterial {
 
         let max_verts = self.vertex_buffer.size();
         if self.vertex_count + (4 * vertex_size) > max_verts {
-            self.grow_vertex_buffer(wgpu);
+            material::grow_buffer(&mut self.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
         }
 
         let num_verts = self.get_vertex_number() as u16;
@@ -436,7 +436,7 @@ impl TextMaterial {
 
         let max_indicies = self.index_buffer.size();
         if self.index_count + (6 * index_size) > max_indicies {
-            self.grow_index_buffer(wgpu);
+            material::grow_buffer(&mut self.vertex_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
         }
 
         wgpu.queue.write_buffer(
@@ -460,62 +460,6 @@ impl TextMaterial {
 
     fn get_index_number(&self) -> u64 {
         self.index_count / 2
-    }
-
-    fn grow_index_buffer(&mut self, wgpu: &WgpuClump) {
-        let mut encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Material Buffer Grower"),
-        });
-
-        let new_size = self.index_buffer.size() * 2;
-        let new_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Vertex_Buffer"),
-            size: new_size,
-            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        encoder.copy_buffer_to_buffer(
-            &self.index_buffer,
-            0,
-            &new_buffer,
-            0,
-            self.index_buffer.size(),
-        );
-
-        wgpu.
-            queue
-            .submit(std::iter::once(encoder.finish()));
-
-        self.index_buffer = new_buffer;
-    }
-
-    fn grow_vertex_buffer(&mut self, wgpu: &WgpuClump) {
-        let mut encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Material Buffer Grower"),
-        });
-
-        let new_size = self.vertex_buffer.size() * 2;
-        let new_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Vertex_Buffer"),
-            size: new_size,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-            mapped_at_creation: false,
-        });
-
-        encoder.copy_buffer_to_buffer(
-            &self.vertex_buffer,
-            0,
-            &new_buffer,
-            0,
-            self.vertex_buffer.size(),
-        );
-
-        wgpu.
-            queue
-            .submit(std::iter::once(encoder.finish()));
-
-        self.vertex_buffer = new_buffer;
     }
 
     pub fn draw<'pass, 'others>(&'others mut self, text_handle: &mut TextRenderer, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
