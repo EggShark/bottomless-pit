@@ -216,6 +216,8 @@ impl Material {
         self.push_triangle(wgpu, verts);
     }
 
+    /// Queues a polygon with the specified number of sides at a position with size and colour.
+    /// This will not play nicely with texture as all the UV coords will be at [0, 0]. 
     pub fn add_regular_n_gon(&mut self, number_of_sides: usize, radius: f32, center: Vec2<f32>, colour: Colour, render: &RenderInformation) {
         if number_of_sides < 4 {
             return;
@@ -385,6 +387,7 @@ impl Material {
     }
 
     // there where 'others: 'pass notation says that 'others lives longer than 'pass
+    /// Draws all queued shapes to the screen.
     pub fn draw<'pass, 'others>(&'others mut self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
         if self.vertex_count == 0 {
             return;
@@ -463,6 +466,7 @@ impl<'a> MaterialBuilder<'a> {
     }
 
 
+    /// Sets the initial Uniform data for the shader
     pub fn set_uniform(self, data: &'a UniformData) -> Self {
         Self {
             texture_change: self.texture_change,
@@ -471,6 +475,7 @@ impl<'a> MaterialBuilder<'a> {
         }
     }
 
+    /// Sets the shader for the Material
     pub fn set_shader(self, shader: Shader) -> Self {
         Self {
             texture_change: self.texture_change,
@@ -496,6 +501,7 @@ pub struct LineMaterial {
 }
 
 impl LineMaterial {
+    /// Creates a new LineMaterial
     pub fn new(engine: &Engine) -> Self {
         let wgpu = engine.get_wgpu();
         let vertex_size = std::mem::size_of::<LineVertex>() as u64;
@@ -515,6 +521,7 @@ impl LineMaterial {
         }
     }
 
+    /// Queues a line from the two points.
     pub fn add_line(&mut self, start: Vec2<f32>, end: Vec2<f32>, colour: Colour, renderer: &RenderInformation) {
         let screen_size = renderer.size;
         let wgpu = renderer.wgpu;
@@ -541,6 +548,7 @@ impl LineMaterial {
         self.vertex_count += 2 * self.vertex_size;
     }
     
+    /// Draws all queued lines to the screen.
     pub fn draw<'pass, 'others>(&'others mut self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
         let pipeline = information.pipelines.get(&self.pipe_id).unwrap();
         

@@ -531,9 +531,26 @@ impl Engine {
     }
 
     /// Will uncap the framerate and cause the engine to redner and update as soon
-    /// as the next frame is ready
+    /// as the next frame is ready unless VSYNC is on then it will draw at the
+    /// VYSNC rate, which is dependant on user hardware.
     pub fn remove_target_fps(&mut self) {
         self.target_fps = None;
+    }
+
+    /// Will turn off vysnc if the platform suports it, using 
+    /// AutoNoVsync for more information check
+    /// [PresentMode::AutoNoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html).
+    pub fn remove_vsync(&mut self) {
+        self.config.present_mode = wgpu::PresentMode::AutoNoVsync;
+        self.surface.configure(&self.wgpu_clump.device, &self.config);
+    }
+
+    /// Will turn off vysnc if the platform suports it, using 
+    /// AutoVsync for more information check
+    /// [PresentMode::AutoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html).
+    pub fn add_vsync(&mut self) {
+        self.config.present_mode = wgpu::PresentMode::AutoVsync;
+        self.surface.configure(&self.wgpu_clump.device, &self.config);
     }
 
     /// Sets a target fps cap. The thread will spin sleep using the
