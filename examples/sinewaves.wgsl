@@ -44,5 +44,8 @@ fn vs_main(model: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return in.colour;
+    var r: f32 = (sin((in.clip_position.x + time.time * 16.0)/16.0) + 1.0) / 2.0;
+    var b: f32 = (sin((in.clip_position.y + time.time * 16.0)/16.0) + 1.0) / 2.0;
+    var g: f32 = (r + b) / 2.0;
+    return vec4(r, g, b, 1.0);
 }
