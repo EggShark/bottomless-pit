@@ -611,20 +611,19 @@ impl Engine {
         event_loop.run(move |event, _, control_flow| {
             match event {
                 Event::RedrawRequested(window_id) if window_id == self.window.id() => {
+                    game.update(&mut self);
+                    self.update();
+                    if self.should_close {
+                        *control_flow = ControlFlow::Exit;
+                    }
                     self.current_frametime = Instant::now();
-
+                    
                     match render(&mut game, &mut self) {
                         Ok(_) => {}
                         // reconfigure surface if lost
                         Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
                         Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                         Err(e) => eprintln!("{:?}", e),
-                    }
-
-                    game.update(&mut self);
-                    self.update();
-                    if self.should_close {
-                        *control_flow = ControlFlow::Exit;
                     }
                 }
                 Event::MainEventsCleared => {
@@ -640,7 +639,7 @@ impl Engine {
                             WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                             WindowEvent::Resized(physical_size) => {
                                 let s = *physical_size;
-                                self.resize(s.into());
+                                self.resize(s.into())
                             }
                             WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                                 let s = **new_inner_size;

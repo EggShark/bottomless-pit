@@ -50,7 +50,8 @@ impl Game for Position {
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
-        self.time = (self.time + engine_handle.get_frame_delta_time()) % (32.0*PI);
+        let dt = engine_handle.get_frame_delta_time();
+        self.time = (self.time + dt) % (32.0*PI);
         self.regular_material.update_uniform_data(&self.time, &engine_handle);
     }
 }

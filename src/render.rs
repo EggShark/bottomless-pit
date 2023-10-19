@@ -115,6 +115,6 @@ pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::S
 
     wgpu.queue.submit(std::iter::once(encoder.finish()));
     output.present();
-
+    
     Ok(())
 }
