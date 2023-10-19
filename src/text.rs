@@ -462,6 +462,7 @@ impl TextMaterial {
         self.index_count / 2
     }
 
+    /// Draws all queued text instances to the screen
     pub fn draw<'pass, 'others>(&'others mut self, text_handle: &mut TextRenderer, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
         if self.change_flag {
             render_text_to_texture(text_handle, &self.text_buffer, self.bounds, self.size, &self.texture_view, information.wgpu);
