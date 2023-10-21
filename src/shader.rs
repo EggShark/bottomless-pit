@@ -1,3 +1,6 @@
+//! Contains everything you need to make some cool shaders including the Shader
+//! and UniformData types.
+
 use std::fs;
 use std::path::Path;
 

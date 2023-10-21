@@ -523,7 +523,7 @@ fn render_text_to_texture(
         texture_size.into(),
         [text_area],
         &mut text_handle.cache,
-    ).unwrap();
+    ).unwrap_or(());
 
     let mut text_encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("text encoder"),

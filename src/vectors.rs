@@ -19,12 +19,6 @@ impl<T> Vec2<T> {
     }
 }
 
-// impl<T, U> From<Vec2<T>> for Vec2<U> where T: From<U> {
-//     fn from(value: Vec2<T>) -> Self {
-        
-//     }
-// }
-
 impl<T> From<Vec2<T>> for (T, T) {
     fn from(value: Vec2<T>) -> Self {
         (value.x, value.y)
@@ -35,14 +29,6 @@ impl From<Vec2<u32>> for glyphon::Resolution {
     fn from(value: Vec2<u32>) -> Self {
         Self {width: value.x, height: value.y}
     }
-}
-
-/// A generic representation of 3D data
-#[derive(Clone, Copy, Debug)]
-pub struct Vec3<T> {
-    pub x: T,
-    pub y: T,
-    pub z: T,
 }
 
 impl<T> From<(T, T)> for Vec2<T> {
@@ -72,16 +58,6 @@ impl<T> From<cgmath::Vector2<T>> for Vec2<T> {
     }
 }
 
-impl<T> From<cgmath::Vector3<T>> for Vec3<T> {
-    fn from(value: cgmath::Vector3<T>) -> Self {
-        Vec3 {
-            x: value.x,
-            y: value.y,
-            z: value.z,
-        }
-    }
-}
-
 impl<T: Add<Output = T>> Add for Vec2<T> {
     type Output = Vec2<T>;
     fn add(self, rhs: Self) -> Self::Output {
@@ -98,28 +74,6 @@ impl<T: Sub<Output = T>> Sub for Vec2<T> {
         Self {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
-        }
-    }
-}
-
-impl<T: Add<Output = T>> Add for Vec3<T> {
-    type Output = Vec3<T>;
-    fn add(self, rhs: Self) -> Self::Output {
-        Self {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-            z: self.z + rhs.z,
-        }
-    }
-}
-
-impl<T: Sub<Output = T>> Sub for Vec3<T> {
-    type Output = Vec3<T>;
-    fn sub(self, rhs: Self) -> Self::Output {
-        Self {
-            x: self.x - rhs.x,
-            y: self.y - rhs.y,
-            z: self.z - rhs.z,
         }
     }
 }
