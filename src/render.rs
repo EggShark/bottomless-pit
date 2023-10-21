@@ -118,3 +118,50 @@ pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::S
     
     Ok(())
 }
+
+pub struct TexturePass {
+    encoder: wgpu::CommandEncoder,
+}
+
+impl TexturePass {
+    pub fn new(engine: &mut Engine) -> Self {
+        let encoder = engine.get_wgpu().device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Texture Pass Encoder"),
+        });
+
+        Self {
+            encoder
+        }
+    }
+
+    pub fn begin_pass<'a> (&'a mut self, engine: &'a Engine, view: &'a wgpu::TextureView) -> RenderInformation<'a, '_> {
+        let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("Render Pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0}),
+                    store: true,
+                },
+            })],
+            depth_stencil_attachment: None,
+        });
+
+        render_pass.set_bind_group(1, engine.camera_bindgroup(), &[]);
+
+        RenderInformation {
+            size: engine.get_window_size(),
+            render_pass,
+            bind_groups: &engine.bindgroups,
+            pipelines: &engine.pipelines,
+            defualt_id: engine.defualt_pipe_id(),
+            camera_bindgroup: engine.camera_bindgroup(),
+            wgpu: engine.get_wgpu(),
+        }
+    }
+
+    pub fn finish_pass(self, engine: &Engine) {
+        engine.get_wgpu().queue.submit(std::iter::once(self.encoder.finish()));
+    }
+}

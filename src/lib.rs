@@ -55,6 +55,7 @@ mod vertex;
 mod glyphon;
 
 use engine_handle::Engine;
+use vectors::Vec2;
 use render::RenderInformation;
 /// The Trait needed for structs to be used in with the Engine
 pub trait Game {
@@ -63,7 +64,9 @@ pub trait Game {
     /// updating code goes here
     fn update(&mut self, engine_handle: &mut Engine);
     /// Things to do when the window closes
-    fn on_close(&self) {}
+    fn on_close(&mut self) {}
+
+    fn on_resize(&mut self, _new_size: Vec2<u32>) {}
 }
 
 #[rustfmt::skip]

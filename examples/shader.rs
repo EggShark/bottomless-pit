@@ -15,34 +15,37 @@ fn main() {
         .build()
         .unwrap();
 
-    let mouse_shader = Shader::new("examples/mouse.wgsl", true, &mut engine)
-        .unwrap();
-
-    let circle_shader = Shader::new("examples/movement.wgsl", true, &mut engine)
-        .unwrap();
-
+    
     let data = MousePos{x: 0.0, y: 0.0};
-    let mouse_uniform_data = UniformData::new(&engine, &data);
-    let circle_uniform_data = UniformData::new(&engine, &0.0_f32);
+    let mouse_uniform = UniformData::new(&engine, &data);
+    let circle_uniform = UniformData::new(&engine, &0.0_f32);
+    
+    let mouse_shader = Shader::new_with_uniforms("examples/mouse.wgsl", &mouse_uniform, &mut engine)
+        .unwrap();
+
+    let circle_shader = Shader::new_with_uniforms("examples/movement.wgsl", &circle_uniform, &mut engine)
+        .unwrap();
 
     let mouse_material = MaterialBuilder::new()
         .set_shader(mouse_shader)
-        .set_uniform(&mouse_uniform_data)
+        .set_uniform(&mouse_uniform)
         .build(&mut engine);
 
     let circle_material = MaterialBuilder::new()
         .set_shader(circle_shader)
-        .set_uniform(&circle_uniform_data)
+        .set_uniform(&circle_uniform)
         .build(&mut engine);
 
     let defualt_material = MaterialBuilder::new().build(&mut engine);
 
     let game = ShaderExample {
         data,
+        mouse_uniform,
         mouse_material,
         circle_material,
         defualt_material,
         theta: 0.0,
+        circle_uniform,
     };
 
     engine.run(game);
@@ -59,7 +62,9 @@ struct ShaderExample {
     circle_material: Material,
     defualt_material: Material,
     data: MousePos,
+    mouse_uniform: UniformData,
     theta: f32,
+    circle_uniform: UniformData,
 }
 
 impl Game for ShaderExample {
@@ -85,7 +90,7 @@ impl Game for ShaderExample {
             y: mouse_pos.y/size.y as f32,
         };
         self.data = new_data;
-        self.mouse_material.update_uniform_data(&self.data, &engine_handle);
-        self.circle_material.update_uniform_data(&self.theta, &engine_handle);
+        self.mouse_uniform.update_uniform_data(&self.data, &engine_handle);
+        self.circle_uniform.update_uniform_data(&self.theta, &engine_handle);
     }
 }

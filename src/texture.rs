@@ -138,6 +138,64 @@ impl Texture {
     }
 }
 
+#[derive(Debug)]
+pub struct UniformTexture {
+    texture: wgpu::Texture,
+}
+
+impl UniformTexture {
+    pub fn new(engine: &Engine, size: Vec2<u32>) -> Self {
+        let device = &engine.get_wgpu().device;
+        let format = engine.get_texture_format();
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Uniform Texture"),
+            size: wgpu::Extent3d {
+                width: size.x,
+                height: size.y,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[]
+        });
+
+        Self {
+            texture,
+        }
+    }
+
+    pub fn get_view(&self) -> wgpu::TextureView {
+        self.texture.create_view(&wgpu::TextureViewDescriptor{
+            label: Some("UniformTextureView"),
+            ..Default::default()
+        })
+    }
+
+    pub fn change_size(&mut self, new_size: Vec2<u32>, engine: &Engine) {
+        let wgpu = engine.get_wgpu();
+        let format = engine.get_texture_format();
+        let texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Uniform Texture"),
+            size: wgpu::Extent3d {
+                width: new_size.x,
+                height: new_size.y,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[]
+        });
+        
+        self.texture = texture;
+    }
+}
+
 /// A struct that contains an Id and the size of a texture stored interally. This
 /// can only be obtained after registering a texture and its only purpose is to 
 /// be added to a [Material](../material/struct.Material.html).

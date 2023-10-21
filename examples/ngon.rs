@@ -19,7 +19,7 @@ fn main() {
 
     let uniform_data = UniformData::new(&engine, &0.0_f32);
 
-    let mouse_shader = Shader::new("examples/sinewaves.wgsl", true, &mut engine)
+    let mouse_shader = Shader::new_with_uniforms("examples/sinewaves.wgsl", &uniform_data, &mut engine)
         .unwrap();
 
     let regular_material = MaterialBuilder::new()
@@ -29,7 +29,8 @@ fn main() {
 
     let pos = Position {
         regular_material,
-        time: 0.0
+        uniform_data,
+        time: 0.0,
     };
 
     engine.run(pos);
@@ -39,6 +40,7 @@ fn main() {
 
 struct Position {
     regular_material: Material,
+    uniform_data: UniformData,
     time: f32,
 }
 
@@ -52,6 +54,6 @@ impl Game for Position {
     fn update(&mut self, engine_handle: &mut Engine) {
         let dt = engine_handle.get_frame_delta_time();
         self.time = (self.time + dt) % (32.0*PI);
-        self.regular_material.update_uniform_data(&self.time, &engine_handle);
+        self.uniform_data.update_uniform_data(&self.time, &engine_handle);
     }
 }

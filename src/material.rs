@@ -12,9 +12,6 @@
 //! }
 use std::f32::consts::PI;
 
-use encase::private::WriteInto;
-use encase::ShaderType;
-
 use crate::matrix_math::normalize_points;
 use crate::texture::RegisteredTexture;
 use crate::vertex::{self, Vertex, LineVertex};
@@ -38,7 +35,6 @@ pub struct Material {
     pub(crate) index_size: u64,
     texture_id: wgpu::Id<wgpu::BindGroup>,
     texture_size: Vec2<f32>,
-    uniform_buffer: Option<wgpu::Buffer>,
     uniform_bindgroup: Option<wgpu::BindGroup>,
 }
 
@@ -58,13 +54,8 @@ impl Material {
 
         let wgpu = engine.get_wgpu();
 
-        let uniform_information = match builder.uniform_data {
-            Some(data) => {
-                let (buffer, bg) = data.extract_buffer_and_bindgroup(wgpu);
-                (Some(buffer), Some(bg))
-            },
-            None => (None, None),
-        };
+        let uniform_bindgroup = builder.uniform_data
+            .and_then(|data| Some(data.create_bind_group(engine.get_texture_sampler(), &wgpu)));
 
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
         let index_size = std::mem::size_of::<u16>() as u64;
@@ -80,8 +71,7 @@ impl Material {
             index_size,
             texture_id,
             texture_size,
-            uniform_buffer: uniform_information.0,
-            uniform_bindgroup: uniform_information.1,
+            uniform_bindgroup,
         }
     }
 
@@ -289,22 +279,6 @@ impl Material {
         self.index_count += indicies.len() as u64 * self.index_size;
     }
 
-    /// Updates the uniform buffer to contain the same type but new data. You can write in a diffrent
-    /// type from before but this could cause undefinded behavoir
-    pub fn update_uniform_data<T: ShaderType + WriteInto>(&mut self, data: &T, engine: &Engine) {
-        match &self.uniform_buffer {
-            Some(uniform_buffer) => {
-                let wgpu = engine.get_wgpu();
-                let mut buffer = encase::UniformBuffer::new(Vec::new());
-                buffer.write(&data).unwrap();
-                let byte_array = buffer.into_inner();
-
-                wgpu.queue.write_buffer(&uniform_buffer, 0, &byte_array);
-            },
-            None => {},
-        }
-    }
-
     /// Returns the number of verticies in the buffer
     pub fn get_vertex_number(&self) -> u64 {
         self.vertex_count / self.vertex_size
@@ -398,6 +372,7 @@ impl Material {
 
         information.render_pass.set_pipeline(pipeline);
         information.render_pass.set_bind_group(0, texture, &[]);
+        information.render_pass.set_bind_group(1, information.camera_bindgroup, &[]);
 
         match &self.uniform_bindgroup {
             Some(bg) => information.render_pass.set_bind_group(2, bg, &[]),

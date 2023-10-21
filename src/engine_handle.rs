@@ -113,6 +113,9 @@ impl Engine {
         let wgpu_clump = WgpuClump { device, queue };
 
         let surface_capabilities = surface.get_capabilities(&adapter);
+        
+        println!("{:?}", surface_capabilities.formats);
+
         let surface_format = surface_capabilities
             .formats
             .iter()
@@ -638,12 +641,14 @@ impl Engine {
                         match event {
                             WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                             WindowEvent::Resized(physical_size) => {
-                                let s = *physical_size;
-                                self.resize(s.into())
+                                let new_size = *physical_size;
+                                self.resize(new_size.into());
+                                game.on_resize(new_size.into());
                             }
                             WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                                let s = **new_inner_size;
-                                self.resize(s.into());
+                                let new_size = **new_inner_size;
+                                self.resize(new_size.into());
+                                game.on_resize(new_size.into());
                             }
                             _ => {}
                         }
