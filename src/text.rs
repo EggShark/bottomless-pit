@@ -37,8 +37,8 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use glyphon::fontdb::Source;
-use glyphon::{FontSystem, SwashCache, TextAtlas, TextArea, TextBounds, Metrics, Attrs, Shaping, Family};
+use crate::glyphon::fontdb::Source;
+use crate::glyphon::{self, FontSystem, SwashCache, TextAtlas, TextArea, TextBounds, Metrics, Attrs, Shaping, Family};
 
 use crate::colour::Colour;
 use crate::engine_handle::{Engine, WgpuClump};
@@ -550,6 +550,7 @@ fn render_text_to_texture(
     text_handle.text_renderer.render(&text_handle.atlas, &mut text_pass).unwrap();
 
     drop(text_pass);
-
+    text_handle.atlas.trim();
+    
     wgpu.queue.submit(std::iter::once(text_encoder.finish()));
 }

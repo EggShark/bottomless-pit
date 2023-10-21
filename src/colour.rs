@@ -124,7 +124,7 @@ impl From<Colour> for wgpu::Color {
     }
 }
 
-impl From<Colour> for glyphon::Color {
+impl From<Colour> for crate::glyphon::Color {
     fn from(value: Colour) -> Self {
         // should work as it is always a number betweeon 1-0
         let r = (value.r * 255.0) as u8;

@@ -52,6 +52,7 @@ pub mod text;
 pub mod texture;
 pub mod vectors;
 mod vertex;
+mod glyphon;
 
 use engine_handle::Engine;
 use render::RenderInformation;
