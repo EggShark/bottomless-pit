@@ -114,8 +114,6 @@ impl Engine {
 
         let surface_capabilities = surface.get_capabilities(&adapter);
         
-        println!("{:?}", surface_capabilities.formats);
-
         let surface_format = surface_capabilities
             .formats
             .iter()

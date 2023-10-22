@@ -174,6 +174,11 @@ impl UniformTexture {
         })
     }
 
+    pub fn get_size(&self) -> Vec2<u32> {
+        let size = self.texture.size();
+        Vec2{x: size.width, y: size.height}
+    }
+
     pub fn change_size(&mut self, new_size: Vec2<u32>, engine: &Engine) {
         let wgpu = engine.get_wgpu();
         let format = engine.get_texture_format();

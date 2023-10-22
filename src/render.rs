@@ -1,6 +1,7 @@
 //! Contains the Renderer struct which also contains all the
 //! functions and logic to draw things to the screen
 
+use crate::colour::Colour;
 use crate::engine_handle::{Engine, WgpuCache, WgpuClump};
 use crate::Game;
 use crate::vectors::Vec2;
@@ -44,7 +45,7 @@ pub(crate) fn make_pipeline(
         primitive: wgpu::PrimitiveState {
             topology,
             strip_index_format: None,
-            front_face: wgpu::FrontFace::Cw, // triagnle must be counter-clock wise to be considered facing forawrd
+            front_face: wgpu::FrontFace::Cw, // triagnle must be clock wise to be considered facing forawrd
             cull_mode: Some(wgpu::Face::Back), // all triagnles not front facing are culled
             // setting this to anything other than fill requires Features::NON_FILL_POLYGON_MODE
             polygon_mode: wgpu::PolygonMode::Fill,
@@ -134,14 +135,20 @@ impl TexturePass {
         }
     }
 
-    pub fn begin_pass<'a> (&'a mut self, engine: &'a Engine, view: &'a wgpu::TextureView) -> RenderInformation<'a, '_> {
+    pub fn begin_pass<'a>(
+        &'a mut self,
+        engine: &'a Engine,
+        view: &'a wgpu::TextureView,
+        texture_size: Vec2<u32>,
+        clear_colour: Colour
+    ) -> RenderInformation<'a, '_> {
         let mut render_pass = self.encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view: &view,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color { r: 0.0, g: 0.0, b: 0.0, a: 0.0}),
+                    load: wgpu::LoadOp::Clear(clear_colour.into()),
                     store: true,
                 },
             })],
@@ -151,7 +158,7 @@ impl TexturePass {
         render_pass.set_bind_group(1, engine.camera_bindgroup(), &[]);
 
         RenderInformation {
-            size: engine.get_window_size(),
+            size: texture_size,
             render_pass,
             bind_groups: &engine.bindgroups,
             pipelines: &engine.pipelines,
