@@ -11,6 +11,7 @@ use wgpu::util::DeviceExt;
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::texture::UniformTexture;
 use crate::vertex::Vertex;
+use crate::vectors::Vec2;
 use crate::{layouts, render};
 
 /// An internal representation of an WGSL Shader. Under the hood this creates
@@ -143,6 +144,13 @@ impl UniformData {
         let byte_array = buffer.into_inner();
 
         wgpu.queue.write_buffer(&self.buffer, 0, &byte_array);
+    }
+
+    pub fn change_texture_size(&mut self, new_size: Vec2<u32>, texture: &mut UniformTexture, engine: &Engine) {
+        assert!(self.texture_view.is_some());
+
+        texture.change_size(new_size, engine);
+        self.texture_view = Some(texture.get_view());
     }
 
     pub(crate) fn create_bind_group(&self, sampler: &wgpu::Sampler, wgpu: &WgpuClump) -> wgpu::BindGroup {

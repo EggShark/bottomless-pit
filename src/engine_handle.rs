@@ -113,7 +113,7 @@ impl Engine {
         let wgpu_clump = WgpuClump { device, queue };
 
         let surface_capabilities = surface.get_capabilities(&adapter);
-        
+
         let surface_format = surface_capabilities
             .formats
             .iter()
@@ -641,12 +641,12 @@ impl Engine {
                             WindowEvent::Resized(physical_size) => {
                                 let new_size = *physical_size;
                                 self.resize(new_size.into());
-                                game.on_resize(new_size.into());
+                                game.on_resize(new_size.into(), &mut self);
                             }
                             WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
                                 let new_size = **new_inner_size;
                                 self.resize(new_size.into());
-                                game.on_resize(new_size.into());
+                                game.on_resize(new_size.into(), &mut self);
                             }
                             _ => {}
                         }

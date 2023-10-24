@@ -77,6 +77,12 @@ pub struct RenderInformation<'pass, 'others> {
     pub(crate) wgpu: &'others WgpuClump,
 }
 
+impl RenderInformation<'_, '_> {
+    pub fn get_size(&self) -> Vec2<u32> {
+        self.size
+    }
+}
+
 pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::SurfaceError> where T: Game, {
     let wgpu = engine.get_wgpu();
     let output = engine.get_current_texture()?;

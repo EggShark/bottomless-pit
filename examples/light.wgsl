@@ -6,6 +6,7 @@ struct Light {
     colour: vec4<f32>,
     position: vec2<f32>,
     brightness: f32,
+    aspect_ratio: f32,
 }
 
 @group(1) @binding(0)
@@ -47,7 +48,11 @@ fn vs_main(model: VertexInput) -> VertexOutput {
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var x: f32 = in.tex_coords.x - light.position.x;
     var y: f32 = in.tex_coords.y - light.position.y;
+
+    x = x * light.aspect_ratio;
+
     var distance = sqrt(x * x + y * y);
+    // TODO: Add blur
     var brightness: f32 = max(0.0, 0.7-distance);
     return textureSample(light_map, light_map_sampler, in.tex_coords) * (brightness * light.colour);
 }

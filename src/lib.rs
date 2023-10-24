@@ -66,7 +66,7 @@ pub trait Game {
     /// Things to do when the window closes
     fn on_close(&mut self) {}
 
-    fn on_resize(&mut self, _new_size: Vec2<u32>) {}
+    fn on_resize(&mut self, _new_size: Vec2<u32>, _engine: &mut Engine) {}
 }
 
 #[rustfmt::skip]

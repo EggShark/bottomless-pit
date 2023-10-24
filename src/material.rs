@@ -13,7 +13,7 @@
 use std::f32::consts::PI;
 
 use crate::matrix_math::normalize_points;
-use crate::texture::RegisteredTexture;
+use crate::texture::{RegisteredTexture, UniformTexture};
 use crate::vertex::{self, Vertex, LineVertex};
 use crate::engine_handle::{WgpuClump, Engine};
 use crate::vectors::Vec2;
@@ -292,6 +292,13 @@ impl Material {
     // Returns the size of the texture in pixels
     pub fn get_texture_size(&self) -> Vec2<f32> {
         self.texture_size
+    }
+
+    pub fn update_uniform_texture(&mut self, new_size: Vec2<u32>, texture: &mut UniformTexture, data: &mut UniformData, engine: &Engine) {
+        data.change_texture_size(new_size, texture, &engine);
+        let sampler = engine.get_texture_sampler();
+        let wgpu = engine.get_wgpu();
+        self.uniform_bindgroup = Some(data.create_bind_group(sampler, wgpu));
     }
 
     fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {

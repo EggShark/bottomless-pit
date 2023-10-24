@@ -1,5 +1,7 @@
 use std::f32::consts::PI;
+use std::cmp::Ordering;
 
+use bottomless_pit::engine_handle::Engine;
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::{TexturePass, RenderInformation};
 use bottomless_pit::shader::{UniformData, Shader};
@@ -12,7 +14,7 @@ use colour::Colour;
 fn main() {
     let mut engine = EngineBuilder::new()
         .set_window_title("Lightmap")
-        .with_resolution((400, 400))
+        .with_resolution((800, 800))
         .set_clear_colour(Colour::BLACK)
         .build()
         .unwrap();
@@ -24,30 +26,32 @@ fn main() {
         pos_x: 0.0,
         pos_y: 0.0,
         brightness: 0.75,
-        _pad: 0.0,
+        aspect_ratio: 0.0,
     };
+    let light_data = UniformData::new_with_extra_texture(&light, &uniform_texture, &engine);
 
-    let uniform_data = UniformData::new_with_extra_texture(&light, &uniform_texture, &engine);
-    let shader = Shader::new_with_uniforms("examples/lightmap.wgsl", &uniform_data, &mut engine).unwrap();
+    let light_shader = Shader::new_with_uniforms("examples/light.wgsl", &light_data, &mut engine).unwrap();
 
     let material = MaterialBuilder::new()
-        .set_uniform(&uniform_data)
-        .set_shader(shader)
+        .set_uniform(&light_data)
+        .set_shader(light_shader)
         .build(&mut engine);
 
-    let ocluder_material = MaterialBuilder::new().build(&mut engine);
+    let ocluder_material = MaterialBuilder::new()
+        .build(&mut engine);
 
     let rectangles = vec![
         Rectangle::new(Vec2{x: 120.0, y: 20.0}, Vec2{x: 50.0, y: 50.0}),
         Rectangle::new(Vec2{x: 270.0, y: 70.0}, Vec2{x: 50.0, y: 50.0}),
         Rectangle::new(Vec2{x: 130.0, y: 280.0}, Vec2{x: 50.0, y: 50.0}),
         Rectangle::new(Vec2{x: 220.0, y: 300.0}, Vec2{x: 50.0, y: 50.0}),
+        Rectangle::new(Vec2{x: 350.0, y: 350.0}, Vec2{x: 100.0, y: 100.0}),
     ];
 
     let s = TextureExample {
         material,
         ocluder_material,
-        uniform_data,
+        light_data,
         light,
         uniform_texture,
         rectangles,
@@ -59,7 +63,7 @@ fn main() {
 struct TextureExample {
     material: Material,
     ocluder_material: Material,
-    uniform_data: UniformData,
+    light_data: UniformData,
     light: Light,
     uniform_texture: UniformTexture,
     rectangles: Vec<Rectangle>,
@@ -67,8 +71,35 @@ struct TextureExample {
 
 const ZEROS: Vec2<f32> = Vec2{x: 0.0, y: 0.0};
 
+impl Game for TextureExample {
+    fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
+        let size = render_handle.get_size();
+        let size = Vec2{x: size.x as f32, y: size.y as f32};
+
+        self.material.add_rectangle(Vec2 {x: 0.0, y: 0.0}, size, Colour::WHITE, &render_handle);
+        self.material.draw(&mut render_handle);
+    }
+
+    fn update(&mut self, engine_handle: &mut Engine) {
+        let mouse_pos = engine_handle.get_mouse_position();
+        let window_size = engine_handle.get_window_size();
+
+        self.light.pos_x = mouse_pos.x / window_size.x as f32;
+        self.light.pos_y = mouse_pos.y / window_size.y as f32;
+        self.light_data.update_uniform_data(&self.light, &engine_handle);
+
+        self.create_shadow_map(engine_handle);
+    }
+
+    fn on_resize(&mut self, new_size: Vec2<u32>, engine_handle: &mut Engine) {
+        self.light.aspect_ratio = new_size.x as f32 / new_size.y as f32;
+        self.light_data.update_uniform_data(&self.light, &engine_handle);
+        self.material.update_uniform_texture(new_size, &mut self.uniform_texture, &mut self.light_data, &engine_handle);
+    }
+}
+
 impl TextureExample {
-    fn create_shadow_map(&mut self, engine_handle: &mut engine_handle::Engine) {
+    fn create_shadow_map(&mut self, engine_handle: &mut Engine) {
         let light_pos = engine_handle.get_mouse_position();
         let mut texture_pass = TexturePass::new(engine_handle);
         let view = self.uniform_texture.get_view();
@@ -80,14 +111,14 @@ impl TextureExample {
                 let vert_1 = segment_1;
                 let vert_2 = segment_1 + 
                     Vec2{
-                        x: 30.0*(segment_1.x - light_pos.x),
-                        y: 30.0*(segment_1.y - light_pos.y),
+                        x: 300.0*(segment_1.x - light_pos.x),
+                        y: 300.0*(segment_1.y - light_pos.y),
                     };
                 let vert_3 = segment_2;
                 let vert_4 = segment_2 + 
                     Vec2{
-                        x: 30.0*(segment_2.x - light_pos.x),
-                        y: 30.0*(segment_2.y - light_pos.y),
+                        x: 300.0*(segment_2.x - light_pos.x),
+                        y: 300.0*(segment_2.y - light_pos.y),
                     };
 
                 let mut arr = [vert_1, vert_2, vert_3, vert_4];
@@ -100,7 +131,6 @@ impl TextureExample {
                 for point in arr.iter_mut() {
                     *point = *point-center_point;
                 }
-
                 arr.sort_by(|left, right| compare_points(left, right));
                 for point in arr.iter_mut() {
                     *point = *point+center_point;
@@ -110,62 +140,16 @@ impl TextureExample {
             }
         }
 
+        // makes sure there is not light in the squares
+        self.rectangles
+            .iter()
+            .for_each(|rect| self.ocluder_material.add_rectangle(rect.pos, rect.size, Colour::BLACK, &mut pain));
+
         self.ocluder_material.draw(&mut pain);
 
         drop(pain);
 
         texture_pass.finish_pass(&engine_handle);
-    }
-}
-
-fn get_angle(center_point: &Vec2<f32>, point: &Vec2<f32>) -> f32 {
-    let x = point.x - center_point.x;
-    let y = point.y - center_point.y;
-    let mut angle = f32::atan2(y, x);
-    if angle <= 0.0 {
-        angle += 2.0*PI;
-    }
-
-    angle
-}
-
-fn get_distance(p1: &Vec2<f32>, p2: &Vec2<f32>) -> f32 {
-    let x = p1.x - p2.x;
-    let y = p1.y - p2.y;
-    (x*x + y*y).sqrt()
-}
-
-// Convex Hull Algo
-fn compare_points(p1: &Vec2<f32>, p2: &Vec2<f32>) -> std::cmp::Ordering {
-    let angle_one = get_angle(&ZEROS, p1);
-    let angle_two = get_angle(&ZEROS, p2);
-    if angle_one < angle_two {
-        return std::cmp::Ordering::Less;
-    }
-    let d1 = get_distance(&ZEROS, p1);
-    let d2 = get_distance(&ZEROS, p2);
-    if (angle_one == angle_two) && (d1 < d2) {
-        return std::cmp::Ordering::Less;
-    }
-
-    std::cmp::Ordering::Greater
-}
-
-impl Game for TextureExample {
-    fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
-        self.material.add_rectangle(Vec2 {x: 0.0, y: 0.0}, Vec2{x: 400.0, y: 400.0}, Colour::WHITE, &render_handle);
-        self.material.draw(&mut render_handle);
-    }
-
-    fn update(&mut self, engine_handle: &mut engine_handle::Engine) {
-        let mouse_pos = engine_handle.get_mouse_position();
-        let window_size = engine_handle.get_window_size();
-
-        self.light.pos_x = mouse_pos.x / window_size.x as f32;
-        self.light.pos_y = mouse_pos.y / window_size.y as f32;
-        self.uniform_data.update_uniform_data(&self.light, &engine_handle);
-
-        self.create_shadow_map(engine_handle);
     }
 }
 
@@ -197,5 +181,39 @@ struct Light {
     pos_x: f32,
     pos_y: f32,
     brightness: f32,
-    _pad: f32,
+    aspect_ratio: f32,
+}
+
+// Convex Hull Algo
+fn compare_points(p1: &Vec2<f32>, p2: &Vec2<f32>) -> Ordering {
+    let angle_one = get_angle(&ZEROS, p1);
+    let angle_two = get_angle(&ZEROS, p2);
+    if angle_one < angle_two {
+        return Ordering::Less;
+    }
+
+    let d1 = get_distance(&ZEROS, p1);
+    let d2 = get_distance(&ZEROS, p2);
+    if (angle_one == angle_two) && (d1 < d2) {
+        return Ordering::Less;
+    }
+
+    Ordering::Greater
+}
+
+fn get_angle(center_point: &Vec2<f32>, point: &Vec2<f32>) -> f32 {
+    let x = point.x - center_point.x;
+    let y = point.y - center_point.y;
+    let mut angle = f32::atan2(y, x);
+    if angle <= 0.0 {
+        angle += 2.0*PI;
+    }
+
+    angle
+}
+
+fn get_distance(p1: &Vec2<f32>, p2: &Vec2<f32>) -> f32 {
+    let x = p1.x - p2.x;
+    let y = p1.y - p2.y;
+    (x*x + y*y).sqrt()
 }
