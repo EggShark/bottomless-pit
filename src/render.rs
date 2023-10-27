@@ -157,9 +157,11 @@ impl TexturePass {
                 resolve_target: None,
                 ops: wgpu::Operations {
                     load: wgpu::LoadOp::Clear(clear_colour.into()),
-                    store: true,
+                    store: wgpu::StoreOp::Store,
                 },
             })],
+            occlusion_query_set: None,
+            timestamp_writes: None,
             depth_stencil_attachment: None,
         });
 
