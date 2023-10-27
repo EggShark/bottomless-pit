@@ -100,9 +100,11 @@ pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::S
             resolve_target: None,
             ops: wgpu::Operations {
                 load: wgpu::LoadOp::Clear(engine.wgpu_colour()),
-                store: true,
+                store: wgpu::StoreOp::Store,
             },
         })],
+        timestamp_writes: None,
+        occlusion_query_set: None,
         depth_stencil_attachment: None,
     });
 

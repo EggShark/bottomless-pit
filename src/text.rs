@@ -541,9 +541,11 @@ fn render_text_to_texture(
                     b: 0.0,
                     a: 0.0,
                 }),
-                store: true
+                store: wgpu::StoreOp::Store,
             },
         })],
+        timestamp_writes: None,
+        occlusion_query_set: None,
         depth_stencil_attachment: None
     });
 
