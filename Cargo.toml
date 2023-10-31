@@ -25,6 +25,8 @@ encase = "0.6.1"
 etagere = "0.2.8"
 cosmic-text = "0.10"
 lru = "0.11"
+cfg-if = "1.0.0"
+web-time = "0.2.3"
 
 [dependencies.wgpu]
 version = "0.18.0"
@@ -35,3 +37,19 @@ features = ["expose-ids"]
 version = "0.24"
 default-features = false
 features = ["png", "jpeg"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1.6"
+console_log = "1.0"
+wgpu = { version = "0.18", features = ["webgl", "expose-ids"]}
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4.30"
+web-sys = { version = "0.3", features = [
+    "Document",
+    "Window",
+    "Element",
+]}

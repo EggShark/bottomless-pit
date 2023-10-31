@@ -5,7 +5,7 @@
 
 use image::{GenericImageView, ImageError};
 use spin_sleep::SpinSleeper;
-use std::time::Instant;
+use web_time::Instant;
 use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
 use winit::error::OsError;
@@ -609,6 +609,30 @@ impl Engine {
     where
         T: Game,
     {
+        cfg_if::cfg_if!{
+            if #[cfg(target_arch = "wasm32")] {
+                std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+                console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
+            } else {
+                env_logger::init();
+            }
+        }
+
+        #[cfg(target_arch="wasm32")]
+        {
+            use winit::platform::web::WindowExtWebSys;
+            web_sys::window()
+                .and_then(|win| win.document())
+                .and_then(|doc| {
+                    let body = doc.body()?;
+                    let canvas = web_sys::Element::from(self.window.canvas());
+                    body.append_child(&canvas).ok()?;
+                    Some(())
+                })
+                .expect("Couldn't append canvas to document body");
+        }
+
+
         let event_loop = self.event_loop.take().unwrap(); //should never panic
         event_loop.run(move |event, _, control_flow| {
             match event {

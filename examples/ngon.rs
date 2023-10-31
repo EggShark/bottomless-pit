@@ -35,8 +35,6 @@ fn main() {
     engine.run(pos);
 }
 
-
-
 struct Position {
     regular_material: Material,
     time: f32,
