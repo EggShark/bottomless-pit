@@ -54,6 +54,15 @@ pub struct Engine {
 
 impl Engine {
     fn new(builder: EngineBuilder) -> Result<Self, BuildError> {
+        cfg_if::cfg_if!{
+            if #[cfg(target_arch = "wasm32")] {
+                std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+                console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
+            } else {
+                env_logger::init();
+            }
+        }
+
         let cursor_visibility = true;
         let input_handle = InputHandle::new();
         let size: Vec2<u32> = builder.resolution.into();
@@ -76,6 +85,20 @@ impl Engine {
         };
 
         let window = window_builder.build(&event_loop)?;
+
+        #[cfg(target_arch="wasm32")]
+        {
+            use winit::platform::web::WindowExtWebSys;
+            web_sys::window()
+                .and_then(|win| win.document())
+                .and_then(|doc| {
+                    let body = doc.body()?;
+                    let canvas = web_sys::Element::from(window.canvas());
+                    body.append_child(&canvas).ok()?;
+                    Some(())
+                })
+                .expect("Couldn't append canvas to document body");
+        }
 
         let backend = if cfg!(target_os = "windows") {
             wgpu::Backends::DX12 // text rendering gets angry on vulkan
@@ -103,10 +126,16 @@ impl Engine {
             None => Err(BuildError::FailedToCreateAdapter),
         }?;
 
+        let limits = if cfg!(target_arch = "wasm32") {
+            wgpu::Limits::downlevel_webgl2_defaults()
+        } else {
+            wgpu::Limits::default()
+        };
+
         let (device, queue) = pollster::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
                 features: wgpu::Features::empty(),
-                limits: wgpu::Limits::default(),
+                limits,
                 label: None,
             },
             None,
@@ -609,30 +638,6 @@ impl Engine {
     where
         T: Game,
     {
-        cfg_if::cfg_if!{
-            if #[cfg(target_arch = "wasm32")] {
-                std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-                console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
-            } else {
-                env_logger::init();
-            }
-        }
-
-        #[cfg(target_arch="wasm32")]
-        {
-            use winit::platform::web::WindowExtWebSys;
-            web_sys::window()
-                .and_then(|win| win.document())
-                .and_then(|doc| {
-                    let body = doc.body()?;
-                    let canvas = web_sys::Element::from(self.window.canvas());
-                    body.append_child(&canvas).ok()?;
-                    Some(())
-                })
-                .expect("Couldn't append canvas to document body");
-        }
-
-
         let event_loop = self.event_loop.take().unwrap(); //should never panic
         event_loop.run(move |event, _, control_flow| {
             match event {
