@@ -50,6 +50,8 @@ pub struct Engine {
     line_pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
     pub(crate) pipelines: WgpuCache<wgpu::RenderPipeline>,
     pub(crate) bindgroups: WgpuCache<wgpu::BindGroup>,
+    #[cfg(target_arch="wasm32")]
+    pub(crate) web_window: web_sys::Window,
 }
 
 impl Engine {
@@ -87,10 +89,11 @@ impl Engine {
         let window = window_builder.build(&event_loop)?;
 
         #[cfg(target_arch="wasm32")]
-        {
+        let web_window = {
+            let web_window = web_sys::window().expect("could not get window");
             use winit::platform::web::WindowExtWebSys;
-            web_sys::window()
-                .and_then(|win| win.document())
+            web_window
+                .document()
                 .and_then(|doc| {
                     let body = doc.body()?;
                     let canvas = web_sys::Element::from(window.canvas());
@@ -98,7 +101,8 @@ impl Engine {
                     Some(())
                 })
                 .expect("Couldn't append canvas to document body");
-        }
+            web_window
+        };
 
         let backend = if cfg!(target_os = "windows") {
             wgpu::Backends::DX12 // text rendering gets angry on vulkan
@@ -364,6 +368,8 @@ impl Engine {
             line_pipeline_id: line_id,
             pipelines,
             bindgroups,
+            #[cfg(target_arch="wasm32")]
+            web_window,
         })
     }
 
