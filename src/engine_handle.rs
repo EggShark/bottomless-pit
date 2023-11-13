@@ -10,7 +10,7 @@ use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
 use winit::error::OsError;
 use winit::event::*;
-use winit::event_loop::{ControlFlow, EventLoop};
+use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder};
 use winit::window::{BadIcon, Window};
 use std::collections::HashMap;
 
@@ -29,7 +29,7 @@ pub struct Engine {
     input_handle: InputHandle,
     window: Window,
     surface: wgpu::Surface,
-    event_loop: Option<EventLoop<()>>,
+    event_loop: Option<EventLoop<BpEvent>>,
     cursor_visibility: bool,
     should_close: bool,
     close_key: Option<Key>,
@@ -50,8 +50,6 @@ pub struct Engine {
     line_pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
     pub(crate) pipelines: WgpuCache<wgpu::RenderPipeline>,
     pub(crate) bindgroups: WgpuCache<wgpu::BindGroup>,
-    #[cfg(target_arch="wasm32")]
-    pub(crate) web_window: web_sys::Window,
 }
 
 impl Engine {
@@ -70,7 +68,7 @@ impl Engine {
         let size: Vec2<u32> = builder.resolution.into();
         let target_fps = builder.target_fps;
 
-        let event_loop = EventLoop::new();
+        let event_loop: EventLoop<BpEvent> = EventLoopBuilder::with_user_event().build();
         let window_builder = winit::window::WindowBuilder::new()
             .with_title(builder.window_title)
             .with_inner_size(winit::dpi::PhysicalSize::new(
@@ -89,7 +87,7 @@ impl Engine {
         let window = window_builder.build(&event_loop)?;
 
         #[cfg(target_arch="wasm32")]
-        let web_window = {
+        {
             let web_window = web_sys::window().expect("could not get window");
             use winit::platform::web::WindowExtWebSys;
             web_window
@@ -101,8 +99,7 @@ impl Engine {
                     Some(())
                 })
                 .expect("Couldn't append canvas to document body");
-            web_window
-        };
+        }
 
         let backend = if cfg!(target_os = "windows") {
             wgpu::Backends::DX12 // text rendering gets angry on vulkan
@@ -368,8 +365,6 @@ impl Engine {
             line_pipeline_id: line_id,
             pipelines,
             bindgroups,
-            #[cfg(target_arch="wasm32")]
-            web_window,
         })
     }
 
@@ -686,6 +681,9 @@ impl Engine {
                         }
                     }
                 }
+                Event::UserEvent(event) => {
+                    println!("{:?}", event);
+                }
                 _ => {}
             }
         });
@@ -980,4 +978,9 @@ impl std::error::Error for IconError {}
 pub(crate) struct WgpuClump {
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
+}
+
+#[derive(Debug)]
+enum BpEvent {
+    File,
 }

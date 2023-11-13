@@ -9,8 +9,7 @@ use image::{GenericImageView, ImageError};
 use std::fmt::Display;
 use std::io::Error;
 use std::path::Path;
-use std::pin::Pin;
-use std::task::Poll;
+use std::sync::Arc;
 
 /// Contains all the information need to render an image/texture to the screen.
 /// In order to be used it must be put inside a [Material](../material/struct.Material.html)
@@ -37,7 +36,7 @@ impl Texture {
         label: Option<&str>,
         path: P,
     ) -> Result<(), TextureError> where P: AsRef<Path> {
-        let bytes = read(path, engine)?;
+        let bytes = crate::io::read(path);
         // let out = Self::from_bytes(engine, label, &bytes)?;
         // Ok(out)
         Ok(())
@@ -142,42 +141,6 @@ impl Texture {
     }
 }
 
-
-#[cfg(target_arch="wasm32")]
-async fn make_request<U: AsRef<Path>>(path: U, engine: &Engine) -> Result<Vec<u8>, TextureError> {
-    use wasm_bindgen_futures::JsFuture;
-
-    let path = path.as_ref()
-        .as_os_str()
-        .to_str()
-        .unwrap();
-    let req = web_sys::RequestInit::new();
-
-    log::warn!("fetch!");
-    let x = engine.web_window.fetch_with_str_and_init(&path, &req);
-
-    let awaited = JsFuture::from(x).await;
-
-    log::warn!("{:?}", awaited);
-
-
-    todo!("finish the functions 4head")
-}
-
-
-cfg_if!{
-    if #[cfg(target_arch="wasm32")] {
-        fn read<U: AsRef<Path>>(path: U, engine: &Engine) -> Result<Vec<u8>, TextureError> {
-            let x = make_request(path, engine);
-
-            Ok(Vec::new())
-        }
-    } else {
-        fn read<P: AsRef<Path>>(path: P, _engine: &Engine) -> Result<Vec<u8>, TextureError> {
-            Ok(std::fs::read(path)?)
-        }
-    }
-}
 
 /// A struct that contains an Id and the size of a texture stored interally. This
 /// can only be obtained after registering a texture and its only purpose is to 
