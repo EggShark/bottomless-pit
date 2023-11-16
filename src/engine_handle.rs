@@ -10,17 +10,20 @@ use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
 use winit::error::OsError;
 use winit::event::*;
-use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder};
+use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy};
 use winit::window::{BadIcon, Window};
 use std::collections::HashMap;
+use std::sync::Arc;
+use std::path::Path;
 
 use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
 use crate::render::{make_pipeline, render};
 use crate::vectors::Vec2;
 use crate::vertex::{Vertex, LineVertex};
-use crate::WHITE_PIXEL;
+use crate::{WHITE_PIXEL, resource};
 use crate::{Game, IDENTITY_MATRIX, layouts};
+use crate::resource::{Resource, InProgressResource, ResourceType};
 
 pub(crate) type WgpuCache<T> = HashMap<wgpu::Id<T>, T>;
 
@@ -30,6 +33,7 @@ pub struct Engine {
     window: Window,
     surface: wgpu::Surface,
     event_loop: Option<EventLoop<BpEvent>>,
+    event_loop_proxy: Arc<EventLoopProxy<BpEvent>>, 
     cursor_visibility: bool,
     should_close: bool,
     close_key: Option<Key>,
@@ -45,6 +49,8 @@ pub struct Engine {
     camera_buffer: wgpu::Buffer,
     wgpu_clump: WgpuClump,
     size: Vec2<u32>,
+    in_progress_resources: Vec<InProgressResource>,
+    loading: bool,
     defualt_bind_group_id: wgpu::Id<wgpu::BindGroup>,
     default_pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
     line_pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
@@ -69,6 +75,7 @@ impl Engine {
         let target_fps = builder.target_fps;
 
         let event_loop: EventLoop<BpEvent> = EventLoopBuilder::with_user_event().build();
+        let event_loop_proxy = Arc::new(event_loop.create_proxy());
         let window_builder = winit::window::WindowBuilder::new()
             .with_title(builder.window_title)
             .with_inner_size(winit::dpi::PhysicalSize::new(
@@ -345,6 +352,7 @@ impl Engine {
             window,
             surface,
             event_loop: Some(event_loop),
+            event_loop_proxy,
             cursor_visibility,
             should_close: false,
             close_key: builder.close_key,
@@ -360,6 +368,8 @@ impl Engine {
             camera_buffer,
             wgpu_clump,
             size,
+            in_progress_resources: Vec::new(),
+            loading: false,
             defualt_bind_group_id: white_pixel_id,
             default_pipeline_id: generic_id,
             line_pipeline_id: line_id,
@@ -593,6 +603,13 @@ impl Engine {
         self.target_fps = Some(fps);
     }
 
+    pub fn create_resource<P: AsRef<Path>>(&self, path: P) {
+        let id = resource::generate_id(ResourceType::Bytes);
+        let path = path.as_ref();
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Bytes);
+        resource::start_load(&self, path, &ip_resource);
+    }
+
     pub(crate) fn get_wgpu(&self) -> &WgpuClump {
         &self.wgpu_clump
     }
@@ -603,6 +620,10 @@ impl Engine {
 
     pub(crate) fn get_texture_format(&self) -> wgpu::TextureFormat {
         self.config.format
+    }
+
+    pub(crate) fn get_proxy(&self) -> Arc<EventLoopProxy<BpEvent>> {
+        self.event_loop_proxy.clone()
     }
 
     /// Used when adding shader options, and textures into the bindgroup cahce !
@@ -682,7 +703,7 @@ impl Engine {
                     }
                 }
                 Event::UserEvent(event) => {
-                    println!("{:?}", event);
+                    log::warn!("{:?}", event);
                 }
                 _ => {}
             }
@@ -981,6 +1002,6 @@ pub(crate) struct WgpuClump {
 }
 
 #[derive(Debug)]
-enum BpEvent {
-    File,
+pub(crate) enum BpEvent {
+    ResourceLoaded(Resource),
 }

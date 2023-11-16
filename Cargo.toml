@@ -38,10 +38,6 @@ version = "0.24"
 default-features = false
 features = ["png", "jpeg"]
 
-[lib]
-crate-type = ["cdylib", "rlib"]
-
-
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.6"
 console_log = "1.0"
@@ -55,4 +51,4 @@ web-sys = { version = "0.3", features = [
     "Request",
     "Response",
 ]}
-js-sys = "0.3.65"
+js-sys = "0.3.64"

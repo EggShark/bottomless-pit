@@ -19,6 +19,11 @@ pub(crate) async fn read<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, ReadError> 
                     JsFuture::from(window.fetch_with_str(path)).await.unwrap();
 
                 let response: web_sys::Response = response_value.dyn_into().unwrap();
+
+                if !response.ok() {
+                    Err(ReadError::ResponseError(response.status(), response.status_text()))?;
+                }
+
                 let data = JsFuture::from(response.array_buffer().unwrap()).await.unwrap();
                 let bytes = Uint8Array::new(&data).to_vec();
                 Ok(bytes)
@@ -36,8 +41,10 @@ pub(crate) async fn read<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, ReadError> 
     }
 }
 
+#[derive(Debug)]
 pub(crate) enum ReadError {
     IoError(std::io::Error),
+    ResponseError(u16, String),
     WindowError,
 }
 

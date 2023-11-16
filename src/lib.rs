@@ -47,6 +47,7 @@ mod io;
 mod layouts;
 pub mod matrix_math;
 pub mod material;
+mod resource;
 pub mod render;
 pub mod shader;
 pub mod text;
