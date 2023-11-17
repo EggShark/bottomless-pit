@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::path::{PathBuf, Path};
 use std::num::NonZeroU64;
 use std::sync::atomic::AtomicU64;
@@ -69,24 +71,10 @@ pub(crate) enum ResourceType {
     Bytes,
 }
 
-pub(crate) fn generate_id(resource_type: ResourceType) -> NonZeroU64 {
-    match resource_type {
-        ResourceType::Bytes => {
-            static BTYE_ID: AtomicU64 = AtomicU64::new(1);
-            let id = BTYE_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            NonZeroU64::new(id).unwrap()
-        },
-        ResourceType::Shader => {
-            static SHADER_ID: AtomicU64 = AtomicU64::new(1);
-            let id = SHADER_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            NonZeroU64::new(id).unwrap()
-        },
-        ResourceType::Image => {
-            static IMAGE_ID: AtomicU64 = AtomicU64::new(1);
-            let id = IMAGE_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            NonZeroU64::new(id).unwrap()
-        }
-    }
+pub fn generate_id<T>() -> ResourceId<T> {
+    static NEXT_ID: AtomicU64 = AtomicU64::new(1);
+    let id = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    ResourceId(NonZeroU64::new(id).unwrap(), PhantomData::<T>)
 }
 
 pub(crate) fn start_load<P: AsRef<Path>>(engine: &Engine, path: P, ip_resource: &InProgressResource) {
@@ -103,4 +91,21 @@ pub(crate) fn start_load<P: AsRef<Path>>(engine: &Engine, path: P, ip_resource: 
             event_loop_proxy.send_event(BpEvent::ResourceLoaded(resource)).unwrap();
         });
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct ResourceId<T>(NonZeroU64, std::marker::PhantomData<T>);
+
+impl<T> ResourceId<T> {
+    pub(crate) fn get_id(&self) -> NonZeroU64 {
+        self.0
+    }
+}
+
+type ResourceMap<T> = HashMap<ResourceId<T>, T>;
+
+pub(crate) struct ResourceManager {
+    btye_resources: ResourceMap<Vec<u8>>,
+    bindgroup_resources: ResourceMap<wgpu::BindGroup>,
+    pipeline_resource: ResourceMap<wgpu::RenderPipeline>,
 }
