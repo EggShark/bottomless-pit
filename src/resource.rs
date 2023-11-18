@@ -8,40 +8,51 @@ use crate::engine_handle::{Engine, BpEvent};
 use crate::io::{self, ReadError};
 
 #[derive(Debug)]
-pub(crate) enum Resource {
-    Ok {
-        path: PathBuf,
-        data: Vec<u8>,
-        id: NonZeroU64,
-        resource_type: ResourceType,
-    },
-    Error {
-        error: ReadError,
-        path: PathBuf,
-        id: NonZeroU64,
-        resource_type: ResourceType,
-    }
+pub(crate) struct Resource {
+    path: PathBuf,
+    data: Vec<u8>,
+    id: NonZeroU64,
+    pub(crate) resource_type: ResourceType,
+}
+
+#[derive(Debug)]
+pub(crate) struct ResourceError {
+    error: ReadError,
+    path: PathBuf,
+    id: NonZeroU64,
+    resource_type: ResourceType,
 }
 
 impl Resource {
-    pub fn from_result(result: Result<Vec<u8>, ReadError>, path: PathBuf, id: NonZeroU64, resource_type: ResourceType) -> Self {
+    pub fn from_result(result: Result<Vec<u8>, ReadError>, path: PathBuf, id: NonZeroU64, resource_type: ResourceType) -> Result<Self, ResourceError> {
         match result {
             Ok(data) => {
-                Resource::Ok {
+                Ok(Self {
                     path,
                     data,
                     id,
                     resource_type,
-                }
+                })
             },
             Err(e) => {
-                Resource::Error {
+                Err(ResourceError {
                     error: e,
                     path,
                     id,
                     resource_type,
-                }
-            }
+                })
+            },
+        }
+    }
+}
+
+pub(crate) fn compare_resources(left: &InProgressResource, right: &Result<Resource, ResourceError>)  -> bool {
+    match right {
+        Ok(right) => {
+            left.id == right.id && left.resource_type == right.resource_type && left.path == right.path
+        },
+        Err(right) => {
+            left.id == right.id && left.resource_type == right.resource_type && left.path == right.path
         }
     }
 }
@@ -64,7 +75,7 @@ impl InProgressResource {
 }
 
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ResourceType {
     Image,
     Shader,

@@ -23,7 +23,7 @@ use crate::vectors::Vec2;
 use crate::vertex::{Vertex, LineVertex};
 use crate::{WHITE_PIXEL, resource};
 use crate::{Game, IDENTITY_MATRIX, layouts};
-use crate::resource::{Resource, InProgressResource, ResourceType};
+use crate::resource::{Resource, InProgressResource, ResourceType, ResourceId, ResourceError, compare_resources};
 
 pub(crate) type WgpuCache<T> = HashMap<wgpu::Id<T>, T>;
 
@@ -603,11 +603,16 @@ impl Engine {
         self.target_fps = Some(fps);
     }
 
-    pub fn create_resource<P: AsRef<Path>>(&self, path: P) {
-        let id = resource::generate_id(ResourceType::Bytes);
+    pub fn create_resource<P: AsRef<Path>>(&mut self, path: P) -> ResourceId<Vec<u8>> {
+        let typed_id = resource::generate_id::<Vec<u8>>();
+        let id = typed_id.get_id();
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Bytes);
+        
         resource::start_load(&self, path, &ip_resource);
+        
+        self.in_progress_resources.push(ip_resource);
+        typed_id
     }
 
     pub(crate) fn get_wgpu(&self) -> &WgpuClump {
@@ -664,19 +669,20 @@ impl Engine {
         event_loop.run(move |event, _, control_flow| {
             match event {
                 Event::RedrawRequested(window_id) if window_id == self.window.id() => {
-                    game.update(&mut self);
-                    self.update();
-                    if self.should_close {
-                        *control_flow = ControlFlow::Exit;
-                    }
-                    self.current_frametime = Instant::now();
-                    
-                    match render(&mut game, &mut self) {
-                        Ok(_) => {}
-                        // reconfigure surface if lost
-                        Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
-                        Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
-                        Err(e) => eprintln!("{:?}", e),
+                    if self.is_loading() {
+                        self.update(control_flow);
+                    } else {
+                        game.update(&mut self);
+                        self.update(control_flow);
+                        self.current_frametime = Instant::now();
+                        
+                        match render(&mut game, &mut self) {
+                            Ok(_) => {}
+                            // reconfigure surface if lost
+                            Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
+                            Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+                            Err(e) => eprintln!("{:?}", e),
+                        }
                     }
                 }
                 Event::MainEventsCleared => {
@@ -703,20 +709,21 @@ impl Engine {
                     }
                 }
                 Event::UserEvent(event) => {
-                    log::warn!("{:?}", event);
+                    self.handle_user_event(event);
                 }
                 _ => {}
             }
         });
     }
 
-    fn update(&mut self) {
+    fn update(&mut self, control_flow: &mut ControlFlow) {
         self.last_frame = Instant::now();
         // self.renderer.bind_group_cache.cache_update();
         self.input_handle.end_of_frame_refresh();
         if let Some(key) = self.close_key {
             if self.input_handle.is_key_down(key) {
-                self.should_close = true;
+                *control_flow = ControlFlow::Exit;
+                return;
             }
         }
 
@@ -741,6 +748,42 @@ impl Engine {
                 .configure(&self.wgpu_clump.device, &self.config);
             self.size = new_size;
         }
+    }
+
+    fn handle_user_event(&mut self, event: BpEvent) {
+        log::warn!("{:?}", event);
+        match event {
+            BpEvent::ResourceLoaded(resource) => self.handle_resource(resource),
+        }
+    }
+
+    fn handle_resource(&mut self, resource: Result<Resource, ResourceError>) {
+        // remove ip resource
+        let idx = self.in_progress_resources
+            .iter()
+            .enumerate()
+            .find(|(_, ip_resource)| compare_resources(ip_resource, &resource))
+            .and_then(|(idx, _)| Some(idx))
+            .expect("Finished resource doesnt match any in progress resources");
+
+        self.in_progress_resources.remove(idx);
+
+        match resource {
+            Ok(data) => {
+                match data.resource_type {
+                    ResourceType::Bytes => {},
+                    ResourceType::Image => todo!(),
+                    ResourceType::Shader => todo!(),
+                }
+            }
+            Err(e) => {
+                log::error!("{:?}, loading defualt replacement", e);
+            }
+        }
+    }
+
+    fn is_loading(&self) -> bool {
+        self.in_progress_resources.len() > 0
     }
 }
 
@@ -1003,5 +1046,5 @@ pub(crate) struct WgpuClump {
 
 #[derive(Debug)]
 pub(crate) enum BpEvent {
-    ResourceLoaded(Resource),
+    ResourceLoaded(Result<Resource, ResourceError>),
 }

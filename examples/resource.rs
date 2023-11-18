@@ -3,13 +3,13 @@ use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::render::RenderInformation;
 
 fn main() {
-    let engine = EngineBuilder::new()
+    let mut engine = EngineBuilder::new()
         .build()
         .unwrap();
 
     let game = LineExample;
 
-    engine.create_resource("examples/bplogo.ng");
+    engine.create_resource("examples/bplogo.png");
 
     engine.run(game);
 }
