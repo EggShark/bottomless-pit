@@ -104,12 +104,26 @@ pub(crate) fn start_load<P: AsRef<Path>>(engine: &Engine, path: P, ip_resource: 
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, PartialOrd, Ord)]
 pub struct ResourceId<T>(NonZeroU64, std::marker::PhantomData<T>);
 
 impl<T> ResourceId<T> {
     pub(crate) fn get_id(&self) -> NonZeroU64 {
         self.0
+    }
+}
+
+impl<T> PartialEq for ResourceId<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl<T> Eq for ResourceId<T> {}
+
+impl<T> std::hash::Hash for ResourceId<T> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state)
     }
 }
 
@@ -119,4 +133,38 @@ pub(crate) struct ResourceManager {
     btye_resources: ResourceMap<Vec<u8>>,
     bindgroup_resources: ResourceMap<wgpu::BindGroup>,
     pipeline_resource: ResourceMap<wgpu::RenderPipeline>,
+}
+
+impl ResourceManager {
+    pub fn new() -> Self {
+        Self {
+            btye_resources: HashMap::new(),
+            bindgroup_resources: HashMap::new(),
+            pipeline_resource: HashMap::new(),
+        }
+    }
+
+    pub fn insert_bytes(&mut self, key: ResourceId<Vec<u8>>, data: Vec<u8>) {
+        self.btye_resources.insert(key, data);
+    }
+
+    pub fn insert_bindgroup(&mut self, key: ResourceId<wgpu::BindGroup>, data: wgpu::BindGroup) {
+        self.bindgroup_resources.insert(key, data);
+    }
+
+    pub fn insert_pipeline(&mut self, key: ResourceId<wgpu::RenderPipeline>, data: wgpu::RenderPipeline) {
+        self.pipeline_resource.insert(key, data);
+    }
+
+    pub fn get_byte_resource(&self, key: &ResourceId<Vec<u8>>) -> Option<&Vec<u8>> {
+        self.btye_resources.get(key)
+    }
+
+    pub fn get_bindgroup(&self, key: &ResourceId<wgpu::BindGroup>) -> Option<&wgpu::BindGroup> {
+        self.bindgroup_resources.get(key)
+    }
+
+    pub fn get_pipeline(&self, key: &ResourceId<wgpu::RenderPipeline>) -> Option<&wgpu::RenderPipeline> {
+        self.pipeline_resource.get(key)
+    } 
 }
