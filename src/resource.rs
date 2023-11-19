@@ -104,12 +104,26 @@ pub(crate) fn start_load<P: AsRef<Path>>(engine: &Engine, path: P, ip_resource: 
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialOrd, Ord)]
+#[derive(PartialOrd, Ord)]
 pub struct ResourceId<T>(NonZeroU64, std::marker::PhantomData<T>);
 
 impl<T> ResourceId<T> {
     pub(crate) fn get_id(&self) -> NonZeroU64 {
         self.0
+    }
+}
+
+impl<T> Clone for ResourceId<T> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<T> Copy for ResourceId<T> {}
+
+impl<T> std::fmt::Debug for ResourceId<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("ID").field(&self.0).finish()
     }
 }
 

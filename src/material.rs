@@ -16,6 +16,7 @@ use encase::private::WriteInto;
 use encase::ShaderType;
 
 use crate::matrix_math::normalize_points;
+use crate::resource::ResourceId;
 use crate::texture::RegisteredTexture;
 use crate::vertex::{self, Vertex, LineVertex};
 use crate::engine_handle::{WgpuClump, Engine};
@@ -27,7 +28,7 @@ use crate::shader::{UniformData, Shader};
 /// A material represents a unique combination of a Texture
 /// and RenderPipeline, while also containing all nessicary buffers
 pub struct Material {
-    pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
+    pipeline_id: ResourceId<wgpu::RenderPipeline>,
     vertex_buffer: wgpu::Buffer,
     /// counts the bytes of vertex not the actual number
     pub(crate) vertex_size: u64,
@@ -36,7 +37,7 @@ pub struct Material {
     /// counts the bytes of the index no the actual number
     pub(crate) index_count: u64,
     pub(crate) index_size: u64,
-    texture_id: wgpu::Id<wgpu::BindGroup>,
+    texture_id: ResourceId<wgpu::BindGroup>,
     texture_size: Vec2<f32>,
     uniform_buffer: Option<wgpu::Buffer>,
     uniform_bindgroup: Option<wgpu::BindGroup>,
@@ -393,8 +394,8 @@ impl Material {
             return;
         }
 
-        let pipeline = information.pipelines.get(&self.pipeline_id).unwrap();
-        let texture = information.bind_groups.get(&self.texture_id).unwrap();
+        let pipeline = information.resources.get_pipeline(&self.pipeline_id).unwrap();
+        let texture = information.resources.get_bindgroup(&self.texture_id).unwrap();
 
         information.render_pass.set_pipeline(pipeline);
         information.render_pass.set_bind_group(0, texture, &[]);
@@ -494,7 +495,7 @@ impl<'a> MaterialBuilder<'a> {
 /// lines. These lines will allways be 1px wide and only one
 /// instance of this material should ever be made per programm.
 pub struct LineMaterial {
-    pipe_id: wgpu::Id<wgpu::RenderPipeline>,
+    pipe_id: ResourceId<wgpu::RenderPipeline>,
     vertex_buffer: wgpu::Buffer,
     vertex_count: u64,
     vertex_size: u64,
@@ -550,7 +551,7 @@ impl LineMaterial {
     
     /// Draws all queued lines to the screen.
     pub fn draw<'pass, 'others>(&'others mut self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
-        let pipeline = information.pipelines.get(&self.pipe_id).unwrap();
+        let pipeline = information.resources.get_pipeline(&self.pipe_id).unwrap();
         
         information.render_pass.set_pipeline(pipeline);
         information.render_pass.set_bind_group(0, information.camera_bindgroup, &[]);

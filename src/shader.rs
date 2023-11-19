@@ -9,15 +9,16 @@ use encase::private::WriteInto;
 use wgpu::util::DeviceExt;
 
 use crate::engine_handle::{Engine, WgpuClump};
+use crate::resource::ResourceId;
 use crate::vertex::Vertex;
-use crate::{layouts, render};
+use crate::{layouts, render, resource};
 
 /// An internal representation of an WGSL Shader. Under the hood this creates
 /// a new pipeline with or without the support for any extra uniforms. To be utilze 
 /// the shader it must be added to a material
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Shader {
-    pub(crate) pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
+    pub(crate) pipeline_id: ResourceId<wgpu::RenderPipeline>,
 }
 
 impl Shader {
@@ -58,7 +59,7 @@ impl Shader {
             )
         };
 
-        let id = pipeline.global_id();
+        let id = resource::generate_id::<wgpu::RenderPipeline>();
         engine.add_to_pipeline_cache(pipeline, id);
 
         Ok(Self {

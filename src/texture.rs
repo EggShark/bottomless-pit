@@ -2,7 +2,8 @@
 //! extension accsss the texture interface
 
 use crate::engine_handle::Engine;
-use crate::layouts;
+use crate::resource::ResourceId;
+use crate::{layouts, resource};
 use crate::vectors::Vec2;
 use cfg_if::cfg_if;
 use image::{GenericImageView, ImageError};
@@ -129,7 +130,7 @@ impl Texture {
     ///     .build();
     /// ```
     pub fn register(self, engine: &mut Engine) -> RegisteredTexture {
-        let id = self.bind_group.global_id();
+        let id = resource::generate_id::<wgpu::BindGroup>();
         let size = self.size;
 
         engine.add_to_bind_group_cache(self.bind_group, id);
@@ -147,7 +148,7 @@ impl Texture {
 /// be added to a [Material](../material/struct.Material.html).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct RegisteredTexture {
-    pub(crate) bindgroup_id: wgpu::Id<wgpu::BindGroup>,
+    pub(crate) bindgroup_id: ResourceId<wgpu::BindGroup>,
     pub(crate) texture_size: Vec2<f32>,
 }
 

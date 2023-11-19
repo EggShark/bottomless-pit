@@ -469,7 +469,7 @@ impl TextMaterial {
             self.change_flag = false;
         }
         
-        information.render_pass.set_pipeline(information.pipelines.get(&information.defualt_id).unwrap());
+        information.render_pass.set_pipeline(information.resources.get_pipeline(&information.defualt_id).unwrap());
         information.render_pass.set_bind_group(0, &self.bind_group, &[]);
 
         information.render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(0..self.get_vertex_number()));

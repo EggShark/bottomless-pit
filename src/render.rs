@@ -3,6 +3,7 @@
 
 use crate::engine_handle::{Engine, WgpuCache, WgpuClump};
 use crate::Game;
+use crate::resource::{ResourceManager, ResourceId};
 use crate::vectors::Vec2;
 
 pub(crate) fn make_pipeline(
@@ -69,9 +70,8 @@ pub(crate) fn make_pipeline(
 pub struct RenderInformation<'pass, 'others> {
     pub(crate) size: Vec2<u32>,
     pub(crate) render_pass: wgpu::RenderPass<'pass>,
-    pub(crate) bind_groups: &'others WgpuCache<wgpu::BindGroup>,
-    pub(crate) pipelines: &'others WgpuCache<wgpu::RenderPipeline>,
-    pub(crate) defualt_id: wgpu::Id<wgpu::RenderPipeline>,
+    pub(crate) resources: &'others ResourceManager,
+    pub(crate) defualt_id: ResourceId<wgpu::RenderPipeline>,
     pub(crate) camera_bindgroup: &'others wgpu::BindGroup,
     pub(crate) wgpu: &'others WgpuClump,
 }
@@ -106,8 +106,7 @@ pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::S
     let render_info = RenderInformation {
         size: engine.get_window_size(),
         render_pass,
-        bind_groups: &engine.bindgroups,
-        pipelines: &engine.pipelines,
+        resources: engine.get_resources(),
         defualt_id: engine.defualt_pipe_id(),
         camera_bindgroup: engine.camera_bindgroup(),
         wgpu,

@@ -23,7 +23,7 @@ use crate::vectors::Vec2;
 use crate::vertex::{Vertex, LineVertex};
 use crate::{WHITE_PIXEL, resource};
 use crate::{Game, IDENTITY_MATRIX, layouts};
-use crate::resource::{Resource, InProgressResource, ResourceType, ResourceId, ResourceError, compare_resources};
+use crate::resource::{Resource, InProgressResource, ResourceType, ResourceId, ResourceError, compare_resources, ResourceManager};
 
 pub(crate) type WgpuCache<T> = HashMap<wgpu::Id<T>, T>;
 
@@ -50,12 +50,10 @@ pub struct Engine {
     wgpu_clump: WgpuClump,
     size: Vec2<u32>,
     in_progress_resources: Vec<InProgressResource>,
-    loading: bool,
-    defualt_bind_group_id: wgpu::Id<wgpu::BindGroup>,
-    default_pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
-    line_pipeline_id: wgpu::Id<wgpu::RenderPipeline>,
-    pub(crate) pipelines: WgpuCache<wgpu::RenderPipeline>,
-    pub(crate) bindgroups: WgpuCache<wgpu::BindGroup>,
+    defualt_bind_group_id: ResourceId<wgpu::BindGroup>,
+    default_pipeline_id: ResourceId<wgpu::RenderPipeline>,
+    line_pipeline_id: ResourceId<wgpu::RenderPipeline>,
+    resource_manager: ResourceManager,
 }
 
 impl Engine {
@@ -335,16 +333,16 @@ impl Engine {
             texture_format,
             Some("line_renderer"),
         );
-    
-        let line_id = line_pipeline.global_id();
-        let generic_id = generic_pipeline.global_id();
-        let mut pipelines = HashMap::new();
-        pipelines.insert(line_id, line_pipeline);
-        pipelines.insert(generic_id, generic_pipeline);
 
-        let white_pixel_id = white_pixel.global_id();
-        let mut bindgroups = HashMap::new();
-        bindgroups.insert(white_pixel_id, white_pixel);
+        let mut resource_manager = ResourceManager::new();
+    
+        let line_id = resource::generate_id::<wgpu::RenderPipeline>();
+        let generic_id = resource::generate_id::<wgpu::RenderPipeline>();
+        resource_manager.insert_pipeline(line_id, line_pipeline);
+        resource_manager.insert_pipeline(generic_id, generic_pipeline);
+
+        let white_pixel_id = resource::generate_id::<wgpu::BindGroup>();
+        resource_manager.insert_bindgroup(white_pixel_id, white_pixel);
 
 
         Ok(Self {
@@ -369,12 +367,10 @@ impl Engine {
             wgpu_clump,
             size,
             in_progress_resources: Vec::new(),
-            loading: false,
             defualt_bind_group_id: white_pixel_id,
             default_pipeline_id: generic_id,
             line_pipeline_id: line_id,
-            pipelines,
-            bindgroups,
+            resource_manager,
         })
     }
 
@@ -631,24 +627,28 @@ impl Engine {
         self.event_loop_proxy.clone()
     }
 
+    pub(crate) fn get_resources(&self) -> &ResourceManager {
+        &self.resource_manager
+    }
+
     /// Used when adding shader options, and textures into the bindgroup cahce !
-    pub(crate) fn add_to_bind_group_cache(&mut self, bind_group: wgpu::BindGroup, key: wgpu::Id<wgpu::BindGroup>) {
-        self.bindgroups.insert(key, bind_group);
+    pub(crate) fn add_to_bind_group_cache(&mut self, bind_group: wgpu::BindGroup, key: ResourceId<wgpu::BindGroup>) {
+        self.resource_manager.insert_bindgroup(key, bind_group);
     }
 
-    pub(crate) fn add_to_pipeline_cache(&mut self, pipeline: wgpu::RenderPipeline, key: wgpu::Id<wgpu::RenderPipeline>) {
-        self.pipelines.insert(key, pipeline);
+    pub(crate) fn add_to_pipeline_cache(&mut self, pipeline: wgpu::RenderPipeline, key: ResourceId<wgpu::RenderPipeline>) {
+        self.resource_manager.insert_pipeline(key, pipeline);
     }
 
-    pub(crate) fn defualt_material_bg_id(&self) -> wgpu::Id<wgpu::BindGroup> {
+    pub(crate) fn defualt_material_bg_id(&self) -> ResourceId<wgpu::BindGroup> {
         self.defualt_bind_group_id
     }
 
-    pub(crate) fn defualt_pipe_id(&self) -> wgpu::Id<wgpu::RenderPipeline> {
+    pub(crate) fn defualt_pipe_id(&self) -> ResourceId<wgpu::RenderPipeline> {
         self.default_pipeline_id
     }
 
-    pub(crate) fn line_pipe_id(&self) -> wgpu::Id<wgpu::RenderPipeline> {
+    pub(crate) fn line_pipe_id(&self) -> ResourceId<wgpu::RenderPipeline> {
         self.line_pipeline_id
     }
 
