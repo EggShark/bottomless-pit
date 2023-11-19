@@ -5,12 +5,10 @@ use crate::engine_handle::Engine;
 use crate::resource::ResourceId;
 use crate::{layouts, resource};
 use crate::vectors::Vec2;
-use cfg_if::cfg_if;
 use image::{GenericImageView, ImageError};
 use std::fmt::Display;
 use std::io::Error;
 use std::path::Path;
-use std::sync::Arc;
 
 /// Contains all the information need to render an image/texture to the screen.
 /// In order to be used it must be put inside a [Material](../material/struct.Material.html)

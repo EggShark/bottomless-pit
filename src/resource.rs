@@ -10,8 +10,8 @@ use crate::io::{self, ReadError};
 #[derive(Debug)]
 pub(crate) struct Resource {
     path: PathBuf,
-    data: Vec<u8>,
-    id: NonZeroU64,
+    pub(crate) data: Vec<u8>,
+    pub(crate) id: NonZeroU64,
     pub(crate) resource_type: ResourceType,
 }
 
@@ -108,6 +108,10 @@ pub(crate) fn start_load<P: AsRef<Path>>(engine: &Engine, path: P, ip_resource: 
 pub struct ResourceId<T>(NonZeroU64, std::marker::PhantomData<T>);
 
 impl<T> ResourceId<T> {
+    pub(crate) fn from_number(number: NonZeroU64) -> Self {
+        Self(number, PhantomData)
+    }
+
     pub(crate) fn get_id(&self) -> NonZeroU64 {
         self.0
     }

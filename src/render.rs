@@ -1,7 +1,7 @@
 //! Contains the Renderer struct which also contains all the
 //! functions and logic to draw things to the screen
 
-use crate::engine_handle::{Engine, WgpuCache, WgpuClump};
+use crate::engine_handle::{Engine, WgpuClump};
 use crate::Game;
 use crate::resource::{ResourceManager, ResourceId};
 use crate::vectors::Vec2;

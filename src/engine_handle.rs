@@ -12,7 +12,6 @@ use winit::error::OsError;
 use winit::event::*;
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy};
 use winit::window::{BadIcon, Window};
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::path::Path;
 
@@ -24,8 +23,6 @@ use crate::vertex::{Vertex, LineVertex};
 use crate::{WHITE_PIXEL, resource};
 use crate::{Game, IDENTITY_MATRIX, layouts};
 use crate::resource::{Resource, InProgressResource, ResourceType, ResourceId, ResourceError, compare_resources, ResourceManager};
-
-pub(crate) type WgpuCache<T> = HashMap<wgpu::Id<T>, T>;
 
 /// The thing that makes the computer go
 pub struct Engine {
@@ -611,6 +608,10 @@ impl Engine {
         typed_id
     }
 
+    pub fn get_byte_resource(&self, id: ResourceId<Vec<u8>>) -> Option<&Vec<u8>> {
+        self.resource_manager.get_byte_resource(&id)
+    }
+
     pub(crate) fn get_wgpu(&self) -> &WgpuClump {
         &self.wgpu_clump
     }
@@ -771,15 +772,28 @@ impl Engine {
         match resource {
             Ok(data) => {
                 match data.resource_type {
-                    ResourceType::Bytes => {},
-                    ResourceType::Image => todo!(),
-                    ResourceType::Shader => todo!(),
+                    ResourceType::Bytes => self.add_finished_bytes(data),
+                    ResourceType::Image => self.add_finished_image(data),
+                    ResourceType::Shader => self.add_finished_shader(data),
                 }
             }
             Err(e) => {
                 log::error!("{:?}, loading defualt replacement", e);
             }
         }
+    }
+
+    fn add_finished_bytes(&mut self, resource: Resource) {
+        let typed_id: ResourceId<Vec<u8>> = ResourceId::from_number(resource.id);
+        self.resource_manager.insert_bytes(typed_id, resource.data);
+    }
+
+    fn add_finished_image(&mut self, resource: Resource) {
+        todo!()
+    }
+
+    fn add_finished_shader(&mut self, resource: Resource) {
+        todo!()
     }
 
     fn is_loading(&self) -> bool {
