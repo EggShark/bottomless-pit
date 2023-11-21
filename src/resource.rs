@@ -6,6 +6,7 @@ use std::sync::atomic::AtomicU64;
 
 use crate::engine_handle::{Engine, BpEvent};
 use crate::io::{self, ReadError};
+use crate::texture::Texture;
 
 #[derive(Debug)]
 pub(crate) struct Resource {
@@ -149,7 +150,7 @@ type ResourceMap<T> = HashMap<ResourceId<T>, T>;
 
 pub(crate) struct ResourceManager {
     btye_resources: ResourceMap<Vec<u8>>,
-    bindgroup_resources: ResourceMap<wgpu::BindGroup>,
+    bindgroup_resources: ResourceMap<Texture>,
     pipeline_resource: ResourceMap<wgpu::RenderPipeline>,
 }
 
@@ -166,7 +167,7 @@ impl ResourceManager {
         self.btye_resources.insert(key, data);
     }
 
-    pub fn insert_bindgroup(&mut self, key: ResourceId<wgpu::BindGroup>, data: wgpu::BindGroup) {
+    pub fn insert_texture(&mut self, key: ResourceId<Texture>, data: Texture) {
         self.bindgroup_resources.insert(key, data);
     }
 
@@ -178,7 +179,7 @@ impl ResourceManager {
         self.btye_resources.get(key)
     }
 
-    pub fn get_bindgroup(&self, key: &ResourceId<wgpu::BindGroup>) -> Option<&wgpu::BindGroup> {
+    pub fn get_texture(&self, key: &ResourceId<Texture>) -> Option<&Texture> {
         self.bindgroup_resources.get(key)
     }
 

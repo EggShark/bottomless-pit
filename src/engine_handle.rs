@@ -18,6 +18,7 @@ use std::path::Path;
 use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
 use crate::render::{make_pipeline, render};
+use crate::texture::Texture;
 use crate::vectors::Vec2;
 use crate::vertex::{Vertex, LineVertex};
 use crate::{WHITE_PIXEL, resource};
@@ -47,7 +48,7 @@ pub struct Engine {
     wgpu_clump: WgpuClump,
     size: Vec2<u32>,
     in_progress_resources: Vec<InProgressResource>,
-    defualt_bind_group_id: ResourceId<wgpu::BindGroup>,
+    defualt_texture_id: ResourceId<Texture>,
     default_pipeline_id: ResourceId<wgpu::RenderPipeline>,
     line_pipeline_id: ResourceId<wgpu::RenderPipeline>,
     resource_manager: ResourceManager,
@@ -255,32 +256,9 @@ impl Engine {
             ..Default::default()
         });
 
-        let texture_bind_group_layout =
-            wgpu_clump
-                .device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    entries: &[
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 0,
-                            visibility: wgpu::ShaderStages::FRAGMENT,
-                            ty: wgpu::BindingType::Texture {
-                                multisampled: false,
-                                view_dimension: wgpu::TextureViewDimension::D2,
-                                sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                            },
-                            count: None,
-                        },
-                        wgpu::BindGroupLayoutEntry {
-                            binding: 1,
-                            visibility: wgpu::ShaderStages::FRAGMENT,
-                            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                            count: None,
-                        },
-                    ],
-                    label: Some("white_pixel_bind_group_layout"),
-                });
+        let texture_bind_group_layout = layouts::create_texture_layout(&wgpu_clump.device);
 
-        let white_pixel = wgpu_clump
+        let white_pixel_bind_group = wgpu_clump
             .device
             .create_bind_group(&wgpu::BindGroupDescriptor {
                 layout: &texture_bind_group_layout,
@@ -296,6 +274,8 @@ impl Engine {
                 ],
                 label: Some("texture_bind_group"),
             });
+
+        let white_pixel = Texture::new(white_pixel_view, white_pixel_bind_group, Vec2{x: 1.0, y: 1.0});
 
         let generic_shader = wgpu_clump
             .device
@@ -338,8 +318,8 @@ impl Engine {
         resource_manager.insert_pipeline(line_id, line_pipeline);
         resource_manager.insert_pipeline(generic_id, generic_pipeline);
 
-        let white_pixel_id = resource::generate_id::<wgpu::BindGroup>();
-        resource_manager.insert_bindgroup(white_pixel_id, white_pixel);
+        let white_pixel_id = resource::generate_id::<Texture>();
+        resource_manager.insert_texture(white_pixel_id, white_pixel);
 
 
         Ok(Self {
@@ -364,7 +344,7 @@ impl Engine {
             wgpu_clump,
             size,
             in_progress_resources: Vec::new(),
-            defualt_bind_group_id: white_pixel_id,
+            defualt_texture_id: white_pixel_id,
             default_pipeline_id: generic_id,
             line_pipeline_id: line_id,
             resource_manager,
@@ -612,6 +592,10 @@ impl Engine {
         self.resource_manager.get_byte_resource(&id)
     }
 
+    pub(crate) fn add_in_progress_resource(&mut self, ip_resource: InProgressResource) {
+        self.in_progress_resources.push(ip_resource);
+    }
+
     pub(crate) fn get_wgpu(&self) -> &WgpuClump {
         &self.wgpu_clump
     }
@@ -632,17 +616,12 @@ impl Engine {
         &self.resource_manager
     }
 
-    /// Used when adding shader options, and textures into the bindgroup cahce !
-    pub(crate) fn add_to_bind_group_cache(&mut self, bind_group: wgpu::BindGroup, key: ResourceId<wgpu::BindGroup>) {
-        self.resource_manager.insert_bindgroup(key, bind_group);
-    }
-
     pub(crate) fn add_to_pipeline_cache(&mut self, pipeline: wgpu::RenderPipeline, key: ResourceId<wgpu::RenderPipeline>) {
         self.resource_manager.insert_pipeline(key, pipeline);
     }
 
-    pub(crate) fn defualt_material_bg_id(&self) -> ResourceId<wgpu::BindGroup> {
-        self.defualt_bind_group_id
+    pub(crate) fn defualt_material_bg_id(&self) -> ResourceId<Texture> {
+        self.defualt_texture_id
     }
 
     pub(crate) fn defualt_pipe_id(&self) -> ResourceId<wgpu::RenderPipeline> {
@@ -752,7 +731,6 @@ impl Engine {
     }
 
     fn handle_user_event(&mut self, event: BpEvent) {
-        log::warn!("{:?}", event);
         match event {
             BpEvent::ResourceLoaded(resource) => self.handle_resource(resource),
         }
@@ -789,7 +767,12 @@ impl Engine {
     }
 
     fn add_finished_image(&mut self, resource: Resource) {
-        todo!()
+        let typed_id: ResourceId<Texture> = ResourceId::from_number(resource.id);
+        let texture = Texture::from_bytes(&self, None, &resource.data);
+        match texture {
+            Ok(texture) => self.resource_manager.insert_texture(typed_id, texture),
+            Err(e) => log::error!("{:?}, loading defualt replacement", e)
+        }
     }
 
     fn add_finished_shader(&mut self, resource: Resource) {

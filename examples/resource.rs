@@ -11,8 +11,6 @@ fn main() {
 
     let handle = engine.create_resource("examples/bplogo.png");
 
-    let data = engine.get_byte_resource(handle).unwrap();
-
     let game = ResourceExample {
         handle,
     };

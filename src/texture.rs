@@ -2,8 +2,8 @@
 //! extension accsss the texture interface
 
 use crate::engine_handle::Engine;
-use crate::resource::ResourceId;
-use crate::{layouts, resource};
+use crate::resource::{self, ResourceType, ResourceId, InProgressResource};
+use crate::layouts;
 use crate::vectors::Vec2;
 use image::{GenericImageView, ImageError};
 use std::fmt::Display;
@@ -31,14 +31,26 @@ impl Texture {
 
     /// Attempts to both read a file at the specified path and turn it into an iamge
     pub fn from_path<P>(
-        engine: &Engine,
-        label: Option<&str>,
+        engine: &mut Engine,
         path: P,
-    ) -> Result<(), TextureError> where P: AsRef<Path> {
-        let bytes = crate::io::read(path);
-        // let out = Self::from_bytes(engine, label, &bytes)?;
-        // Ok(out)
-        Ok(())
+    ) -> ResourceId<Texture> where P: AsRef<Path> {
+        let typed_id = resource::generate_id::<Texture>();
+        let id = typed_id.get_id();
+        let path = path.as_ref();
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Image);
+        
+        resource::start_load(&engine, path, &ip_resource);
+
+        engine.add_in_progress_resource(ip_resource);
+        typed_id
+    }
+
+    pub(crate) fn new(view: wgpu::TextureView, bind_group: wgpu::BindGroup, size: Vec2<f32>) -> Self {
+        Self {
+            _view: view,
+            bind_group,
+            size,
+        }
     }
 
     fn from_image(
@@ -116,39 +128,13 @@ impl Texture {
             size,
         }
     }
-
-    /// Adds a texture to the internal cache this step must be done
-    /// to add a texture to a [Material](../material/struct.Material.html)
-    /// ```rust
-    /// let texture = Texture::from_path("assets/image.png")?
-    ///     .register(&mut engine);
-    /// 
-    /// let material = MaterialBuilder::new()
-    ///     .add_texture(texutre)
-    ///     .build();
-    /// ```
-    pub fn register(self, engine: &mut Engine) -> RegisteredTexture {
-        let id = resource::generate_id::<wgpu::BindGroup>();
-        let size = self.size;
-
-        engine.add_to_bind_group_cache(self.bind_group, id);
-
-        RegisteredTexture {
-            bindgroup_id: id,
-            texture_size: size,
-        }
-    }
 }
 
 
 /// A struct that contains an Id and the size of a texture stored interally. This
 /// can only be obtained after registering a texture and its only purpose is to 
 /// be added to a [Material](../material/struct.Material.html).
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct RegisteredTexture {
-    pub(crate) bindgroup_id: ResourceId<wgpu::BindGroup>,
-    pub(crate) texture_size: Vec2<f32>,
-}
+pub type RegisteredTexture = wgpu::BindGroup;
 
 /// Loading a texture can fail in two senarios. Either the file cant be opened, or the
 /// file loaded is not a supported image file type.

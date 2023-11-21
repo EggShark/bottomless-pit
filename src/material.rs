@@ -17,7 +17,7 @@ use encase::ShaderType;
 
 use crate::matrix_math::normalize_points;
 use crate::resource::ResourceId;
-use crate::texture::RegisteredTexture;
+use crate::texture::Texture;
 use crate::vertex::{self, Vertex, LineVertex};
 use crate::engine_handle::{WgpuClump, Engine};
 use crate::vectors::Vec2;
@@ -37,8 +37,7 @@ pub struct Material {
     /// counts the bytes of the index no the actual number
     pub(crate) index_count: u64,
     pub(crate) index_size: u64,
-    texture_id: ResourceId<wgpu::BindGroup>,
-    texture_size: Vec2<f32>,
+    texture_id: ResourceId<Texture>,
     uniform_buffer: Option<wgpu::Buffer>,
     uniform_bindgroup: Option<wgpu::BindGroup>,
 }
@@ -51,11 +50,9 @@ impl Material {
             None => engine.defualt_pipe_id(),
         };
 
-        let (texture_id, texture_size) = match builder.texture_change {
-            Some(rt) => (rt.bindgroup_id, rt.texture_size),
-            // should just be the size of the white pixel
-            None => (engine.defualt_material_bg_id(), Vec2{x: 1.0, y: 1.0})
-        };
+        let texture_id = builder
+            .texture_change
+            .unwrap_or(engine.defualt_material_bg_id());
 
         let wgpu = engine.get_wgpu();
 
@@ -80,7 +77,6 @@ impl Material {
             index_count: 0,
             index_size,
             texture_id,
-            texture_size,
             uniform_buffer: uniform_information.0,
             uniform_bindgroup: uniform_information.1,
         }
@@ -109,8 +105,11 @@ impl Material {
     pub fn add_rectangle_with_uv(&mut self, position: Vec2<f32>, size: Vec2<f32>, uv_position: Vec2<f32>, uv_size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
         let wgpu = render.wgpu;
         let window_size = render.size;
-        let uv_size = normalize_points(uv_size, self.texture_size);
-        let uv_position = normalize_points(uv_position, self.texture_size);
+
+        let texture_size = render.resources.get_texture(&self.texture_id).unwrap().size;
+
+        let uv_size = normalize_points(uv_size, texture_size);
+        let uv_position = normalize_points(uv_position, texture_size);
 
         let verts = 
             vertex::from_pixels_with_uv(position, size, colour.to_raw(), window_size, uv_position, uv_size);
@@ -133,8 +132,11 @@ impl Material {
     pub fn add_rectangle_ex(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, uv_position: Vec2<f32>, uv_size: Vec2<f32>, render: &RenderInformation) {
         let wgpu = render.wgpu;
         let window_size = render.size;
-        let uv_size = normalize_points(uv_size, self.texture_size);
-        let uv_position = normalize_points(uv_position, self.texture_size);
+
+        let texture_size = render.resources.get_texture(&self.texture_id).unwrap().size;
+
+        let uv_size = normalize_points(uv_size, texture_size);
+        let uv_position = normalize_points(uv_position, texture_size);
 
         let verts = 
             vertex::from_pixels_ex(position, size, colour.to_raw(), window_size, rotation, uv_position, uv_size);
@@ -156,11 +158,12 @@ impl Material {
     /// bottom right and bottom left order as it will not render porperly otherwise.
     pub fn add_custom(&mut self, points: [Vec2<f32>; 4], uv_points: [Vec2<f32>; 4], rotation: f32, colour: Colour, render: &RenderInformation) {
         let wgpu = render.wgpu;
+        let texture_size = render.resources.get_texture(&self.texture_id).unwrap().size;
         let uv_points = [
-            normalize_points(uv_points[0], self.texture_size),
-            normalize_points(uv_points[1], self.texture_size),
-            normalize_points(uv_points[2], self.texture_size),
-            normalize_points(uv_points[3], self.texture_size),
+            normalize_points(uv_points[0], texture_size),
+            normalize_points(uv_points[1], texture_size),
+            normalize_points(uv_points[2], texture_size),
+            normalize_points(uv_points[3], texture_size),
         ];
 
         let verts =
@@ -318,7 +321,7 @@ impl Material {
 
     // Returns the size of the texture in pixels
     pub fn get_texture_size(&self) -> Vec2<f32> {
-        self.texture_size
+        todo!();
     }
 
     fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {
@@ -395,7 +398,7 @@ impl Material {
         }
 
         let pipeline = information.resources.get_pipeline(&self.pipeline_id).unwrap();
-        let texture = information.resources.get_bindgroup(&self.texture_id).unwrap();
+        let texture = &information.resources.get_texture(&self.texture_id).unwrap().bind_group;
 
         information.render_pass.set_pipeline(pipeline);
         information.render_pass.set_bind_group(0, texture, &[]);
@@ -441,7 +444,7 @@ impl Material {
 pub struct MaterialBuilder<'a> {
     // using options to denote a change from the default
     // in the case of a texture the defualt is just the White_Pixel
-    texture_change: Option<RegisteredTexture>,
+    texture_change: Option<ResourceId<Texture>>,
     shader_change: Option<Shader>,
     uniform_data: Option<&'a UniformData>,
 }
@@ -458,7 +461,7 @@ impl<'a> MaterialBuilder<'a> {
     }
 
     /// Adds a Texture to the Material
-    pub fn add_texture(self, texture: RegisteredTexture) -> Self {
+    pub fn add_texture(self, texture: ResourceId<Texture>) -> Self {
         Self {
             texture_change: Some(texture),
             shader_change: self.shader_change,

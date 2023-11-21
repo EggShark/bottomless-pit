@@ -12,20 +12,19 @@ fn main() {
         .with_resolution((400, 400))
         .build()
         .unwrap();
-    let texture = Texture::from_path(&engine, Some("texture"), "examples/bplogo.png")
-        .unwrap();
-        //.register(&mut engine);
 
-    // let texture = MaterialBuilder::new().add_texture(texture).build(&mut engine);
-    // let defualt = MaterialBuilder::new().build(&mut engine);
+    let texture = Texture::from_path(&mut engine, "examples/bplogo.png");
+
+    let texture = MaterialBuilder::new().add_texture(texture).build(&mut engine);
+    let defualt = MaterialBuilder::new().build(&mut engine);
     
-    // let s = TextureExample {
-    //     current: texture,
-    //     other: defualt,
-    //     pos: Vec2{x: 0.0, y: 0.0}
-    // };
+    let s = TextureExample {
+        current: texture,
+        other: defualt,
+        pos: Vec2{x: 0.0, y: 0.0}
+    };
 
-    // engine.run(s);
+    engine.run(s);
 }
 
 struct TextureExample {
