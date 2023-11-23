@@ -15,15 +15,22 @@ fn main() {
         .build()
         .unwrap();
 
-    let mouse_shader = Shader::new("examples/mouse.wgsl", true, &mut engine)
-        .unwrap();
+    let mouse_shader = Shader::new("examples/mouse.wgsl", true, &mut engine);
 
-    let circle_shader = Shader::new("examples/movement.wgsl", true, &mut engine)
-        .unwrap();
+    let circle_shader = Shader::new("examples/movement.wgsl", true, &mut engine);
 
-    let data = MousePos{x: 0.0, y: 0.0};
+    let data = MousePos{
+        x: 0.0,
+        y: 0.0,
+        _junk: 0.0,
+        _padding2: 0.0,
+    };
+
     let mouse_uniform_data = UniformData::new(&engine, &data);
-    let circle_uniform_data = UniformData::new(&engine, &0.0_f32);
+
+    // On wasm we need this to be 16 bytes aligned so we have added this instead of
+    // a 0.0_f32
+    let circle_uniform_data = UniformData::new(&engine, &data);
 
     let mouse_material = MaterialBuilder::new()
         .set_shader(mouse_shader)
@@ -52,6 +59,8 @@ fn main() {
 struct MousePos {
     x: f32,
     y: f32,
+    _junk: f32,
+    _padding2: f32,
 }
 
 struct ShaderExample {
@@ -80,10 +89,14 @@ impl Game for ShaderExample {
 
         let size = engine_handle.get_window_size();
         let mouse_pos = engine_handle.get_mouse_position();
-        let new_data = MousePos{
+
+        let new_data = MousePos {
             x: mouse_pos.x/size.x as f32,
             y: mouse_pos.y/size.y as f32,
+            _junk: 0.0,
+            _padding2: 0.0,
         };
+        
         self.data = new_data;
         self.mouse_material.update_uniform_data(&self.data, &engine_handle);
         self.circle_material.update_uniform_data(&self.theta, &engine_handle);

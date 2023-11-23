@@ -4,6 +4,9 @@ struct CameraUniform {
 
 struct Time {
     time: f32,
+    _junk: f32,
+    _junk1: f32,
+    _junk4: f32,
 }
 
 @group(1) @binding(0)

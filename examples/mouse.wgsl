@@ -4,6 +4,7 @@ struct CameraUniform {
 
 struct MousePos {
     stuff: vec2<f32>,
+    _junk: vec2<f32>,
 }
 
 @group(1) @binding(0)

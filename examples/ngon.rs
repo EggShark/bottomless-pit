@@ -8,6 +8,7 @@ use bottomless_pit::render::RenderInformation;
 use bottomless_pit::colour::Colour;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::shader::UniformData;
+use encase::ShaderType;
 
 fn main() {
     let mut engine = EngineBuilder::new()
@@ -17,10 +18,16 @@ fn main() {
         .build()
         .unwrap();
 
-    let uniform_data = UniformData::new(&engine, &0.0_f32);
+    let data = Time {
+        time: 0.0,
+        _pading: 0.0,
+        _padding2: 0.0,
+        _padding4: 0.0,
+    };
 
-    let mouse_shader = Shader::new("examples/sinewaves.wgsl", true, &mut engine)
-        .unwrap();
+    let uniform_data = UniformData::new(&engine, &data);
+
+    let mouse_shader = Shader::new("examples/sinewaves.wgsl", true, &mut engine);
 
     let regular_material = MaterialBuilder::new()
         .set_uniform(&uniform_data)
@@ -33,6 +40,14 @@ fn main() {
     };
 
     engine.run(pos);
+}
+
+#[derive(ShaderType)]
+struct Time {
+    time: f32,
+    _pading: f32,
+    _padding2: f32,
+    _padding4: f32,
 }
 
 struct Position {
