@@ -28,7 +28,7 @@ use crate::shader::{UniformData, Shader};
 /// A material represents a unique combination of a Texture
 /// and RenderPipeline, while also containing all nessicary buffers
 pub struct Material {
-    pipeline_id: ResourceId<wgpu::RenderPipeline>,
+    pipeline_id: ResourceId<Shader>,
     vertex_buffer: wgpu::Buffer,
     /// counts the bytes of vertex not the actual number
     pub(crate) vertex_size: u64,
@@ -46,7 +46,7 @@ impl Material {
     /// Takes a MaterialBuilder and turns it into a Material
     fn from_builder(builder: MaterialBuilder, engine: &mut Engine) -> Self {
         let pipeline_id = match builder.shader_change {
-            Some(rs) => rs.pipeline_id,
+            Some(rs) => rs,
             None => engine.defualt_pipe_id(),
         };
 
@@ -397,7 +397,7 @@ impl Material {
             return;
         }
 
-        let pipeline = information.resources.get_pipeline(&self.pipeline_id).unwrap();
+        let pipeline = &information.resources.get_pipeline(&self.pipeline_id).unwrap().pipeline;
         let texture = &information.resources.get_texture(&self.texture_id).unwrap().bind_group;
 
         information.render_pass.set_pipeline(pipeline);
@@ -445,7 +445,7 @@ pub struct MaterialBuilder<'a> {
     // using options to denote a change from the default
     // in the case of a texture the defualt is just the White_Pixel
     texture_change: Option<ResourceId<Texture>>,
-    shader_change: Option<Shader>,
+    shader_change: Option<ResourceId<Shader>>,
     uniform_data: Option<&'a UniformData>,
 }
 
@@ -480,7 +480,7 @@ impl<'a> MaterialBuilder<'a> {
     }
 
     /// Sets the shader for the Material
-    pub fn set_shader(self, shader: Shader) -> Self {
+    pub fn set_shader(self, shader: ResourceId<Shader>) -> Self {
         Self {
             texture_change: self.texture_change,
             shader_change: Some(shader),
@@ -498,7 +498,7 @@ impl<'a> MaterialBuilder<'a> {
 /// lines. These lines will allways be 1px wide and only one
 /// instance of this material should ever be made per programm.
 pub struct LineMaterial {
-    pipe_id: ResourceId<wgpu::RenderPipeline>,
+    pipe_id: ResourceId<Shader>,
     vertex_buffer: wgpu::Buffer,
     vertex_count: u64,
     vertex_size: u64,
@@ -554,7 +554,7 @@ impl LineMaterial {
     
     /// Draws all queued lines to the screen.
     pub fn draw<'pass, 'others>(&'others mut self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
-        let pipeline = information.resources.get_pipeline(&self.pipe_id).unwrap();
+        let pipeline = &information.resources.get_pipeline(&self.pipe_id).unwrap().pipeline;
         
         information.render_pass.set_pipeline(pipeline);
         information.render_pass.set_bind_group(0, information.camera_bindgroup, &[]);

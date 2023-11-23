@@ -18,6 +18,7 @@ use std::path::Path;
 use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
 use crate::render::{make_pipeline, render};
+use crate::shader::Shader;
 use crate::texture::Texture;
 use crate::vectors::Vec2;
 use crate::vertex::{Vertex, LineVertex};
@@ -49,8 +50,8 @@ pub struct Engine {
     size: Vec2<u32>,
     in_progress_resources: Vec<InProgressResource>,
     defualt_texture_id: ResourceId<Texture>,
-    default_pipeline_id: ResourceId<wgpu::RenderPipeline>,
-    line_pipeline_id: ResourceId<wgpu::RenderPipeline>,
+    default_pipeline_id: ResourceId<Shader>,
+    line_pipeline_id: ResourceId<Shader>,
     resource_manager: ResourceManager,
 }
 
@@ -313,10 +314,12 @@ impl Engine {
 
         let mut resource_manager = ResourceManager::new();
     
-        let line_id = resource::generate_id::<wgpu::RenderPipeline>();
-        let generic_id = resource::generate_id::<wgpu::RenderPipeline>();
-        resource_manager.insert_pipeline(line_id, line_pipeline);
-        resource_manager.insert_pipeline(generic_id, generic_pipeline);
+        let line_id = resource::generate_id::<Shader>();
+        let generic_id = resource::generate_id::<Shader>();
+        let line_shader = Shader{pipeline: line_pipeline};
+        let generic_shader = Shader{pipeline: generic_pipeline};
+        resource_manager.insert_pipeline(line_id, line_shader);
+        resource_manager.insert_pipeline(generic_id, generic_shader);
 
         let white_pixel_id = resource::generate_id::<Texture>();
         resource_manager.insert_texture(white_pixel_id, white_pixel);
@@ -616,19 +619,15 @@ impl Engine {
         &self.resource_manager
     }
 
-    pub(crate) fn add_to_pipeline_cache(&mut self, pipeline: wgpu::RenderPipeline, key: ResourceId<wgpu::RenderPipeline>) {
-        self.resource_manager.insert_pipeline(key, pipeline);
-    }
-
     pub(crate) fn defualt_material_bg_id(&self) -> ResourceId<Texture> {
         self.defualt_texture_id
     }
 
-    pub(crate) fn defualt_pipe_id(&self) -> ResourceId<wgpu::RenderPipeline> {
+    pub(crate) fn defualt_pipe_id(&self) -> ResourceId<Shader> {
         self.default_pipeline_id
     }
 
-    pub(crate) fn line_pipe_id(&self) -> ResourceId<wgpu::RenderPipeline> {
+    pub(crate) fn line_pipe_id(&self) -> ResourceId<Shader> {
         self.line_pipeline_id
     }
 
@@ -752,7 +751,7 @@ impl Engine {
                 match data.resource_type {
                     ResourceType::Bytes => self.add_finished_bytes(data),
                     ResourceType::Image => self.add_finished_image(data),
-                    ResourceType::Shader => self.add_finished_shader(data),
+                    ResourceType::Shader(has_uniforms) => self.add_finished_shader(data, has_uniforms),
                 }
             }
             Err(e) => {
@@ -775,8 +774,13 @@ impl Engine {
         }
     }
 
-    fn add_finished_shader(&mut self, resource: Resource) {
-        todo!()
+    fn add_finished_shader(&mut self, resource: Resource, has_uniforms: bool,) {
+        let typed_id: ResourceId<Shader> = ResourceId::from_number(resource.id);
+        let shader = Shader::from_resource_data(&resource.data, has_uniforms, &self);
+        match shader {
+            Ok(shader) => self.resource_manager.insert_pipeline(typed_id, shader),
+            Err(e) => log::error!("{:?}. loading defualt replacement", e),
+        }
     }
 
     fn is_loading(&self) -> bool {

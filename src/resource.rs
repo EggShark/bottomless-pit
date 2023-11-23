@@ -6,6 +6,7 @@ use std::sync::atomic::AtomicU64;
 
 use crate::engine_handle::{Engine, BpEvent};
 use crate::io::{self, ReadError};
+use crate::shader::Shader;
 use crate::texture::Texture;
 
 #[derive(Debug)]
@@ -79,7 +80,7 @@ impl InProgressResource {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ResourceType {
     Image,
-    Shader,
+    Shader(bool),
     Bytes,
 }
 
@@ -151,7 +152,7 @@ type ResourceMap<T> = HashMap<ResourceId<T>, T>;
 pub(crate) struct ResourceManager {
     btye_resources: ResourceMap<Vec<u8>>,
     bindgroup_resources: ResourceMap<Texture>,
-    pipeline_resource: ResourceMap<wgpu::RenderPipeline>,
+    pipeline_resource: ResourceMap<Shader>,
 }
 
 impl ResourceManager {
@@ -171,7 +172,7 @@ impl ResourceManager {
         self.bindgroup_resources.insert(key, data);
     }
 
-    pub fn insert_pipeline(&mut self, key: ResourceId<wgpu::RenderPipeline>, data: wgpu::RenderPipeline) {
+    pub fn insert_pipeline(&mut self, key: ResourceId<Shader>, data: Shader) {
         self.pipeline_resource.insert(key, data);
     }
 
@@ -183,7 +184,7 @@ impl ResourceManager {
         self.bindgroup_resources.get(key)
     }
 
-    pub fn get_pipeline(&self, key: &ResourceId<wgpu::RenderPipeline>) -> Option<&wgpu::RenderPipeline> {
+    pub fn get_pipeline(&self, key: &ResourceId<Shader>) -> Option<&Shader> {
         self.pipeline_resource.get(key)
     } 
 }

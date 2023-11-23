@@ -1,33 +1,46 @@
 //! Contains everything you need to make some cool shaders including the Shader
 //! and UniformData types.
 
-use std::fs;
 use std::path::Path;
+use std::string::FromUtf8Error;
 
 use encase::ShaderType;
 use encase::private::WriteInto;
 use wgpu::util::DeviceExt;
 
 use crate::engine_handle::{Engine, WgpuClump};
-use crate::resource::ResourceId;
+use crate::resource::{self, ResourceId, ResourceType, InProgressResource};
 use crate::vertex::Vertex;
-use crate::{layouts, render, resource};
+use crate::{layouts, render};
 
 /// An internal representation of an WGSL Shader. Under the hood this creates
 /// a new pipeline with or without the support for any extra uniforms. To be utilze 
 /// the shader it must be added to a material
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug)]
 pub struct Shader {
-    pub(crate) pipeline_id: ResourceId<wgpu::RenderPipeline>,
+    pub(crate) pipeline: wgpu::RenderPipeline
 }
 
 impl Shader {
-    pub fn new<P: AsRef<Path>>(path: P, has_uniforms: bool, engine: &mut Engine) -> Result<Self, std::io::Error> {
+    pub fn new<P: AsRef<Path>>(path: P, has_uniforms: bool, engine: &mut Engine) -> ResourceId<Shader> {
+        let typed_id = resource::generate_id::<Shader>();
+        let id = typed_id.get_id();
+        let path = path.as_ref();
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(has_uniforms));
+
+        resource::start_load(&engine, path, &ip_resource);
+        engine.add_in_progress_resource(ip_resource);
+
+        typed_id
+    }
+
+    pub(crate) fn from_resource_data(data: &[u8], has_uniforms: bool, engine: &Engine) -> Result<Self, FromUtf8Error> {
         let wgpu = engine.get_wgpu();
 
+        let string = String::from_utf8(data.to_vec())?;
         let shader = wgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("User Shader Module"),
-            source: wgpu::ShaderSource::Wgsl(fs::read_to_string(path)?.into())
+            source: wgpu::ShaderSource::Wgsl(string.into())
         });
 
         let pipeline = if has_uniforms {
@@ -59,11 +72,8 @@ impl Shader {
             )
         };
 
-        let id = resource::generate_id::<wgpu::RenderPipeline>();
-        engine.add_to_pipeline_cache(pipeline, id);
-
         Ok(Self {
-            pipeline_id: id,
+            pipeline,
         })
     }
 }

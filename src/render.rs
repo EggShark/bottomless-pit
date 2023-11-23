@@ -4,6 +4,7 @@
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::Game;
 use crate::resource::{ResourceManager, ResourceId};
+use crate::shader::Shader;
 use crate::vectors::Vec2;
 
 pub(crate) fn make_pipeline(
@@ -71,7 +72,7 @@ pub struct RenderInformation<'pass, 'others> {
     pub(crate) size: Vec2<u32>,
     pub(crate) render_pass: wgpu::RenderPass<'pass>,
     pub(crate) resources: &'others ResourceManager,
-    pub(crate) defualt_id: ResourceId<wgpu::RenderPipeline>,
+    pub(crate) defualt_id: ResourceId<Shader>,
     pub(crate) camera_bindgroup: &'others wgpu::BindGroup,
     pub(crate) wgpu: &'others WgpuClump,
 }
