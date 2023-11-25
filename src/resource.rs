@@ -94,11 +94,21 @@ pub(crate) fn start_load<P: AsRef<Path>>(engine: &Engine, path: P, ip_resource: 
     let path = path.as_ref().to_owned();
     let id = ip_resource.id;
     let resource_type = ip_resource.resource_type;
+    let event_loop_proxy = engine.get_proxy();
     #[cfg(target_arch="wasm32")]
     {
         use wasm_bindgen_futures::spawn_local;
-        let event_loop_proxy = engine.get_proxy();
         spawn_local(async move {
+            let result = io::read(&path).await;
+            let resource = Resource::from_result(result, path, id, resource_type);
+            event_loop_proxy.send_event(BpEvent::ResourceLoaded(resource)).unwrap();
+        });
+    }
+
+    #[cfg(not(target_arch="wasm32"))]
+    {
+        let pool = engine.thread_pool();
+        pool.spawn_ok(async move {
             let result = io::read(&path).await;
             let resource = Resource::from_result(result, path, id, resource_type);
             event_loop_proxy.send_event(BpEvent::ResourceLoaded(resource)).unwrap();

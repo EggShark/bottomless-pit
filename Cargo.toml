@@ -17,7 +17,7 @@ bytemuck = {version = "1.12.3", features = ["derive"]}
 env_logger = "0.10.0"
 log = "0.4.17"
 pollster = "0.2.5"
-winit = "0.28.2"
+winit = "0.28.7"
 cgmath = "0.18.0"
 glyph_brush = "0.7"
 spin_sleep = "1.1.1"
@@ -27,6 +27,7 @@ cosmic-text = "0.10"
 lru = "0.11"
 cfg-if = "1.0.0"
 web-time = "0.2.3"
+futures = {version = "0.3.29", features = ["thread-pool"]}
 
 [dependencies.wgpu]
 version = "0.18.0"

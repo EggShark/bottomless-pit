@@ -3,6 +3,9 @@
 //! builder lets you customize the engine at the start, and the
 //! Engine gives you access to all the crucial logic functions
 
+#[cfg(not(target_arch="wasm32"))]
+use futures::executor::ThreadPool;
+
 use image::{GenericImageView, ImageError};
 use spin_sleep::SpinSleeper;
 use web_time::Instant;
@@ -53,6 +56,8 @@ pub struct Engine {
     default_pipeline_id: ResourceId<Shader>,
     line_pipeline_id: ResourceId<Shader>,
     resource_manager: ResourceManager,
+    #[cfg(not(target_arch="wasm32"))]
+    thread_pool: ThreadPool,
 }
 
 impl Engine {
@@ -351,6 +356,8 @@ impl Engine {
             default_pipeline_id: generic_id,
             line_pipeline_id: line_id,
             resource_manager,
+            #[cfg(not(target_arch="wasm32"))]
+            thread_pool: ThreadPool::new().expect("Failed To Make Pool"),
         })
     }
 
@@ -637,6 +644,11 @@ impl Engine {
 
     pub(crate) fn wgpu_colour(&self) -> wgpu::Color {
         self.clear_colour.into()
+    }
+
+    #[cfg(not(target_arch="wasm32"))]
+    pub(crate) fn thread_pool(&self) -> &ThreadPool {
+        &self.thread_pool
     }
 
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
