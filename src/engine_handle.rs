@@ -10,11 +10,12 @@ use image::{GenericImageView, ImageError};
 use spin_sleep::SpinSleeper;
 use web_time::Instant;
 use wgpu::util::DeviceExt;
-use wgpu::{CreateSurfaceError, RequestDeviceError};
+use wgpu::{CreateSurfaceError, RequestDeviceError, include_wgsl};
 use winit::error::OsError;
 use winit::event::*;
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy};
 use winit::window::{BadIcon, Window};
+use std::num::NonZeroU64;
 use std::sync::Arc;
 use std::path::Path;
 
@@ -767,7 +768,12 @@ impl Engine {
                 }
             }
             Err(e) => {
-                log::error!("{:?}, loading defualt replacement", e);
+                log::error!("could not load resource: {:?}, becuase: {:?}, loading defualt replacement", e, e.error);
+                match e.resource_type {
+                    ResourceType::Bytes => self.add_defualt_bytes(e.id),
+                    ResourceType::Image => self.add_defualt_image(e.id),
+                    ResourceType::Shader(_) => self.add_defualt_shader(e.id),
+                }
             }
         }
     }
@@ -791,8 +797,25 @@ impl Engine {
         let shader = Shader::from_resource_data(&resource.data, has_uniforms, &self);
         match shader {
             Ok(shader) => self.resource_manager.insert_pipeline(typed_id, shader),
-            Err(e) => log::error!("{:?}. loading defualt replacement", e),
+            Err(e) => {
+                log::error!("{:?}. loading defualt replacement", e);
+                self.add_defualt_shader(resource.id);
+            },
         }
+    }
+
+    fn add_defualt_bytes(&mut self, id: NonZeroU64) {
+        todo!()
+    }
+
+    fn add_defualt_image(&mut self, id: NonZeroU64) {
+        todo!()
+    }
+
+    fn add_defualt_shader(&mut self, id: NonZeroU64) {
+        let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
+        let shader = Shader::defualt(&self);
+        self.resource_manager.insert_pipeline(typed_id, shader);
     }
 
     fn is_loading(&self) -> bool {

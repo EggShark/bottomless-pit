@@ -6,6 +6,7 @@ use std::string::FromUtf8Error;
 
 use encase::ShaderType;
 use encase::private::WriteInto;
+use wgpu::include_wgsl;
 use wgpu::util::DeviceExt;
 
 use crate::engine_handle::{Engine, WgpuClump};
@@ -75,6 +76,29 @@ impl Shader {
         Ok(Self {
             pipeline,
         })
+    }
+
+    pub(crate) fn defualt(engine: &Engine) -> Self {
+        let wgpu = engine.get_wgpu();
+
+        let shader_descriptor = include_wgsl!("shaders/shader.wgsl");
+        let shader = wgpu.device.create_shader_module(shader_descriptor);
+        let pipeline = render::make_pipeline(
+            &wgpu.device,
+            wgpu::PrimitiveTopology::TriangleList,
+            &[
+                &layouts::create_texture_layout(&wgpu.device),
+                &layouts::create_camera_layout(&wgpu.device),
+            ],
+            &[Vertex::desc()],
+            &shader,
+            engine.get_texture_format(),
+            Some("Defualt Shader From Error"),
+        );
+
+        Self {
+            pipeline,
+        }
     }
 }
 

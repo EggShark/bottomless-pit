@@ -19,10 +19,10 @@ pub(crate) struct Resource {
 
 #[derive(Debug)]
 pub(crate) struct ResourceError {
-    error: ReadError,
+    pub(crate) error: ReadError,
     path: PathBuf,
-    id: NonZeroU64,
-    resource_type: ResourceType,
+    pub(crate) id: NonZeroU64,
+    pub(crate) resource_type: ResourceType,
 }
 
 impl Resource {
