@@ -805,7 +805,8 @@ impl Engine {
     }
 
     fn add_defualt_bytes(&mut self, id: NonZeroU64) {
-        todo!()
+        let typed_id: ResourceId<Vec<u8>> = ResourceId::from_number(id);
+        self.resource_manager.insert_bytes(typed_id, Vec::new());
     }
 
     fn add_defualt_image(&mut self, id: NonZeroU64) {
