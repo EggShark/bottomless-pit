@@ -3,7 +3,7 @@
 
 use crate::engine_handle::Engine;
 use crate::resource::{self, ResourceType, ResourceId, InProgressResource};
-use crate::layouts;
+use crate::{layouts, ERROR_TEXTURE_DATA};
 use crate::vectors::Vec2;
 use image::{GenericImageView, ImageError};
 use std::fmt::Display;
@@ -51,6 +51,11 @@ impl Texture {
             bind_group,
             size,
         }
+    }
+
+    pub(crate) fn default(engine: &Engine,) -> Self {
+        let image = image::load_from_memory(ERROR_TEXTURE_DATA).unwrap();
+        Self::from_image(engine, image, Some("Error Texture"))
     }
 
     fn from_image(

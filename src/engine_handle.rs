@@ -10,7 +10,7 @@ use image::{GenericImageView, ImageError};
 use spin_sleep::SpinSleeper;
 use web_time::Instant;
 use wgpu::util::DeviceExt;
-use wgpu::{CreateSurfaceError, RequestDeviceError, include_wgsl};
+use wgpu::{CreateSurfaceError, RequestDeviceError};
 use winit::error::OsError;
 use winit::event::*;
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy};
@@ -810,7 +810,9 @@ impl Engine {
     }
 
     fn add_defualt_image(&mut self, id: NonZeroU64) {
-        todo!()
+        let typed_id: ResourceId<Texture> = ResourceId::from_number(id);
+        let image = Texture::default(&self);
+        self.resource_manager.insert_texture(typed_id, image);
     }
 
     fn add_defualt_shader(&mut self, id: NonZeroU64) {
