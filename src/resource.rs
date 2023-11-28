@@ -7,6 +7,7 @@ use std::sync::atomic::AtomicU64;
 use crate::engine_handle::{Engine, BpEvent};
 use crate::io::{self, ReadError};
 use crate::shader::Shader;
+use crate::text::Font;
 use crate::texture::Texture;
 
 #[derive(Debug)]
@@ -82,6 +83,7 @@ pub(crate) enum ResourceType {
     Image,
     Shader(bool),
     Bytes,
+    Font,
 }
 
 pub fn generate_id<T>() -> ResourceId<T> {
@@ -163,6 +165,7 @@ pub(crate) struct ResourceManager {
     btye_resources: ResourceMap<Vec<u8>>,
     bindgroup_resources: ResourceMap<Texture>,
     pipeline_resource: ResourceMap<Shader>,
+    fonts: ResourceMap<Font>,
 }
 
 impl ResourceManager {
@@ -171,6 +174,7 @@ impl ResourceManager {
             btye_resources: HashMap::new(),
             bindgroup_resources: HashMap::new(),
             pipeline_resource: HashMap::new(),
+            fonts: HashMap::new(),
         }
     }
 
@@ -186,6 +190,10 @@ impl ResourceManager {
         self.pipeline_resource.insert(key, data);
     }
 
+    pub fn insert_font(&mut self, key: ResourceId<Font>, data: Font) {
+        self.fonts.insert(key, data);
+    }
+
     pub fn get_byte_resource(&self, key: &ResourceId<Vec<u8>>) -> Option<&Vec<u8>> {
         self.btye_resources.get(key)
     }
@@ -197,4 +205,8 @@ impl ResourceManager {
     pub fn get_pipeline(&self, key: &ResourceId<Shader>) -> Option<&Shader> {
         self.pipeline_resource.get(key)
     } 
+
+    pub fn get_font(&self, key: &ResourceId<Font>) -> Option<&Font> {
+        self.fonts.get(key)
+    }
 }

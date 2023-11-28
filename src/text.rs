@@ -46,13 +46,14 @@ use crate::layouts;
 use crate::material::{self, Material};
 use crate::matrix_math::normalize_points;
 use crate::render::RenderInformation;
+use crate::resource::{self, ResourceId, InProgressResource, ResourceType, ResourceManager};
 use crate::vectors::Vec2;
 use crate::vertex::{self, Vertex};
 
 /// Stores Important information nessicary to rendering text. Only on of these should
 /// be created per application.
-pub struct TextRenderer {
-    font_system: FontSystem,
+pub(crate) struct TextRenderer {
+    pub(crate) font_system: FontSystem,
     cache: SwashCache,
     atlas: TextAtlas,
     text_renderer: glyphon::TextRenderer,
@@ -60,8 +61,7 @@ pub struct TextRenderer {
 }
 
 impl TextRenderer {
-    pub fn new(engine: &Engine) -> Self {
-        let wgpu = engine.get_wgpu();
+    pub fn new(wgpu: &WgpuClump) -> Self {
         let mut font_system = FontSystem::new();
         let defualt_font_id = font_system
             .db_mut()
@@ -89,25 +89,8 @@ impl TextRenderer {
         }
     }
 
-    /// Loads in a new font from a file
-    pub fn load_font_file<P: AsRef<Path>>(&mut self, path: P) -> Result<Font, std::io::Error> {
-        let data = std::fs::read(path)?;
-        let id = self
-            .font_system
-            .db_mut()
-            .load_font_source(Source::Binary(Arc::new(data)))[0];
-
-        let name = self.font_system
-            .db()
-            .face(id)
-            .unwrap()
-            .families[0]
-            .0
-            .clone();
-
-        Ok(Font {
-            name,
-        })
+    pub fn get_defualt_font_name(&self) -> &str {
+        &self.defualt_font_name
     }
 
     /// Loads in a font from a byte array
@@ -129,23 +112,6 @@ impl TextRenderer {
         Font {
             name
         }
-    }
-
-    /// Takes an &str with measurments and gives out the width and hieght of the possible text
-    pub fn measure_str(&mut self, text: &str, font_size: f32, line_height: f32, engine: &Engine) -> Vec2<f32> {
-        let mut buffer = glyphon::Buffer::new(&mut self.font_system, Metrics::new(font_size, line_height));
-        let size = engine.get_window_size();
-        let scale_factor = engine.get_window_scale_factor();
-        let phyisical_width = (size.x as f64 * scale_factor) as f32;
-        let phyiscal_hieght = (size.y as f64 * scale_factor) as f32;
-
-        buffer.set_size(&mut self.font_system, phyisical_width, phyiscal_hieght);
-        buffer.set_text(&mut self.font_system, text, Attrs::new(), Shaping::Basic);
-
-        let hieght = buffer.lines.len() as f32 * buffer.metrics().line_height;
-        let run_width = buffer.layout_runs().map(|run| run.line_w).max_by(f32::total_cmp).unwrap_or(0.0);
-
-        Vec2{x: run_width, y: hieght}
     }
 }
 
@@ -174,21 +140,21 @@ impl TextMaterial {
         colour: Colour,
         font_size: f32,
         line_height: f32,
-        text_handle: &mut TextRenderer,
-        engine: &Engine
+        engine: &mut Engine
     ) -> Self {
-        let mut text_buffer = glyphon::Buffer::new(&mut text_handle.font_system, Metrics::new(font_size, line_height));
         let window_size = engine.get_window_size();
         let scale_factor = engine.get_window_scale_factor();
-        let wgpu = engine.get_wgpu();
+        let font_info = FontInformation::new(engine);
+
+        let mut text_buffer = glyphon::Buffer::new(&mut font_info.text_handle.font_system, Metrics::new(font_size, line_height));
         let phyisical_width = (window_size.x as f64 * scale_factor) as f32;
         let phyiscal_hieght = (window_size.y as f64 * scale_factor) as f32;
 
-        text_buffer.set_size(&mut text_handle.font_system, phyisical_width, phyiscal_hieght);
+        text_buffer.set_size(&mut font_info.text_handle.font_system, phyisical_width, phyiscal_hieght);
         text_buffer.set_text(
-            &mut text_handle.font_system,
+            &mut font_info.text_handle.font_system,
             text,
-            Attrs::new().color(colour.into()).family(Family::Name(&text_handle.defualt_font_name)),
+            Attrs::new().color(colour.into()).family(Family::Name(&font_info.text_handle.defualt_font_name)),
             Shaping::Basic
         );
 
@@ -199,7 +165,7 @@ impl TextMaterial {
             .max_by(f32::total_cmp).unwrap_or(0.0);
 
 
-        let texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
+        let texture = font_info.wgpu.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Text Texture"),
             size: wgpu::Extent3d {
                 width: hieght.ceil() as u32,
@@ -218,14 +184,14 @@ impl TextMaterial {
         let texture_size = Vec2{x: run_width.ceil() as u32, y: hieght.ceil() as u32};
         let texture_view = texture.create_view(&Default::default());
     
-        render_text_to_texture(text_handle, &text_buffer, bounds, texture_size, &texture_view, wgpu);
+        render_text_to_texture(font_info.text_handle, &text_buffer, bounds, texture_size, &texture_view, &font_info.wgpu);
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
 
-        let (vertex_buffer, index_buffer) = Material::create_buffers(&wgpu.device, vertex_size, 8, 2, 12);
+        let (vertex_buffer, index_buffer) = Material::create_buffers(&engine.wgpu_clump.device, vertex_size, 8, 2, 12);
 
-        let bind_group = wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = engine.wgpu_clump.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Text Widget BindGroup"),
-            layout: &layouts::create_texture_layout(&wgpu.device),
+            layout: &layouts::create_texture_layout(&engine.wgpu_clump.device),
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
@@ -257,28 +223,38 @@ impl TextMaterial {
 
     /// Sets the text for the widget, using the defualt font.
     /// This only needs to be done once, not every frame like Materials.
-    pub fn set_text(&mut self, text: &str, colour: Colour, text_handle: &mut TextRenderer, engine: &Engine) {
+    pub fn set_text(&mut self, text: &str, colour: Colour, engine: &mut Engine) {
+        let font_info = FontInformation::new(engine);
         self.text_buffer.set_text(
-            &mut text_handle.font_system,
+            &mut font_info.text_handle.font_system,
             text,
-            Attrs::new().color(colour.into()).family(Family::Name(&text_handle.defualt_font_name)),
+            Attrs::new().color(colour.into()).family(Family::Name(&font_info.text_handle.defualt_font_name)),
             Shaping::Basic
         );
 
-        self.update_measurements(engine.get_wgpu());
+        self.update_measurements(font_info.wgpu);
     }
 
     /// Sets the text for the widget, but with a font of your choosing.
     /// This only needs to be done once, not every frame like Materials
-    pub fn set_text_with_font(&mut self, text: &str, colour: Colour, font: &Font, text_handle: &mut TextRenderer, engine: &Engine) {
+    pub fn set_text_with_font(&mut self, text: &str, colour: Colour, font: &ResourceId<Font>, engine: &mut Engine) {
+        let font_info = FontInformation::new(engine);
+        
+        let backup = &String::new();
+        let name = font_info
+            .resources
+            .get_font(font)
+            .and_then(|f| Some(&f.name))
+            .unwrap_or(backup);
+
         self.text_buffer.set_text(
-            &mut text_handle.font_system,
+            &mut font_info.text_handle.font_system,
             text,
-            Attrs::new().color(colour.into()).family(Family::Name(&font.name)),
+            Attrs::new().color(colour.into()).family(Family::Name(name)),
             Shaping::Basic
         );
 
-        self.update_measurements(engine.get_wgpu());
+        self.update_measurements(font_info.wgpu);
     }
 
     /// Sets bounds for the text. Any text drawn outside of the bounds will be cropped
@@ -287,21 +263,23 @@ impl TextMaterial {
     }
 
     /// Sets the font size of the text
-    pub fn set_font_size(&mut self, new_size: f32, text_handle: &mut TextRenderer, engine: &Engine) {
+    pub fn set_font_size(&mut self, new_size: f32, engine: &mut Engine) {
         self.font_size = new_size;
+        let font_info = FontInformation::new(engine);
         let metrics = Metrics::new(self.font_size, self.line_height);
-        self.text_buffer.set_metrics(&mut text_handle.font_system, metrics);
+        self.text_buffer.set_metrics(&mut font_info.text_handle.font_system, metrics);
 
-        self.update_measurements(engine.get_wgpu());
+        self.update_measurements(font_info.wgpu);
     }
 
     /// Sets the line hieght of the tex
-    pub fn set_line_height(&mut self, new_height: f32, text_handle: &mut TextRenderer, engine: &Engine) {
+    pub fn set_line_height(&mut self, new_height: f32, engine: &mut Engine) {
         self.line_height = new_height;
+        let font_info = FontInformation::new(engine);
         let metrics = Metrics::new(self.font_size, self.line_height);
-        self.text_buffer.set_metrics(&mut text_handle.font_system, metrics);
+        self.text_buffer.set_metrics(&mut font_info.text_handle.font_system, metrics);
 
-        self.update_measurements(engine.get_wgpu());
+        self.update_measurements(font_info.wgpu);
     }
 
     /// Measuers the text contained within the widget
@@ -462,13 +440,20 @@ impl TextMaterial {
         self.index_count / 2
     }
 
+    pub fn prepare(&self, engine: &mut Engine) {
+        let font_info = FontInformation::new(engine);
+        render_text_to_texture(
+            font_info.text_handle,
+            &self.text_buffer,
+            self.bounds,
+            self.size,
+            &self.texture_view,
+            font_info.wgpu
+        );
+    }
+
     /// Draws all queued text instances to the screen
-    pub fn draw<'pass, 'others>(&'others mut self, text_handle: &mut TextRenderer, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
-        if self.change_flag {
-            render_text_to_texture(text_handle, &self.text_buffer, self.bounds, self.size, &self.texture_view, information.wgpu);
-            self.change_flag = false;
-        }
-        
+    pub fn draw<'pass, 'others>(&'others mut self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {        
         let pipeline = &information
             .resources
             .get_pipeline(&information.defualt_id)
@@ -491,11 +476,57 @@ impl TextMaterial {
     }
 }
 
+// fun hacky thing to get around BC
+pub(crate) struct FontInformation<'a> {
+    text_handle: &'a mut TextRenderer,
+    wgpu: &'a WgpuClump,
+    resources: &'a ResourceManager,
+}
+
+impl<'a> FontInformation<'a> {
+    pub fn new(engine: &'a mut Engine) -> Self {
+        Self {
+            text_handle: &mut engine.text_renderer,
+            wgpu: &engine.wgpu_clump,
+            resources: &engine.resource_manager,
+        }
+    }
+}
+
 /// A struct to ensure Font Families are created properly
 /// can be created by [load_font_file](struct.TextRenderer.html#method.load_font_file)
 /// or [load_font_data](struct.TextRenderer.html#method.load_font_file)
 pub struct Font {
     name: String
+}
+
+impl Font {
+    pub fn new<P: AsRef<Path>>(path: P, engine: &mut Engine) -> ResourceId<Font> {
+        let typed_id = resource::generate_id::<Font>();
+        let id = typed_id.get_id();
+        let path = path.as_ref();
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Font);
+        
+        resource::start_load(&engine, path, &ip_resource);
+
+        engine.add_in_progress_resource(ip_resource);
+        typed_id
+    }
+
+    pub fn from_bytes(data: &[u8], engine: &mut Engine) -> ResourceId<Font> {
+        let font = engine.text_renderer.load_font_from_bytes(data);
+        let typed_id = resource::generate_id::<Font>();
+
+        engine.resource_manager.insert_font(typed_id, font);
+
+        typed_id
+    }
+
+    pub(crate) fn from_str(name: &str) -> Self {
+        Self {
+            name: name.to_string()
+        }
+    }
 }
 
 fn render_text_to_texture(

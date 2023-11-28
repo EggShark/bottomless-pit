@@ -103,7 +103,7 @@ pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::S
     });
 
     render_pass.set_bind_group(1, engine.camera_bindgroup(), &[]);
-    
+
     let render_info = RenderInformation {
         size: engine.get_window_size(),
         render_pass,

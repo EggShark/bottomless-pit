@@ -3,6 +3,7 @@
 //! builder lets you customize the engine at the start, and the
 //! Engine gives you access to all the crucial logic functions
 
+use cosmic_text::{Metrics, Attrs, Shaping};
 #[cfg(not(target_arch="wasm32"))]
 use futures::executor::ThreadPool;
 
@@ -23,10 +24,11 @@ use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
 use crate::render::{make_pipeline, render};
 use crate::shader::Shader;
+use crate::text::{Font, TextRenderer};
 use crate::texture::Texture;
 use crate::vectors::Vec2;
 use crate::vertex::{Vertex, LineVertex};
-use crate::{WHITE_PIXEL, resource};
+use crate::{WHITE_PIXEL, resource, glyphon};
 use crate::{Game, IDENTITY_MATRIX, layouts};
 use crate::resource::{Resource, InProgressResource, ResourceType, ResourceId, ResourceError, compare_resources, ResourceManager};
 
@@ -50,13 +52,14 @@ pub struct Engine {
     camera_matrix: [f32; 16],
     camera_bind_group: wgpu::BindGroup,
     camera_buffer: wgpu::Buffer,
-    wgpu_clump: WgpuClump,
+    pub(crate) wgpu_clump: WgpuClump,
     size: Vec2<u32>,
     in_progress_resources: Vec<InProgressResource>,
     defualt_texture_id: ResourceId<Texture>,
     default_pipeline_id: ResourceId<Shader>,
     line_pipeline_id: ResourceId<Shader>,
-    resource_manager: ResourceManager,
+    pub(crate) resource_manager: ResourceManager,
+    pub(crate) text_renderer: TextRenderer,
     #[cfg(not(target_arch="wasm32"))]
     thread_pool: ThreadPool,
 }
@@ -318,6 +321,8 @@ impl Engine {
             Some("line_renderer"),
         );
 
+        let text_renderer = TextRenderer::new(&wgpu_clump);
+
         let mut resource_manager = ResourceManager::new();
     
         let line_id = resource::generate_id::<Shader>();
@@ -357,6 +362,7 @@ impl Engine {
             default_pipeline_id: generic_id,
             line_pipeline_id: line_id,
             resource_manager,
+            text_renderer,
             #[cfg(not(target_arch="wasm32"))]
             thread_pool: ThreadPool::new().expect("Failed To Make Pool"),
         })
@@ -587,6 +593,22 @@ impl Engine {
         self.target_fps = Some(fps);
     }
 
+    pub fn measure_string(&mut self, text: &str, font_size: f32, line_height: f32) -> Vec2<f32> {
+        let mut buffer = glyphon::Buffer::new(&mut self.text_renderer.font_system, Metrics::new(font_size, line_height));
+        let size = self.get_window_size();
+        let scale_factor = self.get_window_scale_factor();
+        let physical_width = (size.x as f64 * scale_factor) as f32;
+        let physical_height = (size.y as f64 * scale_factor) as f32;
+
+        buffer.set_size(&mut self.text_renderer.font_system, physical_height, physical_width);
+        buffer.set_text(&mut self.text_renderer.font_system, text, Attrs::new(), Shaping::Basic);
+
+        let height = buffer.lines.len() as f32 * buffer.metrics().line_height;
+        let run_width = buffer.layout_runs().map(|run| run.line_w).max_by(f32::total_cmp).unwrap_or(0.0);
+
+        Vec2{x: run_width, y: height}
+    }
+
     pub fn create_resource<P: AsRef<Path>>(&mut self, path: P) -> ResourceId<Vec<u8>> {
         let typed_id = resource::generate_id::<Vec<u8>>();
         let id = typed_id.get_id();
@@ -765,6 +787,7 @@ impl Engine {
                     ResourceType::Bytes => self.add_finished_bytes(data),
                     ResourceType::Image => self.add_finished_image(data),
                     ResourceType::Shader(has_uniforms) => self.add_finished_shader(data, has_uniforms),
+                    ResourceType::Font => self.add_finished_font(data),
                 }
             }
             Err(e) => {
@@ -773,6 +796,7 @@ impl Engine {
                     ResourceType::Bytes => self.add_defualt_bytes(e.id),
                     ResourceType::Image => self.add_defualt_image(e.id),
                     ResourceType::Shader(_) => self.add_defualt_shader(e.id),
+                    ResourceType::Font => self.add_defualt_font(e.id),
                 }
             }
         }
@@ -804,6 +828,12 @@ impl Engine {
         }
     }
 
+    fn add_finished_font(&mut self, resource: Resource) {
+        let typed_id: ResourceId<Font> = ResourceId::from_number(resource.id);
+        let font = self.text_renderer.load_font_from_bytes(&resource.data);
+        self.resource_manager.insert_font(typed_id, font);
+    }
+
     fn add_defualt_bytes(&mut self, id: NonZeroU64) {
         let typed_id: ResourceId<Vec<u8>> = ResourceId::from_number(id);
         self.resource_manager.insert_bytes(typed_id, Vec::new());
@@ -819,6 +849,12 @@ impl Engine {
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
         let shader = Shader::defualt(&self);
         self.resource_manager.insert_pipeline(typed_id, shader);
+    }
+
+    fn add_defualt_font(&mut self, id: NonZeroU64) {
+        let typed_id: ResourceId<Font> = ResourceId::from_number(id);
+        let font = Font::from_str(self.text_renderer.get_defualt_font_name());
+        self.resource_manager.insert_font(typed_id, font);
     }
 
     fn is_loading(&self) -> bool {
