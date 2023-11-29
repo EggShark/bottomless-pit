@@ -35,6 +35,19 @@ impl Shader {
         typed_id
     }
 
+    pub fn from_btyes(engine: &mut Engine, has_uniforms: bool, bytes: &[u8]) -> ResourceId<Shader> {
+        let shader = Self::from_resource_data(bytes, has_uniforms, engine)
+            .unwrap_or_else(|e| {
+                log::warn!("{}, occured loading defualt replacement", e);
+                Self::defualt(engine)
+            });
+
+        let typed_id = resource::generate_id::<Shader>();
+        engine.resource_manager.insert_pipeline(typed_id, shader);
+
+        typed_id
+    }
+
     pub(crate) fn from_resource_data(data: &[u8], has_uniforms: bool, engine: &Engine) -> Result<Self, FromUtf8Error> {
         let wgpu = engine.get_wgpu();
 

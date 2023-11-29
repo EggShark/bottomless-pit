@@ -809,7 +809,7 @@ impl Engine {
 
     fn add_finished_image(&mut self, resource: Resource) {
         let typed_id: ResourceId<Texture> = ResourceId::from_number(resource.id);
-        let texture = Texture::from_bytes(&self, None, &resource.data);
+        let texture = Texture::from_resource_data(&self, None, &resource.data);
         match texture {
             Ok(texture) => self.resource_manager.insert_texture(typed_id, texture),
             Err(e) => log::error!("{:?}, loading defualt replacement", e)

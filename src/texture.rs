@@ -20,13 +20,19 @@ pub struct Texture {
 
 impl Texture {
     /// Attempts to load an image from a byte array
-    pub fn from_bytes(
-        engine: &Engine,
-        label: Option<&str>,
-        bytes: &[u8],
-    ) -> Result<Self, TextureError> {
-        let img = image::load_from_memory(bytes)?;
-        Ok(Self::from_image(engine, img, label))
+    pub fn from_btyes(engine: &mut Engine, label: Option<&str>, bytes: &[u8]) -> ResourceId<Texture> {
+        let img = image::load_from_memory(bytes)
+            .and_then(|img| Ok(Self::from_image(engine, img, label)))
+            .unwrap_or_else(|e| {
+                log::warn!("{}, occured loading default", e);
+                Self::default(engine)
+            });
+
+
+        let typed_id = resource::generate_id::<Texture>();
+        engine.resource_manager.insert_texture(typed_id, img);
+
+        typed_id
     }
 
     /// Attempts to both read a file at the specified path and turn it into an iamge
@@ -43,6 +49,15 @@ impl Texture {
 
         engine.add_in_progress_resource(ip_resource);
         typed_id
+    }
+
+    pub(crate) fn from_resource_data(
+        engine: &Engine,
+        label: Option<&str>,
+        bytes: &[u8],
+    ) -> Result<Self, TextureError> {
+        let img = image::load_from_memory(bytes)?;
+        Ok(Self::from_image(engine, img, label))
     }
 
     pub(crate) fn new(view: wgpu::TextureView, bind_group: wgpu::BindGroup, size: Vec2<f32>) -> Self {
