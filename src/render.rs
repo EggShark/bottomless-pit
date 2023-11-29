@@ -78,6 +78,11 @@ pub struct RenderInformation<'pass, 'others> {
 }
 
 pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::SurfaceError> where T: Game, {
+    // there is a chance an .unwrap() would panic bc of an unloaded resource
+    if engine.is_loading() {
+        return Ok(());
+    }
+
     let wgpu = engine.get_wgpu();
     let output = engine.get_current_texture()?;
     let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
