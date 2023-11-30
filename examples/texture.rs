@@ -13,7 +13,7 @@ fn main() {
         .build()
         .unwrap();
 
-    let texture = Texture::from_path(&mut engine, "examples/bplogo.png");
+    let texture = Texture::new(&mut engine, "examples/bplogo.png");
 
     let texture = MaterialBuilder::new().add_texture(texture).build(&mut engine);
     let defualt = MaterialBuilder::new().build(&mut engine);

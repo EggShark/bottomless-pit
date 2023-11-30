@@ -36,7 +36,7 @@ impl Texture {
     }
 
     /// Attempts to both read a file at the specified path and turn it into an iamge
-    pub fn from_path<P>(
+    pub fn new<P>(
         engine: &mut Engine,
         path: P,
     ) -> ResourceId<Texture> where P: AsRef<Path> {
@@ -60,7 +60,7 @@ impl Texture {
         Ok(Self::from_image(engine, img, label))
     }
 
-    pub(crate) fn new(view: wgpu::TextureView, bind_group: wgpu::BindGroup, size: Vec2<f32>) -> Self {
+    pub(crate) fn new_direct(view: wgpu::TextureView, bind_group: wgpu::BindGroup, size: Vec2<f32>) -> Self {
         Self {
             _view: view,
             bind_group,
