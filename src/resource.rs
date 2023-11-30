@@ -1,3 +1,44 @@
+//! Contains the code for the loading of all assets and [ResourceId]
+//! 
+//! In order for bottomless-pit to run on both desktop and web enviorments file reading
+//! has to be done asynchronously. When you call [Texture::new](crate::texture::Texture::new),
+//! [Shader::new](crate::shader::Shader::new), [Font::new](crate::text::Font::new),
+//! or [Engine::create_resource](crate::engine_handle::Engine::create_resource) you are given a
+//! handle to the resource and not the resoruce directly. Since resources are loaded asynchronously it will not
+//! be imeaditly availble. In order to have the resource be available to use as soon as possible the engine halts 
+//! while waiting for the resource. [Game::update](crate::Game::update) will not be called and 
+//! [Game::render](crate::Game::render) will not be called either.
+//! ```rust
+//! fn main() {
+//!     let engine = mut EngineBuilder::new().build();
+//!     
+//!     let texture: ResourceId<Texture> = Texture::new(&mut engine, "path.png");
+//!     // anything loaded in main will be ready on the first frame of the game
+//!     let material = MaterialBuilder::new().add_texture(texture).build();
+//! 
+//!     let game = YourGame {
+//!         textured_material: material,
+//!     }
+//! }
+//! 
+//! struct YourGame {
+//!     textured_material: Material,
+//! }
+//! 
+//! impl Game for YourGame {
+//!     fn update(&mut self, engine: &mut Engine) {
+//!         if engine.is_key_pressed(Key::A) {
+//!             let texutre = Texture::new(engine, "path2.png");
+//!             // render and update wont be called until after the texture finishes loading 
+//!         }
+//!     }
+//! 
+//!     fn render<'pass, 'others>(&'others mut self, renderer: RenderInformation<'pass, 'others>) where 'others: 'pass {
+//!         // do stuff
+//!     }
+//! }
+//! ```
+//! Because of this stalling behavior it is recomended you do all your loading of assests in as large of chunks as possible.
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::path::{PathBuf, Path};
@@ -86,7 +127,7 @@ pub(crate) enum ResourceType {
     Font,
 }
 
-pub fn generate_id<T>() -> ResourceId<T> {
+pub(crate) fn generate_id<T>() -> ResourceId<T> {
     static NEXT_ID: AtomicU64 = AtomicU64::new(1);
     let id = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     ResourceId(NonZeroU64::new(id).unwrap(), PhantomData::<T>)
@@ -118,6 +159,7 @@ pub(crate) fn start_load<P: AsRef<Path>>(engine: &Engine, path: P, ip_resource: 
     }
 }
 
+/// An Id for a specific type of resource used interally in the engine
 #[derive(PartialOrd, Ord)]
 pub struct ResourceId<T>(NonZeroU64, std::marker::PhantomData<T>);
 

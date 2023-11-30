@@ -285,7 +285,7 @@ impl Engine {
                 label: Some("texture_bind_group"),
             });
 
-        let white_pixel = Texture::new(white_pixel_view, white_pixel_bind_group, Vec2{x: 1.0, y: 1.0});
+        let white_pixel = Texture::new_direct(white_pixel_view, white_pixel_bind_group, Vec2{x: 1.0, y: 1.0});
 
         let generic_shader = wgpu_clump
             .device
@@ -593,6 +593,8 @@ impl Engine {
         self.target_fps = Some(fps);
     }
 
+    /// Measures string based on the default font. To measure a string with a custom font
+    /// use [TextMaterial::get_measurements()](../text/struct.TextMaterial.html#method.get_measurements)
     pub fn measure_string(&mut self, text: &str, font_size: f32, line_height: f32) -> Vec2<f32> {
         let mut buffer = glyphon::Buffer::new(&mut self.text_renderer.font_system, Metrics::new(font_size, line_height));
         let size = self.get_window_size();
@@ -857,7 +859,7 @@ impl Engine {
         self.resource_manager.insert_font(typed_id, font);
     }
 
-    fn is_loading(&self) -> bool {
+    pub(crate) fn is_loading(&self) -> bool {
         self.in_progress_resources.len() > 0
     }
 }
