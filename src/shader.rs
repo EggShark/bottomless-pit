@@ -23,6 +23,8 @@ pub struct Shader {
 }
 
 impl Shader {
+    /// Attempts to create a shader from a file. This will halt the engine due to resource loading please see
+    /// the [resource module](crate::resource) for more information.
     pub fn new<P: AsRef<Path>>(path: P, has_uniforms: bool, engine: &mut Engine) -> ResourceId<Shader> {
         let typed_id = resource::generate_id::<Shader>();
         let id = typed_id.get_id();
@@ -35,6 +37,8 @@ impl Shader {
         typed_id
     }
 
+    /// Attempts to create a shader from a byte array, this will not halt the engine. See the 
+    /// [resource module](crate::resource) for more information on this halting behavior.
     pub fn from_btyes(engine: &mut Engine, has_uniforms: bool, bytes: &[u8]) -> ResourceId<Shader> {
         let shader = Self::from_resource_data(bytes, has_uniforms, engine)
             .unwrap_or_else(|e| {

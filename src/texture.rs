@@ -11,7 +11,7 @@ use std::io::Error;
 use std::path::Path;
 
 /// Contains all the information need to render an image/texture to the screen.
-/// In order to be used it must be put inside a [Material](../material/struct.Material.html)
+/// In order to be used it must be put inside a [Material](crate::material::Material)
 pub struct Texture {
     pub(crate) _view: wgpu::TextureView,
     pub(crate) bind_group: wgpu::BindGroup,
@@ -19,23 +19,9 @@ pub struct Texture {
 }
 
 impl Texture {
-    /// Attempts to load an image from a byte array
-    pub fn from_btyes(engine: &mut Engine, label: Option<&str>, bytes: &[u8]) -> ResourceId<Texture> {
-        let img = image::load_from_memory(bytes)
-            .and_then(|img| Ok(Self::from_image(engine, img, label)))
-            .unwrap_or_else(|e| {
-                log::warn!("{}, occured loading default", e);
-                Self::default(engine)
-            });
-
-
-        let typed_id = resource::generate_id::<Texture>();
-        engine.resource_manager.insert_texture(typed_id, img);
-
-        typed_id
-    }
-
-    /// Attempts to both read a file at the specified path and turn it into an iamge
+    /// Attempts to both read a file at the specified path and turn it into an image. This will halt the engine
+    /// untill loading is finished please see the [resource module](crate::resource) module for more information
+    /// on how resource loading works.
     pub fn new<P>(
         engine: &mut Engine,
         path: P,
@@ -48,6 +34,23 @@ impl Texture {
         resource::start_load(&engine, path, &ip_resource);
 
         engine.add_in_progress_resource(ip_resource);
+        typed_id
+    }
+    
+    /// Attempts to load an image from a byte array. This is done staticly as it does not halt the engine
+    /// for more information on resource loading see [resource module](crate::resource).
+    pub fn from_btyes(engine: &mut Engine, label: Option<&str>, bytes: &[u8]) -> ResourceId<Texture> {
+        let img = image::load_from_memory(bytes)
+            .and_then(|img| Ok(Self::from_image(engine, img, label)))
+            .unwrap_or_else(|e| {
+                log::warn!("{}, occured loading default", e);
+                Self::default(engine)
+            });
+
+
+        let typed_id = resource::generate_id::<Texture>();
+        engine.resource_manager.insert_texture(typed_id, img);
+
         typed_id
     }
 

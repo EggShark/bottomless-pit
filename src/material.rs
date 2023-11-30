@@ -82,6 +82,10 @@ impl Material {
         }
     }
 
+    pub fn change_texture(&mut self, texture: ResourceId<Texture>) {
+        self.texture_id = texture
+    }
+
     /// Will queue a Rectangle to be draw.
     pub fn add_rectangle(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
         let window_size = render.size;

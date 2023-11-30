@@ -1,5 +1,6 @@
 use bottomless_pit::Game;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
+use bottomless_pit::input::{Key, MouseKey};
 use bottomless_pit::texture::Texture;
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderInformation;
@@ -63,5 +64,9 @@ impl Game for Position {
     fn update(&mut self, engine_handle: &mut Engine) {
         let dt = engine_handle.get_frame_delta_time();
         self.pos.x += 100.0 * dt;
+        if engine_handle.is_mouse_key_pressed(MouseKey::Left) {
+            let new_texture = Texture::new(engine_handle, "examples/eggshark.png");
+            self.texture_material.change_texture(new_texture);
+        }
     }
 }

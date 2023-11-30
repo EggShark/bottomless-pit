@@ -493,14 +493,14 @@ impl<'a> FontInformation<'a> {
     }
 }
 
-/// A struct to ensure Font Families are created properly
-/// can be created by [load_font_file](struct.TextRenderer.html#method.load_font_file)
-/// or [load_font_data](struct.TextRenderer.html#method.load_font_file)
+/// A struct to ensure Font Families are created properly.
 pub struct Font {
     name: String
 }
 
 impl Font {
+    /// Attempts to load in a Shader from file. This will halt the engine for more information on
+    /// this halting behavior check the [resource module](crate::resource).
     pub fn new<P: AsRef<Path>>(path: P, engine: &mut Engine) -> ResourceId<Font> {
         let typed_id = resource::generate_id::<Font>();
         let id = typed_id.get_id();
@@ -513,6 +513,8 @@ impl Font {
         typed_id
     }
 
+    /// Attempts to load in a Shader from a byte array. This will not halt the 
+    /// engine, please check the [resource module](crate::resource) for more information.
     pub fn from_bytes(data: &[u8], engine: &mut Engine) -> ResourceId<Font> {
         let font = engine.text_renderer.load_font_from_bytes(data);
         let typed_id = resource::generate_id::<Font>();
