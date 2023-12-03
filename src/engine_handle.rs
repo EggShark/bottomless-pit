@@ -83,7 +83,7 @@ impl Engine {
         let event_loop: EventLoop<BpEvent> = EventLoopBuilder::with_user_event().build();
         let event_loop_proxy = Arc::new(event_loop.create_proxy());
         let window_builder = winit::window::WindowBuilder::new()
-            .with_title(builder.window_title)
+            .with_title(&builder.window_title)
             .with_inner_size(winit::dpi::PhysicalSize::new(
                 builder.resolution.0,
                 builder.resolution.1,
@@ -101,17 +101,22 @@ impl Engine {
 
         #[cfg(target_arch="wasm32")]
         {
-            let web_window = web_sys::window().expect("could not get window");
             use winit::platform::web::WindowExtWebSys;
-            web_window
-                .document()
-                .and_then(|doc| {
-                    let body = doc.body()?;
-                    let canvas = web_sys::Element::from(window.canvas());
-                    body.append_child(&canvas).ok()?;
-                    Some(())
-                })
-                .expect("Couldn't append canvas to document body");
+            let web_window = web_sys::window().ok_or(BuildError::CantGetWebWindow)?;
+            let document = web_window.document().ok_or(BuildError::CantGetDocument)?;
+            let canvas = web_sys::Element::from(window.canvas());
+            canvas.set_id(&builder.window_title);
+
+            match document.get_element_by_id(&builder.window_title) {
+                Some(element) => {
+                    element.append_child(&canvas)?;
+                }
+                None => {
+                    log::warn!("coudn't find desitantion <div> with id: {}, appending to body", builder.window_title);
+                    let body = document.body().ok_or(BuildError::CantGetBody)?;
+                    body.append_child(&canvas)?;
+                }
+            }
         }
 
         let backend = if cfg!(target_os = "windows") {
@@ -888,7 +893,7 @@ impl EngineBuilder {
     ///     close_key: None,
     ///     clear_colour: Colour::BLACK,
     ///     window_icon: None,
-    ///     window_title: "".into(),
+    ///     window_title: "Bottonless-Pit Game".into(),
     ///     resizable: true,
     ///     vysnc: false,
     /// }
@@ -900,7 +905,7 @@ impl EngineBuilder {
             close_key: None,
             clear_colour: Colour::BLACK,
             window_icon: None,
-            window_title: "".into(),
+            window_title: "Bottomless-Pit Game".into(),
             resizable: true,
             vsync: wgpu::PresentMode::AutoVsync,
         }
@@ -1065,7 +1070,36 @@ pub enum BuildError {
     CreateSurfaceError(CreateSurfaceError),
     FailedToCreateAdapter,
     RequestDeviceError(RequestDeviceError),
+    #[cfg(target_arch="wasm32")]
+    CantGetWebWindow,
+    #[cfg(target_arch="wasm32")]
+    CantGetDocument,
+    #[cfg(target_arch="wasm32")]
+    CantGetBody,
+    #[cfg(target_arch="wasm32")]
+    JsError(wasm_bindgen::JsValue)
 }
+
+impl std::fmt::Display for BuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::WindowOsError(e) => write!(f, "{}", e),
+            Self::CreateSurfaceError(e) => write!(f, "{}", e),
+            Self::FailedToCreateAdapter => write!(f, "unable to create Adapater"),
+            Self::RequestDeviceError(e) => write!(f, "{}", e),
+            #[cfg(target_arch="wasm32")]
+            Self::CantGetWebWindow => write!(f, "could not get web Window"),
+            #[cfg(target_arch="wasm32")]
+            Self::CantGetDocument => write!(f, "could not get HTML document"),
+            #[cfg(target_arch="wasm32")]
+            Self::CantGetBody => write!(f, "could nto get HTML body tag"),
+            #[cfg(target_arch="wasm32")]
+            Self::JsError(e) => write!(f, "{:?}", e),
+        }
+    }
+}
+
+impl std::error::Error for BuildError {}
 
 impl From<OsError> for BuildError {
     fn from(value: OsError) -> Self {
@@ -1084,6 +1118,14 @@ impl From<RequestDeviceError> for BuildError {
         Self::RequestDeviceError(value)
     }
 }
+
+#[cfg(target_arch="wasm32")]
+impl From<wasm_bindgen::JsValue> for BuildError {
+    fn from(value: wasm_bindgen::JsValue) -> Self {
+        Self::JsError(value)
+    }
+}
+
 //impl std::error::Error for BuildError {}
 
 #[derive(Debug)]

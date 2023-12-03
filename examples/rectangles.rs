@@ -1,6 +1,6 @@
 use bottomless_pit::Game;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
-use bottomless_pit::input::{Key, MouseKey};
+use bottomless_pit::input::MouseKey;
 use bottomless_pit::texture::Texture;
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderInformation;
