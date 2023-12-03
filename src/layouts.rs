@@ -1,8 +1,7 @@
 //! just a file to hold functions for creating the various bindgroup layouts
 
 pub(crate) fn create_uniform_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-    let s = device
-    .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("User_Shader_Options_Layout"),
         entries: &[wgpu::BindGroupLayoutEntry {
             binding: 0,
@@ -14,9 +13,7 @@ pub(crate) fn create_uniform_layout(device: &wgpu::Device) -> wgpu::BindGroupLay
             },
             count: None,
         }]
-    });
-
-    s
+    })
 }
 
 pub(crate) fn create_texture_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {

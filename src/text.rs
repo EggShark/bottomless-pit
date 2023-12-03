@@ -184,7 +184,7 @@ impl TextMaterial {
         let texture_size = Vec2{x: run_width.ceil() as u32, y: hieght.ceil() as u32};
         let texture_view = texture.create_view(&Default::default());
     
-        render_text_to_texture(font_info.text_handle, &text_buffer, bounds, texture_size, &texture_view, &font_info.wgpu);
+        render_text_to_texture(font_info.text_handle, &text_buffer, bounds, texture_size, &texture_view, font_info.wgpu);
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
 
         let (vertex_buffer, index_buffer) = Material::create_buffers(&engine.wgpu_clump.device, vertex_size, 8, 2, 12);
@@ -213,7 +213,7 @@ impl TextMaterial {
             vertex_buffer,
             index_buffer,
             texture_view,
-            texture: texture,
+            texture,
             bind_group,
             vertex_count: 0,
             index_count: 0,
@@ -244,7 +244,7 @@ impl TextMaterial {
         let name = font_info
             .resources
             .get_font(font)
-            .and_then(|f| Some(&f.name))
+            .map(|f| &f.name)
             .unwrap_or(backup);
 
         self.text_buffer.set_text(
@@ -322,7 +322,7 @@ impl TextMaterial {
         let rect_size = Vec2{x: self.size.x as f32, y: self.size.y as f32};
         let wgpu = render.wgpu;
         let verts =
-            vertex::from_pixels(position, rect_size, tint.to_raw(), window_size);
+            vertex::from_pixels(position, rect_size, tint.as_raw(), window_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -334,7 +334,7 @@ impl TextMaterial {
         let rect_size = Vec2{x: self.size.x as f32, y: self.size.y as f32};
         let wgpu = render.wgpu;
         let verts =
-            vertex::from_pixels_with_rotation(position, rect_size, tint.to_raw(), window_size, degrees);
+            vertex::from_pixels_with_rotation(position, rect_size, tint.as_raw(), window_size, degrees);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -349,11 +349,12 @@ impl TextMaterial {
         let uv_size = normalize_points(uv_size, Vec2{x: self.size.x as f32, y: self.size.y as f32});
 
         let verts =
-            vertex::from_pixels_with_uv(position, size, tint.to_raw(), window_size, uv_pos, uv_size);
+            vertex::from_pixels_with_uv(position, size, tint.as_raw(), window_size, uv_pos, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
 
+    #[allow(clippy::too_many_arguments)]
     /// Queues a piece of text at the position with, uv controll, and rotation.
     pub fn add_instace_ex(
         &mut self,
@@ -373,7 +374,7 @@ impl TextMaterial {
 
 
         let verts = 
-            vertex::from_pixels_ex(position, size, tint.to_raw(), window_size, degrees, uv_pos, uv_size);
+            vertex::from_pixels_ex(position, size, tint.as_raw(), window_size, degrees, uv_pos, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -392,7 +393,7 @@ impl TextMaterial {
         ];
 
         let verts = 
-            vertex::from_pixels_custom(points, uv_points, degrees, tint.to_raw(), window_size);
+            vertex::from_pixels_custom(points, uv_points, degrees, tint.as_raw(), window_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -507,7 +508,7 @@ impl Font {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Font);
         
-        resource::start_load(&engine, path, &ip_resource);
+        resource::start_load(engine, path, &ip_resource);
 
         engine.add_in_progress_resource(ip_resource);
         typed_id
@@ -540,7 +541,7 @@ fn render_text_to_texture(
     wgpu: &WgpuClump,
 ) {
     let text_area = TextArea {
-        buffer: &text,
+        buffer: text,
         left: 0.0,
         top: 0.0,
         scale: 1.0,
@@ -571,7 +572,7 @@ fn render_text_to_texture(
     let mut text_pass = text_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("Text to Texture Pass"),
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view: &texture_view,
+            view: texture_view,
             resolve_target: None,
             ops: wgpu::Operations {
                 load: wgpu::LoadOp::Clear(wgpu::Color {

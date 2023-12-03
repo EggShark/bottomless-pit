@@ -31,7 +31,7 @@ impl Shader {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(has_uniforms));
 
-        resource::start_load(&engine, path, &ip_resource);
+        resource::start_load(engine, path, &ip_resource);
         engine.add_in_progress_resource(ip_resource);
 
         typed_id

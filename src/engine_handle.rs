@@ -167,8 +167,7 @@ impl Engine {
             .formats
             .iter()
             .copied()
-            .filter(|f| f.is_srgb())
-            .next()
+            .find(|f| f.is_srgb())
             .unwrap_or(surface_capabilities.formats[0]);
 
         let config = wgpu::SurfaceConfiguration {
@@ -558,8 +557,7 @@ impl Engine {
 
     /// Gets the time since the previous frame or change in time between now and last frame
     pub fn get_frame_delta_time(&self) -> f32 {
-        let dt = Instant::now().duration_since(self.last_frame).as_secs_f32();
-        dt
+        Instant::now().duration_since(self.last_frame).as_secs_f32()
     }
 
     /// Gets the current target fps
@@ -622,7 +620,7 @@ impl Engine {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Bytes);
         
-        resource::start_load(&self, path, &ip_resource);
+        resource::start_load(self, path, &ip_resource);
         
         self.in_progress_resources.push(ip_resource);
         typed_id
@@ -783,7 +781,7 @@ impl Engine {
             .iter()
             .enumerate()
             .find(|(_, ip_resource)| compare_resources(ip_resource, &resource))
-            .and_then(|(idx, _)| Some(idx))
+            .map(|(idx, _)| idx)
             .expect("Finished resource doesnt match any in progress resources");
 
         self.in_progress_resources.remove(idx);
@@ -816,7 +814,7 @@ impl Engine {
 
     fn add_finished_image(&mut self, resource: Resource) {
         let typed_id: ResourceId<Texture> = ResourceId::from_number(resource.id);
-        let texture = Texture::from_resource_data(&self, None, &resource.data);
+        let texture = Texture::from_resource_data(self, None, &resource.data);
         match texture {
             Ok(texture) => self.resource_manager.insert_texture(typed_id, texture),
             Err(e) => log::error!("{:?}, loading defualt replacement", e)
@@ -825,7 +823,7 @@ impl Engine {
 
     fn add_finished_shader(&mut self, resource: Resource, has_uniforms: bool,) {
         let typed_id: ResourceId<Shader> = ResourceId::from_number(resource.id);
-        let shader = Shader::from_resource_data(&resource.data, has_uniforms, &self);
+        let shader = Shader::from_resource_data(&resource.data, has_uniforms, self);
         match shader {
             Ok(shader) => self.resource_manager.insert_pipeline(typed_id, shader),
             Err(e) => {
@@ -848,13 +846,13 @@ impl Engine {
 
     fn add_defualt_image(&mut self, id: NonZeroU64) {
         let typed_id: ResourceId<Texture> = ResourceId::from_number(id);
-        let image = Texture::default(&self);
+        let image = Texture::default(self);
         self.resource_manager.insert_texture(typed_id, image);
     }
 
     fn add_defualt_shader(&mut self, id: NonZeroU64) {
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
-        let shader = Shader::defualt(&self);
+        let shader = Shader::defualt(self);
         self.resource_manager.insert_pipeline(typed_id, shader);
     }
 
@@ -865,7 +863,7 @@ impl Engine {
     }
 
     pub(crate) fn is_loading(&self) -> bool {
-        self.in_progress_resources.len() > 0
+        !self.in_progress_resources.is_empty()
     }
 }
 
@@ -1053,7 +1051,7 @@ impl EngineBuilder {
     }
 
     /// Attempts to buld the Engine
-    pub fn build<'a>(self) -> Result<Engine, BuildError> {
+    pub fn build(self) -> Result<Engine, BuildError> {
         Engine::new(self)
     }
 }

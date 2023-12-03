@@ -28,12 +28,16 @@ struct DebugTriangle {
 impl Game for DebugTriangle {
     fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
         self.material.add_triangle_with_coloured_verticies(
-            Vec2{x: 200.0, y: 0.0},
-            Vec2{x: 400.0, y: 400.0},
-            Vec2{x: 0.0, y: 400.0},
-            Colour::RED,
-            Colour::GREEN,
-            Colour::BLUE,
+            [
+                Vec2{x: 200.0, y: 0.0},
+                Vec2{x: 400.0, y: 400.0},
+                Vec2{x: 0.0, y: 400.0},
+            ],
+            [
+                Colour::RED,
+                Colour::GREEN,
+                Colour::BLUE,
+            ],
             &render_handle,
         );
         self.material.add_rectangle(Vec2{x: 0.0, y: 0.0}, Vec2{x: 100.0, y: 100.0}, Colour::RED, &render_handle);

@@ -31,7 +31,7 @@ impl Texture {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image);
         
-        resource::start_load(&engine, path, &ip_resource);
+        resource::start_load(engine, path, &ip_resource);
 
         engine.add_in_progress_resource(ip_resource);
         typed_id
@@ -41,7 +41,7 @@ impl Texture {
     /// for more information on resource loading see [resource module](crate::resource).
     pub fn from_btyes(engine: &mut Engine, label: Option<&str>, bytes: &[u8]) -> ResourceId<Texture> {
         let img = image::load_from_memory(bytes)
-            .and_then(|img| Ok(Self::from_image(engine, img, label)))
+            .map(|img| Self::from_image(engine, img, label))
             .unwrap_or_else(|e| {
                 log::warn!("{}, occured loading default", e);
                 Self::default(engine)

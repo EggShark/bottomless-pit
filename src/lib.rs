@@ -54,6 +54,7 @@ pub mod text;
 pub mod texture;
 pub mod vectors;
 mod vertex;
+#[allow(clippy::all)]
 mod glyphon;
 
 use engine_handle::Engine;

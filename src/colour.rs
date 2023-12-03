@@ -108,7 +108,7 @@ impl Colour {
         }
     }
 
-    pub(crate) fn to_raw(&self) -> [f32; 4] {
+    pub(crate) fn as_raw(&self) -> [f32; 4] {
         [self.r, self.g, self.b, self.a]
     }
 }

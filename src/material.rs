@@ -91,7 +91,7 @@ impl Material {
         let window_size = render.size;
         let wgpu = render.wgpu;
         let verts =
-            vertex::from_pixels(position, size, colour.to_raw(), window_size);
+            vertex::from_pixels(position, size, colour.as_raw(), window_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -100,7 +100,7 @@ impl Material {
     pub fn add_screenspace_rectangle(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
         let wgpu = render.wgpu;
 
-        let verts = vertex::new(position, size, colour.to_raw());
+        let verts = vertex::new(position, size, colour.as_raw());
         self.push_rectangle(wgpu, verts);
     }
 
@@ -116,7 +116,7 @@ impl Material {
         let uv_position = normalize_points(uv_position, texture_size);
 
         let verts = 
-            vertex::from_pixels_with_uv(position, size, colour.to_raw(), window_size, uv_position, uv_size);
+            vertex::from_pixels_with_uv(position, size, colour.as_raw(), window_size, uv_position, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -127,13 +127,23 @@ impl Material {
         let window_size = render.size;
 
         let verts =
-            vertex::from_pixels_with_rotation(position, size, colour.to_raw(), window_size, rotation);
+            vertex::from_pixels_with_rotation(position, size, colour.as_raw(), window_size, rotation);
 
         self.push_rectangle(wgpu, verts);
     }
 
+    #[allow(clippy::too_many_arguments)]
     /// Queues a rectangle with both UV, and Rotation,
-    pub fn add_rectangle_ex(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, uv_position: Vec2<f32>, uv_size: Vec2<f32>, render: &RenderInformation) {
+    pub fn add_rectangle_ex(
+        &mut self,
+        position: Vec2<f32>,
+        size: Vec2<f32>,
+        colour: Colour,
+        rotation: f32,
+        uv_position: Vec2<f32>,
+        uv_size: Vec2<f32>,
+        render: &RenderInformation
+    ) {
         let wgpu = render.wgpu;
         let window_size = render.size;
 
@@ -143,17 +153,27 @@ impl Material {
         let uv_position = normalize_points(uv_position, texture_size);
 
         let verts = 
-            vertex::from_pixels_ex(position, size, colour.to_raw(), window_size, rotation, uv_position, uv_size);
+            vertex::from_pixels_ex(position, size, colour.as_raw(), window_size, rotation, uv_position, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
     
+    #[allow(clippy::too_many_arguments)]
     /// Queues a rectangle with both UV, and Rotation, but will draw the rectangle in WGSL screenspace
-    pub fn add_screenspace_rectangle_ex(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, uv_position: Vec2<f32>, uv_size: Vec2<f32>, render: &RenderInformation) {
+    pub fn add_screenspace_rectangle_ex(
+        &mut self,
+        position: Vec2<f32>,
+        size: Vec2<f32>,
+        colour: Colour,
+        rotation: f32,
+        uv_position: Vec2<f32>,
+        uv_size: Vec2<f32>,
+        render: &RenderInformation
+    ) {
         let wgpu = render.wgpu;
         
         let verts = 
-            vertex::new_ex(position, size, colour.to_raw(), rotation, uv_position, uv_size);
+            vertex::new_ex(position, size, colour.as_raw(), rotation, uv_position, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -171,7 +191,7 @@ impl Material {
         ];
 
         let verts =
-            vertex::from_pixels_custom(points, uv_points, rotation, colour.to_raw(), render.size);
+            vertex::from_pixels_custom(points, uv_points, rotation, colour.as_raw(), render.size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -181,7 +201,7 @@ impl Material {
         let window_size = render.size;
         let wgpu = render.wgpu;
 
-        let colour = colour.to_raw();
+        let colour = colour.as_raw();
         let tex_coords = [0.0, 0.0];
 
         let verts = [
@@ -200,12 +220,8 @@ impl Material {
     /// in clockwise order
     pub fn add_triangle_with_coloured_verticies(
         &mut self,
-        p1: Vec2<f32>,
-        p2: Vec2<f32>,
-        p3: Vec2<f32>,
-        c1: Colour,
-        c2: Colour,
-        c3: Colour,
+        points: [Vec2<f32>; 3],
+        colours: [Colour; 3],
         render: &RenderInformation,
     ) {
         let window_size = render.size;
@@ -213,11 +229,11 @@ impl Material {
 
         let tex_coords = [0.0, 0.0];
         let verts = [
-            Vertex::from_2d([p1.x, p1.y], tex_coords, c1.to_raw())
+            Vertex::from_2d([points[0].x, points[0].y], tex_coords, colours[0].as_raw())
                 .pixels_to_screenspace(window_size),
-            Vertex::from_2d([p2.x, p2.y], tex_coords, c2.to_raw())
+            Vertex::from_2d([points[1].x, points[1].y], tex_coords, colours[1].as_raw())
                 .pixels_to_screenspace(window_size),
-            Vertex::from_2d([p3.x, p3.y], tex_coords, c3.to_raw())
+            Vertex::from_2d([points[2].x, points[2].y], tex_coords, colours[2].as_raw())
                 .pixels_to_screenspace(window_size)
         ];
 
@@ -242,7 +258,7 @@ impl Material {
                 }
             })
             .map(|point| {
-                Vertex::from_2d([point.x, point.y], [0.0, 0.0], colour.to_raw())
+                Vertex::from_2d([point.x, point.y], [0.0, 0.0], colour.as_raw())
                 .pixels_to_screenspace(screen_size)   
             })
             .collect::<Vec<Vertex>>();
@@ -307,7 +323,7 @@ impl Material {
                 buffer.write(&data).unwrap();
                 let byte_array = buffer.into_inner();
 
-                wgpu.queue.write_buffer(&uniform_buffer, 0, &byte_array);
+                wgpu.queue.write_buffer(uniform_buffer, 0, &byte_array);
             },
             None => {},
         }
@@ -498,6 +514,12 @@ impl<'a> MaterialBuilder<'a> {
     }
 }
 
+impl<'a> Default for MaterialBuilder<'a> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// A diffrent type of material used to draw WebGPU debug
 /// lines. These lines will allways be 1px wide and only one
 /// instance of this material should ever be made per programm.
@@ -535,9 +557,9 @@ impl LineMaterial {
         let wgpu = renderer.wgpu;
 
         let verts = [
-            LineVertex::new(start.to_raw(), colour.to_raw())
+            LineVertex::new(start.to_raw(), colour.as_raw())
                 .pixels_to_screenspace(screen_size),
-            LineVertex::new(end.to_raw(), colour.to_raw())
+            LineVertex::new(end.to_raw(), colour.as_raw())
                 .pixels_to_screenspace(screen_size),
         ];
 
@@ -591,7 +613,7 @@ pub(crate) fn grow_buffer(buffer: &mut wgpu::Buffer, wgpu: &WgpuClump, size_need
     });
 
     encoder.copy_buffer_to_buffer(
-        &buffer,
+        buffer,
         0,
         &new_buffer,
         0,

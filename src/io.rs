@@ -44,7 +44,9 @@ pub(crate) async fn read<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, ReadError> 
 #[derive(Debug)]
 pub(crate) enum ReadError {
     IoError(std::io::Error),
+    #[cfg(target_arch="wasm32")]
     ResponseError(u16, String),
+    #[cfg(target_arch="wasm32")]
     WindowError,
 }
 
