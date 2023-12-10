@@ -2,9 +2,9 @@
 //! extension accsss the texture interface
 
 use crate::engine_handle::Engine;
-use crate::resource::{self, ResourceType, ResourceId, InProgressResource};
-use crate::{layouts, ERROR_TEXTURE_DATA};
+use crate::resource::{self, InProgressResource, ResourceId, ResourceType};
 use crate::vectors::Vec2;
+use crate::{layouts, ERROR_TEXTURE_DATA};
 use image::{GenericImageView, ImageError};
 use std::fmt::Display;
 use std::io::Error;
@@ -22,31 +22,34 @@ impl Texture {
     /// Attempts to both read a file at the specified path and turn it into an image. This will halt the engine
     /// untill loading is finished please see the [resource module](crate::resource) module for more information
     /// on how resource loading works.
-    pub fn new<P>(
-        engine: &mut Engine,
-        path: P,
-    ) -> ResourceId<Texture> where P: AsRef<Path> {
+    pub fn new<P>(engine: &mut Engine, path: P) -> ResourceId<Texture>
+    where
+        P: AsRef<Path>,
+    {
         let typed_id = resource::generate_id::<Texture>();
         let id = typed_id.get_id();
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image);
-        
+
         resource::start_load(engine, path, &ip_resource);
 
         engine.add_in_progress_resource(ip_resource);
         typed_id
     }
-    
+
     /// Attempts to load an image from a byte array. This is done staticly as it does not halt the engine
     /// for more information on resource loading see [resource module](crate::resource).
-    pub fn from_btyes(engine: &mut Engine, label: Option<&str>, bytes: &[u8]) -> ResourceId<Texture> {
+    pub fn from_btyes(
+        engine: &mut Engine,
+        label: Option<&str>,
+        bytes: &[u8],
+    ) -> ResourceId<Texture> {
         let img = image::load_from_memory(bytes)
             .map(|img| Self::from_image(engine, img, label))
             .unwrap_or_else(|e| {
                 log::warn!("{}, occured loading default", e);
                 Self::default(engine)
             });
-
 
         let typed_id = resource::generate_id::<Texture>();
         engine.resource_manager.insert_texture(typed_id, img);
@@ -63,7 +66,11 @@ impl Texture {
         Ok(Self::from_image(engine, img, label))
     }
 
-    pub(crate) fn new_direct(view: wgpu::TextureView, bind_group: wgpu::BindGroup, size: Vec2<f32>) -> Self {
+    pub(crate) fn new_direct(
+        view: wgpu::TextureView,
+        bind_group: wgpu::BindGroup,
+        size: Vec2<f32>,
+    ) -> Self {
         Self {
             _view: view,
             bind_group,
@@ -71,16 +78,12 @@ impl Texture {
         }
     }
 
-    pub(crate) fn default(engine: &Engine,) -> Self {
+    pub(crate) fn default(engine: &Engine) -> Self {
         let image = image::load_from_memory(ERROR_TEXTURE_DATA).unwrap();
         Self::from_image(engine, image, Some("Error Texture"))
     }
 
-    fn from_image(
-        engine: &Engine,
-        img: image::DynamicImage,
-        label: Option<&str>,
-    ) -> Self {
+    fn from_image(engine: &Engine, img: image::DynamicImage, label: Option<&str>) -> Self {
         let wgpu = engine.get_wgpu();
         let diffuse_rgba = img.to_rgba8();
         let (width, height) = img.dimensions();
@@ -123,22 +126,20 @@ impl Texture {
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let bind_group_layout = layouts::create_texture_layout(&wgpu.device);
 
-        let bind_group = wgpu
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(engine.get_texture_sampler()),
-                    },
-                ],
-                label: Some("diffuse_bind_group"),
-            });
+        let bind_group = wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(engine.get_texture_sampler()),
+                },
+            ],
+            label: Some("diffuse_bind_group"),
+        });
 
         let size = Vec2 {
             x: width as f32,

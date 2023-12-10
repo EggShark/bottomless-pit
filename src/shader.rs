@@ -4,28 +4,32 @@
 use std::path::Path;
 use std::string::FromUtf8Error;
 
-use encase::ShaderType;
 use encase::private::WriteInto;
+use encase::ShaderType;
 use wgpu::include_wgsl;
 use wgpu::util::DeviceExt;
 
 use crate::engine_handle::{Engine, WgpuClump};
-use crate::resource::{self, ResourceId, ResourceType, InProgressResource};
+use crate::resource::{self, InProgressResource, ResourceId, ResourceType};
 use crate::vertex::Vertex;
 use crate::{layouts, render};
 
 /// An internal representation of an WGSL Shader. Under the hood this creates
-/// a new pipeline with or without the support for any extra uniforms. To be utilze 
+/// a new pipeline with or without the support for any extra uniforms. To be utilze
 /// the shader it must be added to a material
 #[derive(Debug)]
 pub struct Shader {
-    pub(crate) pipeline: wgpu::RenderPipeline
+    pub(crate) pipeline: wgpu::RenderPipeline,
 }
 
 impl Shader {
     /// Attempts to create a shader from a file. This will halt the engine due to resource loading please see
     /// the [resource module](crate::resource) for more information.
-    pub fn new<P: AsRef<Path>>(path: P, has_uniforms: bool, engine: &mut Engine) -> ResourceId<Shader> {
+    pub fn new<P: AsRef<Path>>(
+        path: P,
+        has_uniforms: bool,
+        engine: &mut Engine,
+    ) -> ResourceId<Shader> {
         let typed_id = resource::generate_id::<Shader>();
         let id = typed_id.get_id();
         let path = path.as_ref();
@@ -37,14 +41,13 @@ impl Shader {
         typed_id
     }
 
-    /// Attempts to create a shader from a byte array, this will not halt the engine. See the 
+    /// Attempts to create a shader from a byte array, this will not halt the engine. See the
     /// [resource module](crate::resource) for more information on this halting behavior.
     pub fn from_btyes(engine: &mut Engine, has_uniforms: bool, bytes: &[u8]) -> ResourceId<Shader> {
-        let shader = Self::from_resource_data(bytes, has_uniforms, engine)
-            .unwrap_or_else(|e| {
-                log::warn!("{}, occured loading defualt replacement", e);
-                Self::defualt(engine)
-            });
+        let shader = Self::from_resource_data(bytes, has_uniforms, engine).unwrap_or_else(|e| {
+            log::warn!("{}, occured loading defualt replacement", e);
+            Self::defualt(engine)
+        });
 
         let typed_id = resource::generate_id::<Shader>();
         engine.resource_manager.insert_pipeline(typed_id, shader);
@@ -52,14 +55,20 @@ impl Shader {
         typed_id
     }
 
-    pub(crate) fn from_resource_data(data: &[u8], has_uniforms: bool, engine: &Engine) -> Result<Self, FromUtf8Error> {
+    pub(crate) fn from_resource_data(
+        data: &[u8],
+        has_uniforms: bool,
+        engine: &Engine,
+    ) -> Result<Self, FromUtf8Error> {
         let wgpu = engine.get_wgpu();
 
         let string = String::from_utf8(data.to_vec())?;
-        let shader = wgpu.device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("User Shader Module"),
-            source: wgpu::ShaderSource::Wgsl(string.into())
-        });
+        let shader = wgpu
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("User Shader Module"),
+                source: wgpu::ShaderSource::Wgsl(string.into()),
+            });
 
         let pipeline = if has_uniforms {
             render::make_pipeline(
@@ -90,9 +99,7 @@ impl Shader {
             )
         };
 
-        Ok(Self {
-            pipeline,
-        })
+        Ok(Self { pipeline })
     }
 
     pub(crate) fn defualt(engine: &Engine) -> Self {
@@ -113,14 +120,12 @@ impl Shader {
             Some("Defualt Shader From Error"),
         );
 
-        Self {
-            pipeline,
-        }
+        Self { pipeline }
     }
 }
 
 /// `UniformData` contains the byte data of any struct that implements
-/// [ShaderType](https://docs.rs/encase/latest/encase/trait.ShaderType.html) which 
+/// [ShaderType](https://docs.rs/encase/latest/encase/trait.ShaderType.html) which
 /// can be derived. This data needs to be added to a Material upon creation.
 #[derive(Debug)]
 pub struct UniformData {
@@ -143,12 +148,17 @@ impl UniformData {
         }
     }
 
-    pub(crate) fn extract_buffer_and_bindgroup(&self, wgpu: &WgpuClump) -> (wgpu::Buffer, wgpu::BindGroup) {
-        let buffer = wgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("User uniform buffer"),
-            contents: &self.initial_data,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
+    pub(crate) fn extract_buffer_and_bindgroup(
+        &self,
+        wgpu: &WgpuClump,
+    ) -> (wgpu::Buffer, wgpu::BindGroup) {
+        let buffer = wgpu
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("User uniform buffer"),
+                contents: &self.initial_data,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
 
         let bind_group = wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("User Uniform BindGroup"),

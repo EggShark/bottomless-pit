@@ -1,12 +1,12 @@
 //! Contains the code for the loading of all assets and [ResourceId]
-//! 
+//!
 //! In order for bottomless-pit to run on both desktop and web enviorments file reading
 //! has to be done asynchronously. When you call [Texture::new](crate::texture::Texture::new),
 //! [Shader::new](crate::shader::Shader::new), [Font::new](crate::text::Font::new),
 //! or [Engine::create_resource](crate::engine_handle::Engine::create_resource) you are given a
 //! handle to the resource and not the resoruce directly. Since resources are loaded asynchronously it will not
-//! be imeaditly availble. In order to have the resource be available to use as soon as possible the engine halts 
-//! while waiting for the resource. [Game::update](crate::Game::update) will not be called and 
+//! be imeaditly availble. In order to have the resource be available to use as soon as possible the engine halts
+//! while waiting for the resource. [Game::update](crate::Game::update) will not be called and
 //! [Game::render](crate::Game::render) will not be called either.
 //! ```rust
 //! fn main() {
@@ -15,24 +15,24 @@
 //!     let texture: ResourceId<Texture> = Texture::new(&mut engine, "path.png");
 //!     // anything loaded in main will be ready on the first frame of the game
 //!     let material = MaterialBuilder::new().add_texture(texture).build();
-//! 
+//!
 //!     let game = YourGame {
 //!         textured_material: material,
 //!     }
 //! }
-//! 
+//!
 //! struct YourGame {
 //!     textured_material: Material,
 //! }
-//! 
+//!
 //! impl Game for YourGame {
 //!     fn update(&mut self, engine: &mut Engine) {
 //!         if engine.is_key_pressed(Key::A) {
 //!             let texutre = Texture::new(engine, "path2.png");
-//!             // render and update wont be called until after the texture finishes loading 
+//!             // render and update wont be called until after the texture finishes loading
 //!         }
 //!     }
-//! 
+//!
 //!     fn render<'pass, 'others>(&'others mut self, renderer: RenderInformation<'pass, 'others>) where 'others: 'pass {
 //!         // do stuff
 //!     }
@@ -41,11 +41,11 @@
 //! Because of this stalling behavior it is recomended you do all your loading of assests in as large of chunks as possible.
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::path::{PathBuf, Path};
 use std::num::NonZeroU64;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU64;
 
-use crate::engine_handle::{Engine, BpEvent};
+use crate::engine_handle::{BpEvent, Engine};
 use crate::io::{self, ReadError};
 use crate::shader::Shader;
 use crate::text::Font;
@@ -68,35 +68,43 @@ pub(crate) struct ResourceError {
 }
 
 impl Resource {
-    pub fn from_result(result: Result<Vec<u8>, ReadError>, path: PathBuf, id: NonZeroU64, resource_type: ResourceType) -> Result<Self, ResourceError> {
+    pub fn from_result(
+        result: Result<Vec<u8>, ReadError>,
+        path: PathBuf,
+        id: NonZeroU64,
+        resource_type: ResourceType,
+    ) -> Result<Self, ResourceError> {
         match result {
-            Ok(data) => {
-                Ok(Self {
-                    path,
-                    data,
-                    id,
-                    resource_type,
-                })
-            },
-            Err(e) => {
-                Err(ResourceError {
-                    error: e,
-                    path,
-                    id,
-                    resource_type,
-                })
-            },
+            Ok(data) => Ok(Self {
+                path,
+                data,
+                id,
+                resource_type,
+            }),
+            Err(e) => Err(ResourceError {
+                error: e,
+                path,
+                id,
+                resource_type,
+            }),
         }
     }
 }
 
-pub(crate) fn compare_resources(left: &InProgressResource, right: &Result<Resource, ResourceError>)  -> bool {
+pub(crate) fn compare_resources(
+    left: &InProgressResource,
+    right: &Result<Resource, ResourceError>,
+) -> bool {
     match right {
         Ok(right) => {
-            left.id == right.id && left.resource_type == right.resource_type && left.path == right.path
-        },
+            left.id == right.id
+                && left.resource_type == right.resource_type
+                && left.path == right.path
+        }
         Err(right) => {
-            left.id == right.id && left.resource_type == right.resource_type && left.path == right.path
+            left.id == right.id
+                && left.resource_type == right.resource_type
+                && left.path == right.path
         }
     }
 }
@@ -118,7 +126,6 @@ impl InProgressResource {
     }
 }
 
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ResourceType {
     Image,
@@ -133,28 +140,36 @@ pub(crate) fn generate_id<T>() -> ResourceId<T> {
     ResourceId(NonZeroU64::new(id).unwrap(), PhantomData::<T>)
 }
 
-pub(crate) fn start_load<P: AsRef<Path>>(engine: &Engine, path: P, ip_resource: &InProgressResource) {
+pub(crate) fn start_load<P: AsRef<Path>>(
+    engine: &Engine,
+    path: P,
+    ip_resource: &InProgressResource,
+) {
     let path = path.as_ref().to_owned();
     let id = ip_resource.id;
     let resource_type = ip_resource.resource_type;
     let event_loop_proxy = engine.get_proxy();
-    #[cfg(target_arch="wasm32")]
+    #[cfg(target_arch = "wasm32")]
     {
         use wasm_bindgen_futures::spawn_local;
         spawn_local(async move {
             let result = io::read(&path).await;
             let resource = Resource::from_result(result, path, id, resource_type);
-            event_loop_proxy.send_event(BpEvent::ResourceLoaded(resource)).unwrap();
+            event_loop_proxy
+                .send_event(BpEvent::ResourceLoaded(resource))
+                .unwrap();
         });
     }
 
-    #[cfg(not(target_arch="wasm32"))]
+    #[cfg(not(target_arch = "wasm32"))]
     {
         let pool = engine.thread_pool();
         pool.spawn_ok(async move {
             let result = io::read(&path).await;
             let resource = Resource::from_result(result, path, id, resource_type);
-            event_loop_proxy.send_event(BpEvent::ResourceLoaded(resource)).unwrap();
+            event_loop_proxy
+                .send_event(BpEvent::ResourceLoaded(resource))
+                .unwrap();
         });
     }
 }
@@ -246,7 +261,7 @@ impl ResourceManager {
 
     pub fn get_pipeline(&self, key: &ResourceId<Shader>) -> Option<&Shader> {
         self.pipeline_resource.get(key)
-    } 
+    }
 
     pub fn get_font(&self, key: &ResourceId<Font>) -> Option<&Font> {
         self.fonts.get(key)

@@ -27,7 +27,10 @@ impl<T> From<Vec2<T>> for (T, T) {
 
 impl From<Vec2<u32>> for crate::glyphon::Resolution {
     fn from(value: Vec2<u32>) -> Self {
-        Self {width: value.x, height: value.y}
+        Self {
+            width: value.x,
+            height: value.y,
+        }
     }
 }
 

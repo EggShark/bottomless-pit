@@ -1,6 +1,7 @@
 use crate::{
-    glyphon::text_render::ContentType, glyphon::CacheKey, glyphon::FontSystem, glyphon::GlyphDetails,
-    glyphon::GlyphToRender, glyphon::GpuCacheStatus, glyphon::Params, glyphon::Resolution, glyphon::SwashCache,
+    glyphon::text_render::ContentType, glyphon::CacheKey, glyphon::FontSystem,
+    glyphon::GlyphDetails, glyphon::GlyphToRender, glyphon::GpuCacheStatus, glyphon::Params,
+    glyphon::Resolution, glyphon::SwashCache,
 };
 use etagere::{size2, Allocation, BucketedAtlasAllocator};
 use lru::LruCache;

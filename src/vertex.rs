@@ -1,6 +1,6 @@
-use crate::vectors::Vec2;
 use crate::matrix_math::calculate_rotation_matrix;
-use cgmath::{Vector4, Matrix4, Transform};
+use crate::vectors::Vec2;
+use cgmath::{Matrix4, Transform, Vector4};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -54,13 +54,12 @@ impl Vertex {
     pub(crate) fn rotate(mut self, rotation: f32, center: Vec2<f32>) -> Self {
         let rotaion_matrix = calculate_rotation_matrix(rotation);
         let translation_matrix = Matrix4::from_translation(cgmath::vec3(center.x, center.y, 0.0));
-        let inverse_translation = translation_matrix.inverse_transform()
-            .unwrap_or(cgmath::Matrix4::new(
-                1.0, 0.0, 0.0, 0.0,
-                0.0, 1.0, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0,
-            ));
+        let inverse_translation =
+            translation_matrix
+                .inverse_transform()
+                .unwrap_or(cgmath::Matrix4::new(
+                    1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+                ));
         let vec4 = Vector4::new(self.position[0], self.position[1], 1.0, 1.0);
         let out = translation_matrix * rotaion_matrix * inverse_translation * vec4;
 
@@ -132,7 +131,8 @@ pub fn from_pixels(
     let size = size.to_raw();
 
     [
-        Vertex::from_2d(pos, [0.0, 0.0], colour).to_owned()
+        Vertex::from_2d(pos, [0.0, 0.0], colour)
+            .to_owned()
             .pixels_to_screenspace(screen_size),
         Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour)
             .pixels_to_screenspace(screen_size),
@@ -154,25 +154,27 @@ pub fn from_pixels_with_uv(
     let pos = pos.to_raw();
     let size = size.to_raw();
     let uv_pos = uv_pos.to_raw();
-    
+
     [
-        Vertex::from_2d(pos, uv_pos, colour)
-            .pixels_to_screenspace(screen_size),
+        Vertex::from_2d(pos, uv_pos, colour).pixels_to_screenspace(screen_size),
         Vertex::from_2d(
             [pos[0] + size[0], pos[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1]],
             colour,
-        ).pixels_to_screenspace(screen_size),
+        )
+        .pixels_to_screenspace(screen_size),
         Vertex::from_2d(
             [pos[0] + size[0], pos[1] + size[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1] + uv_size.y],
             colour,
-        ).pixels_to_screenspace(screen_size),
+        )
+        .pixels_to_screenspace(screen_size),
         Vertex::from_2d(
             [pos[0], pos[1] + size[1]],
             [uv_pos[0], uv_pos[1] + uv_size.y],
             colour,
-        ).pixels_to_screenspace(screen_size),
+        )
+        .pixels_to_screenspace(screen_size),
     ]
 }
 
@@ -186,7 +188,10 @@ pub(crate) fn from_pixels_with_rotation(
     let pos = pos.to_raw();
     let size = size.to_raw();
 
-    let center = Vec2{x: pos[0] + size[0]/2.0, y: pos[1] + size[1]/2.0};
+    let center = Vec2 {
+        x: pos[0] + size[0] / 2.0,
+        y: pos[1] + size[1] / 2.0,
+    };
 
     [
         Vertex::from_2d(pos, [0.0, 0.0], colour)
@@ -217,7 +222,10 @@ pub(crate) fn from_pixels_ex(
     let size = size.to_raw();
     let uv_pos = uv_pos.to_raw();
 
-    let center = Vec2{x: pos[0] + size[0]/2.0, y: pos[1] + size[1]/2.0};
+    let center = Vec2 {
+        x: pos[0] + size[0] / 2.0,
+        y: pos[1] + size[1] / 2.0,
+    };
     [
         Vertex::from_2d(pos, uv_pos, colour)
             .rotate(rotation, center)
@@ -226,20 +234,23 @@ pub(crate) fn from_pixels_ex(
             [pos[0] + size[0], pos[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1]],
             colour,
-        ).rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+        )
+        .rotate(rotation, center)
+        .pixels_to_screenspace(screen_size),
         Vertex::from_2d(
             [pos[0] + size[0], pos[1] + size[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1] + uv_size.y],
             colour,
-        ).rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+        )
+        .rotate(rotation, center)
+        .pixels_to_screenspace(screen_size),
         Vertex::from_2d(
             [pos[0], pos[1] + size[1]],
             [uv_pos[0], uv_pos[1] + uv_size.y],
             colour,
-        ).rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+        )
+        .rotate(rotation, center)
+        .pixels_to_screenspace(screen_size),
     ]
 }
 
@@ -255,30 +266,41 @@ pub(crate) fn new_ex(
     let size = size.to_raw();
     let uv_pos = uv_pos.to_raw();
 
-    let center = Vec2{x: pos[0] + size[0]/2.0, y: pos[1] + size[1]/2.0};
-    
+    let center = Vec2 {
+        x: pos[0] + size[0] / 2.0,
+        y: pos[1] + size[1] / 2.0,
+    };
+
     [
-        Vertex::from_2d(pos, uv_pos, colour)
-            .rotate(rotation, center),
+        Vertex::from_2d(pos, uv_pos, colour).rotate(rotation, center),
         Vertex::from_2d(
             [pos[0] + size[0], pos[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1]],
             colour,
-        ).rotate(rotation, center),
+        )
+        .rotate(rotation, center),
         Vertex::from_2d(
             [pos[0] + size[0], pos[1] + size[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1] + uv_size.y],
             colour,
-        ).rotate(rotation, center),
+        )
+        .rotate(rotation, center),
         Vertex::from_2d(
             [pos[0], pos[1] + size[1]],
             [uv_pos[0], uv_pos[1] + uv_size.y],
             colour,
-        ).rotate(rotation, center),
+        )
+        .rotate(rotation, center),
     ]
 }
 
-pub(crate) fn from_pixels_custom(points: [Vec2<f32>; 4], uvs: [Vec2<f32>; 4], rotation: f32, colour: [f32; 4], screen_size: Vec2<u32>) -> [Vertex; 4] {
+pub(crate) fn from_pixels_custom(
+    points: [Vec2<f32>; 4],
+    uvs: [Vec2<f32>; 4],
+    rotation: f32,
+    colour: [f32; 4],
+    screen_size: Vec2<u32>,
+) -> [Vertex; 4] {
     let center = get_center_of_four_points(points);
 
     [
@@ -299,13 +321,16 @@ pub(crate) fn from_pixels_custom(points: [Vec2<f32>; 4], uvs: [Vec2<f32>; 4], ro
 
 fn get_center_of_four_points(points: [Vec2<f32>; 4]) -> Vec2<f32> {
     let tri1_centroid_x = (points[0].x + points[1].x + points[3].x) / 3.0;
-    let tri1_centroid_y = (points[0].y  + points[1].y + points[3].y) / 3.0;
+    let tri1_centroid_y = (points[0].y + points[1].y + points[3].y) / 3.0;
 
-    let tri2_centriod_x = (points[1].x + points[2].x  + points[3].x) / 3.0;
+    let tri2_centriod_x = (points[1].x + points[2].x + points[3].x) / 3.0;
     let tri2_centroid_y = (points[1].y + points[2].y + points[3].y) / 3.0;
 
     let mid_point_x = (tri1_centroid_x + tri2_centriod_x) / 2.0;
     let mid_point_y = (tri1_centroid_y + tri2_centroid_y) / 2.0;
 
-    Vec2{x: mid_point_x, y: mid_point_y}
+    Vec2 {
+        x: mid_point_x,
+        y: mid_point_y,
+    }
 }

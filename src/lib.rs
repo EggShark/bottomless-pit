@@ -42,27 +42,29 @@
 
 pub mod colour;
 pub mod engine_handle;
+#[allow(clippy::all)]
+mod glyphon;
 pub mod input;
 mod io;
 mod layouts;
-pub mod matrix_math;
 pub mod material;
-pub mod resource;
+pub mod matrix_math;
 pub mod render;
+pub mod resource;
 pub mod shader;
 pub mod text;
 pub mod texture;
 pub mod vectors;
 mod vertex;
-#[allow(clippy::all)]
-mod glyphon;
 
 use engine_handle::Engine;
 use render::RenderInformation;
 /// The Trait needed for structs to be used in with the Engine
 pub trait Game {
     /// Rendering code goes here
-    fn render<'pass, 'others>(&'others mut self, render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass;
+    fn render<'pass, 'others>(&'others mut self, render_handle: RenderInformation<'pass, 'others>)
+    where
+        'others: 'pass;
     /// Updating code goes here
     fn update(&mut self, engine_handle: &mut Engine);
     /// Things to do when the window closes

@@ -1,13 +1,13 @@
 use std::f32::consts::PI;
 
-use bottomless_pit::Game;
+use bottomless_pit::colour::Colour;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
-use bottomless_pit::shader::Shader;
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderInformation;
-use bottomless_pit::colour::Colour;
-use bottomless_pit::vectors::Vec2;
+use bottomless_pit::shader::Shader;
 use bottomless_pit::shader::UniformData;
+use bottomless_pit::vectors::Vec2;
+use bottomless_pit::Game;
 use encase::ShaderType;
 
 fn main() {
@@ -36,7 +36,7 @@ fn main() {
 
     let pos = Position {
         regular_material,
-        time: 0.0
+        time: 0.0,
     };
 
     engine.run(pos);
@@ -56,15 +56,27 @@ struct Position {
 }
 
 impl Game for Position {
-    fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
-        self.regular_material.add_regular_n_gon(120, 200.0, Vec2{x: 250.0, y: 250.0}, Colour::BLUE, &render_handle);
+    fn render<'pass, 'others>(
+        &'others mut self,
+        mut render_handle: RenderInformation<'pass, 'others>,
+    ) where
+        'others: 'pass,
+    {
+        self.regular_material.add_regular_n_gon(
+            120,
+            200.0,
+            Vec2 { x: 250.0, y: 250.0 },
+            Colour::BLUE,
+            &render_handle,
+        );
 
         self.regular_material.draw(&mut render_handle);
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
         let dt = engine_handle.get_frame_delta_time();
-        self.time = (self.time + dt) % (32.0*PI);
-        self.regular_material.update_uniform_data(&self.time, &engine_handle);
+        self.time = (self.time + dt) % (32.0 * PI);
+        self.regular_material
+            .update_uniform_data(&self.time, &engine_handle);
     }
 }

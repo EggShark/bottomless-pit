@@ -3,12 +3,15 @@
 //! builder lets you customize the engine at the start, and the
 //! Engine gives you access to all the crucial logic functions
 
-use cosmic_text::{Metrics, Attrs, Shaping};
-#[cfg(not(target_arch="wasm32"))]
+use cosmic_text::{Attrs, Metrics, Shaping};
+#[cfg(not(target_arch = "wasm32"))]
 use futures::executor::ThreadPool;
 
 use image::{GenericImageView, ImageError};
 use spin_sleep::SpinSleeper;
+use std::num::NonZeroU64;
+use std::path::Path;
+use std::sync::Arc;
 use web_time::Instant;
 use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
@@ -16,21 +19,21 @@ use winit::error::OsError;
 use winit::event::*;
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy};
 use winit::window::{BadIcon, Window};
-use std::num::NonZeroU64;
-use std::sync::Arc;
-use std::path::Path;
 
 use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
 use crate::render::{make_pipeline, render};
+use crate::resource::{
+    compare_resources, InProgressResource, Resource, ResourceError, ResourceId, ResourceManager,
+    ResourceType,
+};
 use crate::shader::Shader;
 use crate::text::{Font, TextRenderer};
 use crate::texture::Texture;
 use crate::vectors::Vec2;
-use crate::vertex::{Vertex, LineVertex};
-use crate::{WHITE_PIXEL, resource, glyphon};
-use crate::{Game, IDENTITY_MATRIX, layouts};
-use crate::resource::{Resource, InProgressResource, ResourceType, ResourceId, ResourceError, compare_resources, ResourceManager};
+use crate::vertex::{LineVertex, Vertex};
+use crate::{glyphon, resource, WHITE_PIXEL};
+use crate::{layouts, Game, IDENTITY_MATRIX};
 
 /// The thing that makes the computer go
 pub struct Engine {
@@ -38,7 +41,7 @@ pub struct Engine {
     window: Window,
     surface: wgpu::Surface,
     event_loop: Option<EventLoop<BpEvent>>,
-    event_loop_proxy: Arc<EventLoopProxy<BpEvent>>, 
+    event_loop_proxy: Arc<EventLoopProxy<BpEvent>>,
     cursor_visibility: bool,
     should_close: bool,
     close_key: Option<Key>,
@@ -60,13 +63,13 @@ pub struct Engine {
     line_pipeline_id: ResourceId<Shader>,
     pub(crate) resource_manager: ResourceManager,
     pub(crate) text_renderer: TextRenderer,
-    #[cfg(not(target_arch="wasm32"))]
+    #[cfg(not(target_arch = "wasm32"))]
     thread_pool: ThreadPool,
 }
 
 impl Engine {
     fn new(builder: EngineBuilder) -> Result<Self, BuildError> {
-        cfg_if::cfg_if!{
+        cfg_if::cfg_if! {
             if #[cfg(target_arch = "wasm32")] {
                 std::panic::set_hook(Box::new(console_error_panic_hook::hook));
                 console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
@@ -99,7 +102,7 @@ impl Engine {
 
         let window = window_builder.build(&event_loop)?;
 
-        #[cfg(target_arch="wasm32")]
+        #[cfg(target_arch = "wasm32")]
         {
             use winit::platform::web::WindowExtWebSys;
             let web_window = web_sys::window().ok_or(BuildError::CantGetWebWindow)?;
@@ -112,7 +115,10 @@ impl Engine {
                     element.append_child(&canvas)?;
                 }
                 None => {
-                    log::warn!("coudn't find desitantion <div> with id: {}, appending to body", builder.window_title);
+                    log::warn!(
+                        "coudn't find desitantion <div> with id: {}, appending to body",
+                        builder.window_title
+                    );
                     let body = document.body().ok_or(BuildError::CantGetBody)?;
                     body.append_child(&canvas)?;
                 }
@@ -272,24 +278,29 @@ impl Engine {
 
         let texture_bind_group_layout = layouts::create_texture_layout(&wgpu_clump.device);
 
-        let white_pixel_bind_group = wgpu_clump
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &texture_bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&white_pixel_view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&white_pixel_sampler),
-                    },
-                ],
-                label: Some("texture_bind_group"),
-            });
+        let white_pixel_bind_group =
+            wgpu_clump
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    layout: &texture_bind_group_layout,
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::TextureView(&white_pixel_view),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: wgpu::BindingResource::Sampler(&white_pixel_sampler),
+                        },
+                    ],
+                    label: Some("texture_bind_group"),
+                });
 
-        let white_pixel = Texture::new_direct(white_pixel_view, white_pixel_bind_group, Vec2{x: 1.0, y: 1.0});
+        let white_pixel = Texture::new_direct(
+            white_pixel_view,
+            white_pixel_bind_group,
+            Vec2 { x: 1.0, y: 1.0 },
+        );
 
         let generic_shader = wgpu_clump
             .device
@@ -328,17 +339,20 @@ impl Engine {
         let text_renderer = TextRenderer::new(&wgpu_clump);
 
         let mut resource_manager = ResourceManager::new();
-    
+
         let line_id = resource::generate_id::<Shader>();
         let generic_id = resource::generate_id::<Shader>();
-        let line_shader = Shader{pipeline: line_pipeline};
-        let generic_shader = Shader{pipeline: generic_pipeline};
+        let line_shader = Shader {
+            pipeline: line_pipeline,
+        };
+        let generic_shader = Shader {
+            pipeline: generic_pipeline,
+        };
         resource_manager.insert_pipeline(line_id, line_shader);
         resource_manager.insert_pipeline(generic_id, generic_shader);
 
         let white_pixel_id = resource::generate_id::<Texture>();
         resource_manager.insert_texture(white_pixel_id, white_pixel);
-
 
         Ok(Self {
             input_handle,
@@ -367,7 +381,7 @@ impl Engine {
             line_pipeline_id: line_id,
             resource_manager,
             text_renderer,
-            #[cfg(not(target_arch="wasm32"))]
+            #[cfg(not(target_arch = "wasm32"))]
             thread_pool: ThreadPool::new().expect("Failed To Make Pool"),
         })
     }
@@ -549,7 +563,7 @@ impl Engine {
     }
 
     /// nessicary for creating shaders and wanting to use your own unifroms
-    /// this should be pretty generic as it is exposed to both the vertex 
+    /// this should be pretty generic as it is exposed to both the vertex
     /// and fragment stage
     pub fn uniform_layout(&self) -> wgpu::BindGroupLayout {
         layouts::create_uniform_layout(&self.wgpu_clump.device)
@@ -572,20 +586,22 @@ impl Engine {
         self.target_fps = None;
     }
 
-    /// Will turn off vysnc if the platform suports it, using 
+    /// Will turn off vysnc if the platform suports it, using
     /// AutoNoVsync for more information check
     /// [PresentMode::AutoNoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html).
     pub fn remove_vsync(&mut self) {
         self.config.present_mode = wgpu::PresentMode::AutoNoVsync;
-        self.surface.configure(&self.wgpu_clump.device, &self.config);
+        self.surface
+            .configure(&self.wgpu_clump.device, &self.config);
     }
 
-    /// Will turn off vysnc if the platform suports it, using 
+    /// Will turn off vysnc if the platform suports it, using
     /// AutoVsync for more information check
     /// [PresentMode::AutoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html).
     pub fn add_vsync(&mut self) {
         self.config.present_mode = wgpu::PresentMode::AutoVsync;
-        self.surface.configure(&self.wgpu_clump.device, &self.config);
+        self.surface
+            .configure(&self.wgpu_clump.device, &self.config);
     }
 
     /// Sets a target fps cap. The thread will spin sleep using the
@@ -599,19 +615,38 @@ impl Engine {
     /// Measures string based on the default font. To measure a string with a custom font
     /// use [TextMaterial::get_measurements()](../text/struct.TextMaterial.html#method.get_measurements)
     pub fn measure_string(&mut self, text: &str, font_size: f32, line_height: f32) -> Vec2<f32> {
-        let mut buffer = glyphon::Buffer::new(&mut self.text_renderer.font_system, Metrics::new(font_size, line_height));
+        let mut buffer = glyphon::Buffer::new(
+            &mut self.text_renderer.font_system,
+            Metrics::new(font_size, line_height),
+        );
         let size = self.get_window_size();
         let scale_factor = self.get_window_scale_factor();
         let physical_width = (size.x as f64 * scale_factor) as f32;
         let physical_height = (size.y as f64 * scale_factor) as f32;
 
-        buffer.set_size(&mut self.text_renderer.font_system, physical_height, physical_width);
-        buffer.set_text(&mut self.text_renderer.font_system, text, Attrs::new(), Shaping::Basic);
+        buffer.set_size(
+            &mut self.text_renderer.font_system,
+            physical_height,
+            physical_width,
+        );
+        buffer.set_text(
+            &mut self.text_renderer.font_system,
+            text,
+            Attrs::new(),
+            Shaping::Basic,
+        );
 
         let height = buffer.lines.len() as f32 * buffer.metrics().line_height;
-        let run_width = buffer.layout_runs().map(|run| run.line_w).max_by(f32::total_cmp).unwrap_or(0.0);
+        let run_width = buffer
+            .layout_runs()
+            .map(|run| run.line_w)
+            .max_by(f32::total_cmp)
+            .unwrap_or(0.0);
 
-        Vec2{x: run_width, y: height}
+        Vec2 {
+            x: run_width,
+            y: height,
+        }
     }
 
     /// Loads in a byte vector resource, can be used to load arbitary files. This will halt
@@ -622,15 +657,15 @@ impl Engine {
         let id = typed_id.get_id();
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Bytes);
-        
+
         resource::start_load(self, path, &ip_resource);
-        
+
         self.in_progress_resources.push(ip_resource);
         typed_id
     }
 
     /// Attemps to fetch a byte resource.
-    /// 
+    ///
     /// Returns `None` if the resource isnt loaded yet. Resources will always be available
     /// on the next frame after being requested. Please see the [resource module](crate::resource)
     /// for more information.
@@ -682,7 +717,7 @@ impl Engine {
         self.clear_colour.into()
     }
 
-    #[cfg(not(target_arch="wasm32"))]
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn thread_pool(&self) -> &ThreadPool {
         &self.thread_pool
     }
@@ -702,12 +737,14 @@ impl Engine {
                         game.update(&mut self);
                         self.update(control_flow);
                         self.current_frametime = Instant::now();
-                        
+
                         match render(&mut game, &mut self) {
                             Ok(_) => {}
                             // reconfigure surface if lost
                             Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
-                            Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+                            Err(wgpu::SurfaceError::OutOfMemory) => {
+                                *control_flow = ControlFlow::Exit
+                            }
                             Err(e) => eprintln!("{:?}", e),
                         }
                     }
@@ -755,10 +792,13 @@ impl Engine {
         }
 
         if let Some(frame_rate) = self.target_fps {
-            let frame_time = Instant::now().duration_since(self.current_frametime).as_nanos() as u64;
+            let frame_time = Instant::now()
+                .duration_since(self.current_frametime)
+                .as_nanos() as u64;
             let desired_time_between_frames = 1000000000 / frame_rate as u64;
             if frame_time < desired_time_between_frames {
-                self.spin_sleeper.sleep_ns(desired_time_between_frames-frame_time);
+                self.spin_sleeper
+                    .sleep_ns(desired_time_between_frames - frame_time);
             }
         }
     }
@@ -785,7 +825,8 @@ impl Engine {
 
     fn handle_resource(&mut self, resource: Result<Resource, ResourceError>) {
         // remove ip resource
-        let idx = self.in_progress_resources
+        let idx = self
+            .in_progress_resources
             .iter()
             .enumerate()
             .find(|(_, ip_resource)| compare_resources(ip_resource, &resource))
@@ -795,16 +836,18 @@ impl Engine {
         self.in_progress_resources.remove(idx);
 
         match resource {
-            Ok(data) => {
-                match data.resource_type {
-                    ResourceType::Bytes => self.add_finished_bytes(data),
-                    ResourceType::Image => self.add_finished_image(data),
-                    ResourceType::Shader(has_uniforms) => self.add_finished_shader(data, has_uniforms),
-                    ResourceType::Font => self.add_finished_font(data),
-                }
-            }
+            Ok(data) => match data.resource_type {
+                ResourceType::Bytes => self.add_finished_bytes(data),
+                ResourceType::Image => self.add_finished_image(data),
+                ResourceType::Shader(has_uniforms) => self.add_finished_shader(data, has_uniforms),
+                ResourceType::Font => self.add_finished_font(data),
+            },
             Err(e) => {
-                log::error!("could not load resource: {:?}, becuase: {:?}, loading defualt replacement", e, e.error);
+                log::error!(
+                    "could not load resource: {:?}, becuase: {:?}, loading defualt replacement",
+                    e,
+                    e.error
+                );
                 match e.resource_type {
                     ResourceType::Bytes => self.add_defualt_bytes(e.id),
                     ResourceType::Image => self.add_defualt_image(e.id),
@@ -825,11 +868,11 @@ impl Engine {
         let texture = Texture::from_resource_data(self, None, &resource.data);
         match texture {
             Ok(texture) => self.resource_manager.insert_texture(typed_id, texture),
-            Err(e) => log::error!("{:?}, loading defualt replacement", e)
+            Err(e) => log::error!("{:?}, loading defualt replacement", e),
         }
     }
 
-    fn add_finished_shader(&mut self, resource: Resource, has_uniforms: bool,) {
+    fn add_finished_shader(&mut self, resource: Resource, has_uniforms: bool) {
         let typed_id: ResourceId<Shader> = ResourceId::from_number(resource.id);
         let shader = Shader::from_resource_data(&resource.data, has_uniforms, self);
         match shader {
@@ -837,7 +880,7 @@ impl Engine {
             Err(e) => {
                 log::error!("{:?}. loading defualt replacement", e);
                 self.add_defualt_shader(resource.id);
-            },
+            }
         }
     }
 
@@ -928,7 +971,7 @@ impl EngineBuilder {
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
-            vsync: self.vsync
+            vsync: self.vsync,
         }
     }
 
@@ -943,7 +986,7 @@ impl EngineBuilder {
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
-            vsync: self.vsync
+            vsync: self.vsync,
         }
     }
 
@@ -961,7 +1004,7 @@ impl EngineBuilder {
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
-            vsync: self.vsync
+            vsync: self.vsync,
         }
     }
 
@@ -1070,7 +1113,6 @@ impl Default for EngineBuilder {
     }
 }
 
-
 /// All the errors that can occur when creating core engine resources
 #[derive(Debug)]
 pub enum BuildError {
@@ -1085,18 +1127,18 @@ pub enum BuildError {
     /// Occurs when the WGPU device cannot be made. This usually
     /// means the OS does not support the minimum graphics features.
     RequestDeviceError(RequestDeviceError),
-    #[cfg(target_arch="wasm32")]
+    #[cfg(target_arch = "wasm32")]
     /// This occurs when the code cannot fetch the JavaScript Window element.
     CantGetWebWindow,
-    #[cfg(target_arch="wasm32")]
+    #[cfg(target_arch = "wasm32")]
     /// This occurs when the Document element cannout be found.
     CantGetDocument,
-    #[cfg(target_arch="wasm32")]
+    #[cfg(target_arch = "wasm32")]
     /// This is any error that can come from the calling of JavaScript
     /// APIs.
     CantGetBody,
-    #[cfg(target_arch="wasm32")]
-    JsError(wasm_bindgen::JsValue)
+    #[cfg(target_arch = "wasm32")]
+    JsError(wasm_bindgen::JsValue),
 }
 
 impl std::fmt::Display for BuildError {
@@ -1106,13 +1148,13 @@ impl std::fmt::Display for BuildError {
             Self::CreateSurfaceError(e) => write!(f, "{}", e),
             Self::FailedToCreateAdapter => write!(f, "unable to create Adapater"),
             Self::RequestDeviceError(e) => write!(f, "{}", e),
-            #[cfg(target_arch="wasm32")]
+            #[cfg(target_arch = "wasm32")]
             Self::CantGetWebWindow => write!(f, "could not get web Window"),
-            #[cfg(target_arch="wasm32")]
+            #[cfg(target_arch = "wasm32")]
             Self::CantGetDocument => write!(f, "could not get HTML document"),
-            #[cfg(target_arch="wasm32")]
+            #[cfg(target_arch = "wasm32")]
             Self::CantGetBody => write!(f, "could nto get HTML body tag"),
-            #[cfg(target_arch="wasm32")]
+            #[cfg(target_arch = "wasm32")]
             Self::JsError(e) => write!(f, "{:?}", e),
         }
     }
@@ -1138,7 +1180,7 @@ impl From<RequestDeviceError> for BuildError {
     }
 }
 
-#[cfg(target_arch="wasm32")]
+#[cfg(target_arch = "wasm32")]
 impl From<wasm_bindgen::JsValue> for BuildError {
     fn from(value: wasm_bindgen::JsValue) -> Self {
         Self::JsError(value)

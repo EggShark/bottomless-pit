@@ -2,10 +2,10 @@
 //! functions and logic to draw things to the screen
 
 use crate::engine_handle::{Engine, WgpuClump};
-use crate::Game;
-use crate::resource::{ResourceManager, ResourceId};
+use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
 use crate::vectors::Vec2;
+use crate::Game;
 
 pub(crate) fn make_pipeline(
     device: &wgpu::Device,
@@ -82,7 +82,10 @@ pub struct RenderInformation<'pass, 'others> {
     pub(crate) wgpu: &'others WgpuClump,
 }
 
-pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::SurfaceError> where T: Game, {
+pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::SurfaceError>
+where
+    T: Game,
+{
     // there is a chance an .unwrap() would panic bc of an unloaded resource
     if engine.is_loading() {
         return Ok(());
@@ -90,13 +93,15 @@ pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::S
 
     let wgpu = engine.get_wgpu();
     let output = engine.get_current_texture()?;
-    let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+    let view = output
+        .texture
+        .create_view(&wgpu::TextureViewDescriptor::default());
     let mut encoder = wgpu
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Encoder"),
         });
-    
+
     let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some("Render Pass"),
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -127,6 +132,6 @@ pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::S
 
     wgpu.queue.submit(std::iter::once(encoder.finish()));
     output.present();
-    
+
     Ok(())
 }

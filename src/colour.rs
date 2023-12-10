@@ -69,10 +69,10 @@ impl Colour {
         r: 0.63529414,
         g: 0.16470589,
         b: 0.16470589,
-        a: 1.0
+        a: 1.0,
     };
 
-    /// Takes a hex string like `#805E4E` and turns into a colour. Can fail if an 
+    /// Takes a hex string like `#805E4E` and turns into a colour. Can fail if an
     /// invaild string is provided
     pub fn from_hex(hex_str: &str) -> Result<Self, std::num::ParseIntError> {
         let colour_values = i32::from_str_radix(hex_str, 16)?;
@@ -97,7 +97,7 @@ impl Colour {
         }
     }
 
-    /// Interpolates between two colours by the specified fraction which should be between 1.0 
+    /// Interpolates between two colours by the specified fraction which should be between 1.0
     /// and 0.0
     pub fn linear_interpolation(start: Colour, end: Colour, fraction: f32) -> Self {
         Self {
@@ -117,7 +117,7 @@ impl From<Colour> for wgpu::Color {
     fn from(value: Colour) -> Self {
         wgpu::Color {
             r: value.r as f64,
-            g: value.g as f64, 
+            g: value.g as f64,
             b: value.b as f64,
             a: value.a as f64,
         }

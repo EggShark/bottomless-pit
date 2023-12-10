@@ -1,7 +1,7 @@
 use crate::{
-    glyphon::FontSystem, glyphon::GlyphDetails, glyphon::GlyphToRender, glyphon::GpuCacheStatus, glyphon::Params,
-    glyphon::PrepareError, glyphon::RenderError, glyphon::Resolution, glyphon::SwashCache, glyphon::SwashContent,
-    glyphon::TextArea, glyphon::TextAtlas,
+    glyphon::FontSystem, glyphon::GlyphDetails, glyphon::GlyphToRender, glyphon::GpuCacheStatus,
+    glyphon::Params, glyphon::PrepareError, glyphon::RenderError, glyphon::Resolution,
+    glyphon::SwashCache, glyphon::SwashContent, glyphon::TextArea, glyphon::TextAtlas,
 };
 use std::{iter, mem::size_of, slice, sync::Arc};
 use wgpu::{
@@ -110,8 +110,11 @@ impl TextRenderer {
                     {
                         atlas.color_atlas.promote(physical_glyph.cache_key);
                     } else {
-                        let Some(image) = cache
-                            .get_image_uncached(font_system, physical_glyph.cache_key) else { continue };
+                        let Some(image) =
+                            cache.get_image_uncached(font_system, physical_glyph.cache_key)
+                        else {
+                            continue;
+                        };
 
                         let content_type = match image.content {
                             SwashContent::Color => ContentType::Color,

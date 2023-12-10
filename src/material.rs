@@ -3,7 +3,7 @@
 //! ```rust,no_run
 //! // Simple code to draw a 100x100 red rectangle to the screen
 //! let defualt_material = MaterialBuilder::new().build();
-//! 
+//!
 //! impl Game for Struct {
 //!     fn render<'pass, 'others>(&mut Self, mut renderer: RenderInformation<'pass, 'others>) where 'others: 'pass {
 //!         self.defualt_material.add_rectangle(Vec2{x: 0.0, y: 0.0}, Vec2{x: 100.0, y: 100.0}, Colour::RED, &renderer);
@@ -15,15 +15,15 @@ use std::f32::consts::PI;
 use encase::private::WriteInto;
 use encase::ShaderType;
 
-use crate::matrix_math::normalize_points;
-use crate::resource::ResourceId;
-use crate::texture::Texture;
-use crate::vertex::{self, Vertex, LineVertex};
-use crate::engine_handle::{WgpuClump, Engine};
-use crate::vectors::Vec2;
 use crate::colour::Colour;
+use crate::engine_handle::{Engine, WgpuClump};
+use crate::matrix_math::normalize_points;
 use crate::render::RenderInformation;
-use crate::shader::{UniformData, Shader};
+use crate::resource::ResourceId;
+use crate::shader::{Shader, UniformData};
+use crate::texture::Texture;
+use crate::vectors::Vec2;
+use crate::vertex::{self, LineVertex, Vertex};
 
 /// A material represents a unique combination of a Texture
 /// and RenderPipeline, while also containing all nessicary buffers
@@ -60,13 +60,14 @@ impl Material {
             Some(data) => {
                 let (buffer, bg) = data.extract_buffer_and_bindgroup(wgpu);
                 (Some(buffer), Some(bg))
-            },
+            }
             None => (None, None),
         };
 
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
         let index_size = std::mem::size_of::<u16>() as u64;
-        let (vertex_buffer, index_buffer) = Self::create_buffers(&wgpu.device, vertex_size, 50, index_size, 50);
+        let (vertex_buffer, index_buffer) =
+            Self::create_buffers(&wgpu.device, vertex_size, 50, index_size, 50);
 
         Self {
             pipeline_id,
@@ -87,26 +88,45 @@ impl Material {
     }
 
     /// Will queue a Rectangle to be draw.
-    pub fn add_rectangle(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
+    pub fn add_rectangle(
+        &mut self,
+        position: Vec2<f32>,
+        size: Vec2<f32>,
+        colour: Colour,
+        render: &RenderInformation,
+    ) {
         let window_size = render.size;
         let wgpu = render.wgpu;
-        let verts =
-            vertex::from_pixels(position, size, colour.as_raw(), window_size);
+        let verts = vertex::from_pixels(position, size, colour.as_raw(), window_size);
 
         self.push_rectangle(wgpu, verts);
     }
 
     /// Queues a rectangle using WGSL cordinate space. (0, 0) is the center of the screen and (-1, 1) is the top left corner
-    pub fn add_screenspace_rectangle(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
+    pub fn add_screenspace_rectangle(
+        &mut self,
+        position: Vec2<f32>,
+        size: Vec2<f32>,
+        colour: Colour,
+        render: &RenderInformation,
+    ) {
         let wgpu = render.wgpu;
 
         let verts = vertex::new(position, size, colour.as_raw());
         self.push_rectangle(wgpu, verts);
     }
 
-    /// Queues a rectagnle with UV coordniates. The position and size of the UV cordniates are the same as the pixels in the 
+    /// Queues a rectagnle with UV coordniates. The position and size of the UV cordniates are the same as the pixels in the
     /// actaul image.
-    pub fn add_rectangle_with_uv(&mut self, position: Vec2<f32>, size: Vec2<f32>, uv_position: Vec2<f32>, uv_size: Vec2<f32>, colour: Colour, render: &RenderInformation) {
+    pub fn add_rectangle_with_uv(
+        &mut self,
+        position: Vec2<f32>,
+        size: Vec2<f32>,
+        uv_position: Vec2<f32>,
+        uv_size: Vec2<f32>,
+        colour: Colour,
+        render: &RenderInformation,
+    ) {
         let wgpu = render.wgpu;
         let window_size = render.size;
 
@@ -115,19 +135,37 @@ impl Material {
         let uv_size = normalize_points(uv_size, texture_size);
         let uv_position = normalize_points(uv_position, texture_size);
 
-        let verts = 
-            vertex::from_pixels_with_uv(position, size, colour.as_raw(), window_size, uv_position, uv_size);
+        let verts = vertex::from_pixels_with_uv(
+            position,
+            size,
+            colour.as_raw(),
+            window_size,
+            uv_position,
+            uv_size,
+        );
 
         self.push_rectangle(wgpu, verts);
     }
 
     /// Queues a rectangle that will be rotated around its centerpoint. Rotation is in degrees
-    pub fn add_rectangle_with_rotation(&mut self, position: Vec2<f32>, size: Vec2<f32>, colour: Colour, rotation: f32, render: &RenderInformation) {
+    pub fn add_rectangle_with_rotation(
+        &mut self,
+        position: Vec2<f32>,
+        size: Vec2<f32>,
+        colour: Colour,
+        rotation: f32,
+        render: &RenderInformation,
+    ) {
         let wgpu = render.wgpu;
         let window_size = render.size;
 
-        let verts =
-            vertex::from_pixels_with_rotation(position, size, colour.as_raw(), window_size, rotation);
+        let verts = vertex::from_pixels_with_rotation(
+            position,
+            size,
+            colour.as_raw(),
+            window_size,
+            rotation,
+        );
 
         self.push_rectangle(wgpu, verts);
     }
@@ -142,7 +180,7 @@ impl Material {
         rotation: f32,
         uv_position: Vec2<f32>,
         uv_size: Vec2<f32>,
-        render: &RenderInformation
+        render: &RenderInformation,
     ) {
         let wgpu = render.wgpu;
         let window_size = render.size;
@@ -152,12 +190,19 @@ impl Material {
         let uv_size = normalize_points(uv_size, texture_size);
         let uv_position = normalize_points(uv_position, texture_size);
 
-        let verts = 
-            vertex::from_pixels_ex(position, size, colour.as_raw(), window_size, rotation, uv_position, uv_size);
+        let verts = vertex::from_pixels_ex(
+            position,
+            size,
+            colour.as_raw(),
+            window_size,
+            rotation,
+            uv_position,
+            uv_size,
+        );
 
         self.push_rectangle(wgpu, verts);
     }
-    
+
     #[allow(clippy::too_many_arguments)]
     /// Queues a rectangle with both UV, and Rotation, but will draw the rectangle in WGSL screenspace
     pub fn add_screenspace_rectangle_ex(
@@ -168,19 +213,32 @@ impl Material {
         rotation: f32,
         uv_position: Vec2<f32>,
         uv_size: Vec2<f32>,
-        render: &RenderInformation
+        render: &RenderInformation,
     ) {
         let wgpu = render.wgpu;
-        
-        let verts = 
-            vertex::new_ex(position, size, colour.as_raw(), rotation, uv_position, uv_size);
+
+        let verts = vertex::new_ex(
+            position,
+            size,
+            colour.as_raw(),
+            rotation,
+            uv_position,
+            uv_size,
+        );
 
         self.push_rectangle(wgpu, verts);
     }
 
     /// Queues a 4 pointed polygon with complete control over uv coordinates and rotation. The points need to be in top left, right
     /// bottom right and bottom left order as it will not render porperly otherwise.
-    pub fn add_custom(&mut self, points: [Vec2<f32>; 4], uv_points: [Vec2<f32>; 4], rotation: f32, colour: Colour, render: &RenderInformation) {
+    pub fn add_custom(
+        &mut self,
+        points: [Vec2<f32>; 4],
+        uv_points: [Vec2<f32>; 4],
+        rotation: f32,
+        colour: Colour,
+        render: &RenderInformation,
+    ) {
         let wgpu = render.wgpu;
         let texture_size = render.resources.get_texture(&self.texture_id).unwrap().size;
         let uv_points = [
@@ -197,7 +255,14 @@ impl Material {
     }
 
     /// Queues a traingle, the points must be provided in clockwise order
-    pub fn add_triangle(&mut self, p1: Vec2<f32>, p2: Vec2<f32>, p3: Vec2<f32>, colour: Colour, render: &RenderInformation) {
+    pub fn add_triangle(
+        &mut self,
+        p1: Vec2<f32>,
+        p2: Vec2<f32>,
+        p3: Vec2<f32>,
+        colour: Colour,
+        render: &RenderInformation,
+    ) {
         let window_size = render.size;
         let wgpu = render.wgpu;
 
@@ -205,12 +270,9 @@ impl Material {
         let tex_coords = [0.0, 0.0];
 
         let verts = [
-            Vertex::from_2d([p1.x, p1.y], tex_coords, colour)
-                .pixels_to_screenspace(window_size),
-            Vertex::from_2d([p2.x, p2.y], tex_coords, colour)
-                .pixels_to_screenspace(window_size),
-            Vertex::from_2d([p3.x, p3.y], tex_coords, colour)
-                .pixels_to_screenspace(window_size),
+            Vertex::from_2d([p1.x, p1.y], tex_coords, colour).pixels_to_screenspace(window_size),
+            Vertex::from_2d([p2.x, p2.y], tex_coords, colour).pixels_to_screenspace(window_size),
+            Vertex::from_2d([p3.x, p3.y], tex_coords, colour).pixels_to_screenspace(window_size),
         ];
 
         self.push_triangle(wgpu, verts);
@@ -234,15 +296,22 @@ impl Material {
             Vertex::from_2d([points[1].x, points[1].y], tex_coords, colours[1].as_raw())
                 .pixels_to_screenspace(window_size),
             Vertex::from_2d([points[2].x, points[2].y], tex_coords, colours[2].as_raw())
-                .pixels_to_screenspace(window_size)
+                .pixels_to_screenspace(window_size),
         ];
 
         self.push_triangle(wgpu, verts);
     }
 
     /// Queues a polygon with the specified number of sides at a position with size and colour.
-    /// This will not play nicely with texture as all the UV coords will be at [0, 0]. 
-    pub fn add_regular_n_gon(&mut self, number_of_sides: usize, radius: f32, center: Vec2<f32>, colour: Colour, render: &RenderInformation) {
+    /// This will not play nicely with texture as all the UV coords will be at [0, 0].
+    pub fn add_regular_n_gon(
+        &mut self,
+        number_of_sides: usize,
+        radius: f32,
+        center: Vec2<f32>,
+        colour: Colour,
+        render: &RenderInformation,
+    ) {
         if number_of_sides < 4 {
             return;
         }
@@ -251,18 +320,16 @@ impl Material {
         let screen_size = render.size;
 
         let vertices = (0..number_of_sides)
-            .map(|num| {
-                Vec2 {
-                    x: radius * (2.0 * PI * num as f32 / number_of_sides as f32).cos() + center.x,
-                    y: radius * (2.0 * PI * num as f32 / number_of_sides as f32).sin() + center.y,
-                }
+            .map(|num| Vec2 {
+                x: radius * (2.0 * PI * num as f32 / number_of_sides as f32).cos() + center.x,
+                y: radius * (2.0 * PI * num as f32 / number_of_sides as f32).sin() + center.y,
             })
             .map(|point| {
                 Vertex::from_2d([point.x, point.y], [0.0, 0.0], colour.as_raw())
-                .pixels_to_screenspace(screen_size)   
+                    .pixels_to_screenspace(screen_size)
             })
             .collect::<Vec<Vertex>>();
-    
+
         let number_of_vertices = self.get_vertex_number() as u16;
         let number_of_triangles = (number_of_sides - 2) as u16;
 
@@ -285,17 +352,31 @@ impl Material {
         };
 
         for _ in 0..triangles_to_add {
-            indicies.extend_from_slice(&[indicies[num_indicies-3], indicies[num_indicies-2], indicies[num_indicies-1]]);
+            indicies.extend_from_slice(&[
+                indicies[num_indicies - 3],
+                indicies[num_indicies - 2],
+                indicies[num_indicies - 1],
+            ]);
         }
 
         let max_verts = self.vertex_buffer.size();
         if self.vertex_count + (vertices.len() as u64 * self.vertex_size) > max_verts {
-            grow_buffer(&mut self.vertex_buffer, wgpu, self.vertex_count + (vertices.len() as u64 * self.vertex_size), wgpu::BufferUsages::VERTEX);
+            grow_buffer(
+                &mut self.vertex_buffer,
+                wgpu,
+                self.vertex_count + (vertices.len() as u64 * self.vertex_size),
+                wgpu::BufferUsages::VERTEX,
+            );
         }
 
         let max_indicies = self.index_buffer.size();
         if self.index_count + (indicies.len() as u64 * self.index_size) > max_indicies {
-            grow_buffer(&mut self.index_buffer, wgpu, self.index_count + (indicies.len() as u64 * self.index_size), wgpu::BufferUsages::INDEX);
+            grow_buffer(
+                &mut self.index_buffer,
+                wgpu,
+                self.index_count + (indicies.len() as u64 * self.index_size),
+                wgpu::BufferUsages::INDEX,
+            );
         }
 
         wgpu.queue.write_buffer(
@@ -324,8 +405,8 @@ impl Material {
                 let byte_array = buffer.into_inner();
 
                 wgpu.queue.write_buffer(uniform_buffer, 0, &byte_array);
-            },
-            None => {},
+            }
+            None => {}
         }
     }
 
@@ -352,8 +433,12 @@ impl Material {
 
         let num_verts = self.get_vertex_number() as u16;
         let indicies = [
-            num_verts, 1 + num_verts, 2 + num_verts,
-            3 + num_verts, num_verts, 2 + num_verts,
+            num_verts,
+            1 + num_verts,
+            2 + num_verts,
+            3 + num_verts,
+            num_verts,
+            2 + num_verts,
         ];
 
         let max_indicies = self.index_buffer.size();
@@ -386,8 +471,12 @@ impl Material {
         // yes its wastefull to do this but this is the only way to not have
         // it mess up other drawings while also allowing triangles
         let indicies = [
-            num_verts, 1 + num_verts, 2 + num_verts,
-            num_verts, 1 + num_verts, 2 + num_verts,
+            num_verts,
+            1 + num_verts,
+            2 + num_verts,
+            num_verts,
+            1 + num_verts,
+            2 + num_verts,
         ];
 
         let max_indicies = self.index_buffer.size();
@@ -412,39 +501,64 @@ impl Material {
 
     // there where 'others: 'pass notation says that 'others lives longer than 'pass
     /// Draws all queued shapes to the screen.
-    pub fn draw<'pass, 'others>(&'others mut self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
+    pub fn draw<'pass, 'others>(
+        &'others mut self,
+        information: &mut RenderInformation<'pass, 'others>,
+    ) where
+        'others: 'pass,
+    {
         if self.vertex_count == 0 {
             return;
         }
 
-        let pipeline = &information.resources.get_pipeline(&self.pipeline_id).unwrap().pipeline;
-        let texture = &information.resources.get_texture(&self.texture_id).unwrap().bind_group;
+        let pipeline = &information
+            .resources
+            .get_pipeline(&self.pipeline_id)
+            .unwrap()
+            .pipeline;
+        let texture = &information
+            .resources
+            .get_texture(&self.texture_id)
+            .unwrap()
+            .bind_group;
 
         information.render_pass.set_pipeline(pipeline);
         information.render_pass.set_bind_group(0, texture, &[]);
 
         match &self.uniform_bindgroup {
             Some(bg) => information.render_pass.set_bind_group(2, bg, &[]),
-            None => {},
+            None => {}
         }
 
-        information.render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
+        information
+            .render_pass
+            .set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
         information.render_pass.set_index_buffer(
             self.index_buffer.slice(0..self.index_count),
             wgpu::IndexFormat::Uint16,
         );
 
-        information.render_pass.draw_indexed(0..self.get_index_number() as u32, 0, 0..1);
+        information
+            .render_pass
+            .draw_indexed(0..self.get_index_number() as u32, 0, 0..1);
 
         self.vertex_count = 0;
         self.index_count = 0;
     }
 
-    pub(crate) fn create_buffers(device: &wgpu::Device, vertex_size: u64, vert_count: u64, index_size: u64, index_count: u64) -> (wgpu::Buffer, wgpu::Buffer) {
+    pub(crate) fn create_buffers(
+        device: &wgpu::Device,
+        vertex_size: u64,
+        vert_count: u64,
+        index_size: u64,
+        index_count: u64,
+    ) -> (wgpu::Buffer, wgpu::Buffer) {
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Vertex_Buffer"),
             size: vertex_size * vert_count,
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            usage: wgpu::BufferUsages::VERTEX
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
 
@@ -452,7 +566,9 @@ impl Material {
         let index_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Index_Buffer"),
             size: index_size * index_count,
-            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            usage: wgpu::BufferUsages::INDEX
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
 
@@ -471,7 +587,7 @@ pub struct MaterialBuilder<'a> {
 
 impl<'a> MaterialBuilder<'a> {
     /// Creates a new MaterialBuilder, that contains no texture, custom shaders, or
-    /// uniforms 
+    /// uniforms
     pub fn new() -> Self {
         Self {
             texture_change: None,
@@ -488,7 +604,6 @@ impl<'a> MaterialBuilder<'a> {
             uniform_data: self.uniform_data,
         }
     }
-
 
     /// Sets the initial Uniform data for the shader
     pub fn set_uniform(self, data: &'a UniformData) -> Self {
@@ -538,7 +653,9 @@ impl LineMaterial {
 
         let vertex_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Line material vertex buffer"),
-            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
+            usage: wgpu::BufferUsages::VERTEX
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
             size: vertex_size * 100,
             mapped_at_creation: false,
         });
@@ -552,15 +669,19 @@ impl LineMaterial {
     }
 
     /// Queues a line from the two points.
-    pub fn add_line(&mut self, start: Vec2<f32>, end: Vec2<f32>, colour: Colour, renderer: &RenderInformation) {
+    pub fn add_line(
+        &mut self,
+        start: Vec2<f32>,
+        end: Vec2<f32>,
+        colour: Colour,
+        renderer: &RenderInformation,
+    ) {
         let screen_size = renderer.size;
         let wgpu = renderer.wgpu;
 
         let verts = [
-            LineVertex::new(start.to_raw(), colour.as_raw())
-                .pixels_to_screenspace(screen_size),
-            LineVertex::new(end.to_raw(), colour.as_raw())
-                .pixels_to_screenspace(screen_size),
+            LineVertex::new(start.to_raw(), colour.as_raw()).pixels_to_screenspace(screen_size),
+            LineVertex::new(end.to_raw(), colour.as_raw()).pixels_to_screenspace(screen_size),
         ];
 
         let max_verts = self.vertex_buffer.size();
@@ -577,30 +698,51 @@ impl LineMaterial {
 
         self.vertex_count += 2 * self.vertex_size;
     }
-    
-    /// Draws all queued lines to the screen.
-    pub fn draw<'pass, 'others>(&'others mut self, information: &mut RenderInformation<'pass, 'others>) where 'others: 'pass, {
-        let pipeline = &information.resources.get_pipeline(&self.pipe_id).unwrap().pipeline;
-        
-        information.render_pass.set_pipeline(pipeline);
-        information.render_pass.set_bind_group(0, information.camera_bindgroup, &[]);
-        information.render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
 
-        information.render_pass.draw(0..self.get_vertex_count() as u32, 0..1);
+    /// Draws all queued lines to the screen.
+    pub fn draw<'pass, 'others>(
+        &'others mut self,
+        information: &mut RenderInformation<'pass, 'others>,
+    ) where
+        'others: 'pass,
+    {
+        let pipeline = &information
+            .resources
+            .get_pipeline(&self.pipe_id)
+            .unwrap()
+            .pipeline;
+
+        information.render_pass.set_pipeline(pipeline);
+        information
+            .render_pass
+            .set_bind_group(0, information.camera_bindgroup, &[]);
+        information
+            .render_pass
+            .set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
+
+        information
+            .render_pass
+            .draw(0..self.get_vertex_count() as u32, 0..1);
 
         self.vertex_count = 0;
     }
-    
-    pub fn get_vertex_count(&self) -> u64 {
-        self.vertex_count/self.vertex_size
-    }
 
+    pub fn get_vertex_count(&self) -> u64 {
+        self.vertex_count / self.vertex_size
+    }
 }
 
-pub(crate) fn grow_buffer(buffer: &mut wgpu::Buffer, wgpu: &WgpuClump, size_needed: u64, vert_or_index: wgpu::BufferUsages) {
-    let mut encoder = wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-        label: Some("Material Buffer Grower"),
-    });
+pub(crate) fn grow_buffer(
+    buffer: &mut wgpu::Buffer,
+    wgpu: &WgpuClump,
+    size_needed: u64,
+    vert_or_index: wgpu::BufferUsages,
+) {
+    let mut encoder = wgpu
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("Material Buffer Grower"),
+        });
 
     let size_needed = size_needed + (4 - (size_needed % wgpu::COPY_BUFFER_ALIGNMENT));
 
@@ -612,17 +754,9 @@ pub(crate) fn grow_buffer(buffer: &mut wgpu::Buffer, wgpu: &WgpuClump, size_need
         mapped_at_creation: false,
     });
 
-    encoder.copy_buffer_to_buffer(
-        buffer,
-        0,
-        &new_buffer,
-        0,
-        buffer.size(),
-    );
+    encoder.copy_buffer_to_buffer(buffer, 0, &new_buffer, 0, buffer.size());
 
-    wgpu.
-        queue
-        .submit(std::iter::once(encoder.finish()));
+    wgpu.queue.submit(std::iter::once(encoder.finish()));
 
     *buffer = new_buffer;
 }
