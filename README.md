@@ -4,10 +4,11 @@ This library is inspired slightly by Raylib and other rust based game engines li
 All Bottomless-pit does currently is handle keyboard and mouse input while also providing
 a simple way to draw objects to the screen. The shape and texutre renderer is written
 in house, but the text rendering is powered by [glyphon](https://github.com/grovesNL/glyphon).
-
 To get started start by implmenting the Game trait on any struct you like
 ```rust,no_run
-use bottomless_pit::{Engine, EngineBuilder, Renderer, Game};
+use bottomless_pit::Game;
+use bottomless_pit::engine_handle::{Engine, EngineBuilder};
+use bottomless_pit::render::RenderInformation;
 fn main() {
     let engine = EngineBuilder::new()
         .build()
@@ -27,7 +28,7 @@ impl CoolGame {
 }
 
 impl Game for CoolGame {
-    fn render(&self, render_handle: &mut Renderer) {
+    fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
         // render what ever you want
     }
     fn update(&mut self, engine_handle: &mut Engine) {
