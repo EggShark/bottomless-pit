@@ -614,6 +614,9 @@ impl Engine {
         Vec2{x: run_width, y: height}
     }
 
+    /// Loads in a byte vector resource, can be used to load arbitary files. This will halt
+    /// the engine utill it is done loading. For more information on this behavoir see the
+    /// [resource module](crate::resource)
     pub fn create_resource<P: AsRef<Path>>(&mut self, path: P) -> ResourceId<Vec<u8>> {
         let typed_id = resource::generate_id::<Vec<u8>>();
         let id = typed_id.get_id();
@@ -626,6 +629,11 @@ impl Engine {
         typed_id
     }
 
+    /// Attemps to fetch a byte resource.
+    /// 
+    /// Returns `None` if the resource isnt loaded yet. Resources will always be available
+    /// on the next frame after being requested. Please see the [resource module](crate::resource)
+    /// for more information.
     pub fn get_byte_resource(&self, id: ResourceId<Vec<u8>>) -> Option<&Vec<u8>> {
         self.resource_manager.get_byte_resource(&id)
     }
@@ -1062,17 +1070,30 @@ impl Default for EngineBuilder {
     }
 }
 
+
+/// All the errors that can occur when creating core engine resources
 #[derive(Debug)]
 pub enum BuildError {
+    /// Occurs when the operating system cannot do certain actions,
+    /// typically means the window could not be created.
     WindowOsError(OsError),
+    /// Happens when the surface cannont be created. This can happen
+    /// on certian OS's or when the browser does not suport WebGL
     CreateSurfaceError(CreateSurfaceError),
+    /// Occurs when the WGPU adapter cannot be found.
     FailedToCreateAdapter,
+    /// Occurs when the WGPU device cannot be made. This usually
+    /// means the OS does not support the minimum graphics features.
     RequestDeviceError(RequestDeviceError),
     #[cfg(target_arch="wasm32")]
+    /// This occurs when the code cannot fetch the JavaScript Window element.
     CantGetWebWindow,
     #[cfg(target_arch="wasm32")]
+    /// This occurs when the Document element cannout be found.
     CantGetDocument,
     #[cfg(target_arch="wasm32")]
+    /// This is any error that can come from the calling of JavaScript
+    /// APIs.
     CantGetBody,
     #[cfg(target_arch="wasm32")]
     JsError(wasm_bindgen::JsValue)
@@ -1124,11 +1145,13 @@ impl From<wasm_bindgen::JsValue> for BuildError {
     }
 }
 
-//impl std::error::Error for BuildError {}
-
+/// Errors that can occur when setting the window Icon.
 #[derive(Debug)]
 pub enum IconError {
+    /// Occurs because the image does not meet certain
+    /// requirments please see [winit docs](https://docs.rs/winit/latest/winit/window/enum.BadIcon.html).
     BadIcon(BadIcon),
+    /// The image file was not a valid image
     IconLoadingError(ImageError),
 }
 

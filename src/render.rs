@@ -67,7 +67,12 @@ pub(crate) fn make_pipeline(
 
 /// RenderInformation contains all the information needed to render objects to the sreen.
 /// You should never have to worry about lifetimes as the way the event loop is strutured
-/// RenderInformation will live long enough, just properly annotate your functions.
+/// RenderInformation will live long enough, just properly annotate your functions like so:
+/// ```rust
+/// fn render<'a, 'b>(&'b mut self, mut render_handle: RenderInformation<'a, 'b>) where 'b: 'a {
+///     // do something here
+/// }
+/// ```
 pub struct RenderInformation<'pass, 'others> {
     pub(crate) size: Vec2<u32>,
     pub(crate) render_pass: wgpu::RenderPass<'pass>,

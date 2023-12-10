@@ -1,4 +1,4 @@
-//! Generic implmentation of both 2D and 3D vectors
+//! Generic implmentation of 2D Vectors
 
 use std::ops::{Add, Sub};
 

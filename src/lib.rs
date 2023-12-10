@@ -63,7 +63,7 @@ use render::RenderInformation;
 pub trait Game {
     /// Rendering code goes here
     fn render<'pass, 'others>(&'others mut self, render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass;
-    /// updating code goes here
+    /// Updating code goes here
     fn update(&mut self, engine_handle: &mut Engine);
     /// Things to do when the window closes
     fn on_close(&self) {}

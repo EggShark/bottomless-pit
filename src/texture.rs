@@ -153,16 +153,10 @@ impl Texture {
     }
 }
 
-
-/// A struct that contains an Id and the size of a texture stored interally. This
-/// can only be obtained after registering a texture and its only purpose is to 
-/// be added to a [Material](../material/struct.Material.html).
-pub type RegisteredTexture = wgpu::BindGroup;
-
 /// Loading a texture can fail in two senarios. Either the file cant be opened, or the
 /// file loaded is not a supported image file type.
 #[derive(Debug)]
-pub enum TextureError {
+pub(crate) enum TextureError {
     IoError(Error),
     ImageError(ImageError),
 }
