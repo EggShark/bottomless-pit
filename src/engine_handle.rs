@@ -106,19 +106,21 @@ impl Engine {
         {
             use winit::platform::web::WindowExtWebSys;
             let web_window = web_sys::window().ok_or(BuildError::CantGetWebWindow)?;
-            let document = web_window.document().ok_or(BuildError::CantGetDocument)?;
             let canvas = web_sys::Element::from(window.canvas());
-            canvas.set_id(&builder.window_title);
+            let document = web_window.document().ok_or(BuildError::CantGetDocument)?;
 
             match document.get_element_by_id(&builder.window_title) {
                 Some(element) => {
-                    element.append_child(&canvas)?;
+                    let array = js_sys::Array::new();
+                    array.push(&wasm_bindgen::JsValue::from(canvas));
+                    element.replace_with_with_node(&array)?;
                 }
                 None => {
                     log::warn!(
-                        "coudn't find desitantion <div> with id: {}, appending to body",
+                        "coudn't find desitantion <canvas> with id: {}, appending to body",
                         builder.window_title
                     );
+                    canvas.set_id(&builder.window_title);
                     let body = document.body().ok_or(BuildError::CantGetBody)?;
                     body.append_child(&canvas)?;
                 }
