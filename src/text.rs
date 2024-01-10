@@ -128,11 +128,10 @@ pub struct TextMaterial {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     texture: wgpu::Texture,
-    texture_view: wgpu::TextureView,
+    // texture_view: wgpu::TextureView,
     bind_group: wgpu::BindGroup,
     vertex_count: u64,
     index_count: u64,
-    change_flag: bool,
 }
 
 impl TextMaterial {
@@ -143,29 +142,26 @@ impl TextMaterial {
         line_height: f32,
         engine: &mut Engine,
     ) -> Self {
-        let window_size = engine.get_window_size();
-        let scale_factor = engine.get_window_scale_factor();
         let font_info = FontInformation::new(engine);
 
         let mut text_buffer = glyphon::Buffer::new(
             &mut font_info.text_handle.font_system,
             Metrics::new(font_size, line_height),
         );
-        let phyisical_width = (window_size.x as f64 * scale_factor) as f32;
-        let phyiscal_hieght = (window_size.y as f64 * scale_factor) as f32;
-
+        
         text_buffer.set_size(
             &mut font_info.text_handle.font_system,
-            phyisical_width,
-            phyiscal_hieght,
+            f32::MAX,
+            f32::MAX,
         );
+
         text_buffer.set_text(
             &mut font_info.text_handle.font_system,
             text,
             Attrs::new()
                 .color(colour.into())
                 .family(Family::Name(&font_info.text_handle.defualt_font_name)),
-            Shaping::Basic,
+            Shaping::Advanced,
         );
 
         let hieght = text_buffer.lines.len() as f32 * text_buffer.metrics().line_height;
@@ -181,8 +177,8 @@ impl TextMaterial {
             .create_texture(&wgpu::TextureDescriptor {
                 label: Some("Text Texture"),
                 size: wgpu::Extent3d {
-                    width: hieght.ceil() as u32,
-                    height: run_width.ceil() as u32,
+                    width: run_width.ceil() as u32,
+                    height: hieght.ceil() as u32,
                     depth_or_array_layers: 1,
                 },
                 mip_level_count: 1,
@@ -201,10 +197,12 @@ impl TextMaterial {
                 y: i32::MAX,
             },
         };
+
         let texture_size = Vec2 {
             x: run_width.ceil() as u32,
             y: hieght.ceil() as u32,
         };
+
         let texture_view = texture.create_view(&Default::default());
 
         render_text_to_texture(
@@ -215,6 +213,7 @@ impl TextMaterial {
             &texture_view,
             font_info.wgpu,
         );
+
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
 
         let (vertex_buffer, index_buffer) =
@@ -246,12 +245,10 @@ impl TextMaterial {
             text_buffer,
             vertex_buffer,
             index_buffer,
-            texture_view,
             texture,
             bind_group,
             vertex_count: 0,
             index_count: 0,
-            change_flag: false,
         }
     }
 
@@ -268,7 +265,7 @@ impl TextMaterial {
             Shaping::Basic,
         );
 
-        self.update_measurements(font_info.wgpu);
+        self.update_measurements(font_info);
     }
 
     /// Sets the text for the widget, but with a font of your choosing.
@@ -296,7 +293,7 @@ impl TextMaterial {
             Shaping::Basic,
         );
 
-        self.update_measurements(font_info.wgpu);
+        self.update_measurements(font_info);
     }
 
     /// Sets bounds for the text. Any text drawn outside of the bounds will be cropped
@@ -315,7 +312,7 @@ impl TextMaterial {
         self.text_buffer
             .set_metrics(&mut font_info.text_handle.font_system, metrics);
 
-        self.update_measurements(font_info.wgpu);
+        self.update_measurements(font_info);
     }
 
     /// Sets the line hieght of the tex
@@ -326,7 +323,7 @@ impl TextMaterial {
         self.text_buffer
             .set_metrics(&mut font_info.text_handle.font_system, metrics);
 
-        self.update_measurements(font_info.wgpu);
+        self.update_measurements(font_info);
     }
 
     /// Measuers the text contained within the widget
@@ -334,7 +331,7 @@ impl TextMaterial {
         self.size
     }
 
-    fn update_measurements(&mut self, wgpu: &WgpuClump) {
+    fn update_measurements(&mut self, font_info: FontInformation) {
         let hieght = self.text_buffer.lines.len() as f32 * self.text_buffer.metrics().line_height;
         let run_width = self
             .text_buffer
@@ -348,7 +345,7 @@ impl TextMaterial {
             y: hieght.ceil() as u32,
         };
 
-        self.texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
+        self.texture = font_info.wgpu.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Text Texture"),
             size: wgpu::Extent3d {
                 width: self.size.x,
@@ -362,8 +359,6 @@ impl TextMaterial {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
-
-        self.change_flag = true;
     }
 
     /// Queues a peice of text at the specified position. Its size will be the size of the entire
@@ -587,16 +582,34 @@ impl TextMaterial {
         self.index_count / 2
     }
 
-    pub fn prepare(&self, engine: &mut Engine) {
+    pub fn prepare(&mut self, engine: &mut Engine) {
         let font_info = FontInformation::new(engine);
+        let texture_view = self.texture.create_view(&wgpu::TextureViewDescriptor::default());
         render_text_to_texture(
             font_info.text_handle,
             &self.text_buffer,
             self.bounds,
             self.size,
-            &self.texture_view,
+            &texture_view,
             font_info.wgpu,
         );
+
+        drop(font_info);
+
+        self.bind_group = engine.wgpu_clump.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Text Widget BindGroup"),
+            layout: &layouts::create_texture_layout(&engine.wgpu_clump.device),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(engine.get_texture_sampler()),
+                },
+            ],
+        });
     }
 
     /// Draws all queued text instances to the screen

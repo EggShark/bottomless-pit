@@ -72,7 +72,7 @@ impl Engine {
         cfg_if::cfg_if! {
             if #[cfg(target_arch = "wasm32")] {
                 std::panic::set_hook(Box::new(console_error_panic_hook::hook));
-                console_log::init_with_level(log::Level::Warn).expect("Couldn't initialize logger");
+                console_log::init_with_level(log::Level::Info).expect("Couldn't initialize logger");
             } else {
                 env_logger::init();
             }
@@ -784,7 +784,12 @@ impl Engine {
 
     fn update(&mut self, control_flow: &mut ControlFlow) {
         self.last_frame = Instant::now();
-        // self.renderer.bind_group_cache.cache_update();
+
+        if self.should_close {
+            *control_flow = ControlFlow::Exit;
+            return;
+        }
+
         self.input_handle.end_of_frame_refresh();
         if let Some(key) = self.close_key {
             if self.input_handle.is_key_down(key) {

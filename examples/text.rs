@@ -14,9 +14,9 @@ fn main() {
         .unwrap();
 
     let comic = Font::new("examples/Comic.ttf", &mut engine);
-    let text_mat = TextMaterial::new("AA", Colour::RED, 100.0, 100.0, &mut engine);
+    let text_mat = TextMaterial::new("this is a test", Colour::RED, 0.5, 0.5 * 1.3, &mut engine);
 
-    let text_example = TextExample { text_mat, comic };
+    let text_example = TextExample { text_mat, comic, font_size: 0.5};
 
     engine.run(text_example);
 }
@@ -24,6 +24,7 @@ fn main() {
 struct TextExample {
     text_mat: TextMaterial,
     comic: ResourceId<Font>,
+    font_size: f32,
 }
 
 impl Game for TextExample {
@@ -46,11 +47,16 @@ impl Game for TextExample {
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
+        self.font_size += 2.0 * engine_handle.get_frame_delta_time();
+
+        self.text_mat.set_font_size(self.font_size, engine_handle);
+        self.text_mat.set_line_height(self.font_size * 1.3, engine_handle);
+
         if engine_handle.is_mouse_key_pressed(MouseKey::Left) {
             self.text_mat
-                .set_text_with_font("hel", Colour::GREEN, &self.comic, engine_handle);
-            self.text_mat.set_font_size(40.0, engine_handle);
-            self.text_mat.prepare(engine_handle);
+                .set_text_with_font("hello I am talking to you here???", Colour::GREEN, &self.comic, engine_handle);
         }
+
+        self.text_mat.prepare(engine_handle);
     }
 }
