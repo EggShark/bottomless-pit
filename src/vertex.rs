@@ -1,6 +1,4 @@
-use crate::matrix_math::calculate_rotation_matrix;
 use crate::vectors::Vec2;
-use cgmath::{Matrix4, Transform, Vector4};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -52,16 +50,13 @@ impl Vertex {
     }
 
     pub(crate) fn rotate(mut self, rotation: f32, center: Vec2<f32>) -> Self {
-        let rotaion_matrix = calculate_rotation_matrix(rotation);
-        let translation_matrix = Matrix4::from_translation(cgmath::vec3(center.x, center.y, 0.0));
-        let inverse_translation =
-            translation_matrix
-                .inverse_transform()
-                .unwrap_or(cgmath::Matrix4::new(
-                    1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
-                ));
-        let vec4 = Vector4::new(self.position[0], self.position[1], 1.0, 1.0);
-        let out = translation_matrix * rotaion_matrix * inverse_translation * vec4;
+        let rotaion_matrix = glam::Mat3::from_angle(rotation.to_radians());
+        let translation_matrix = glam::Mat3::from_translation(center.into());
+        let inverse_translation = translation_matrix.inverse();
+        let combined = translation_matrix * rotaion_matrix * inverse_translation;
+
+        let glam_2d = glam::vec2(self.position[0], self.position[1]);
+        let out = combined.transform_point2(glam_2d);
 
         self.position[0] = out.x;
         self.position[1] = out.y;

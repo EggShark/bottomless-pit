@@ -58,12 +58,18 @@ impl<T> From<winit::dpi::PhysicalSize<T>> for Vec2<T> {
     }
 }
 
-impl<T> From<cgmath::Vector2<T>> for Vec2<T> {
-    fn from(value: cgmath::Vector2<T>) -> Vec2<T> {
-        Vec2 {
+impl From<glam::Vec2> for Vec2<f32> {
+    fn from(value: glam::Vec2) -> Self {
+        Self {
             x: value.x,
             y: value.y,
         }
+    }
+}
+
+impl Into<glam::Vec2> for Vec2<f32> {
+    fn into(self) -> glam::Vec2 {
+        glam::Vec2 { x: self.x, y: self.y }
     }
 }
 

@@ -7,15 +7,3 @@ pub fn normalize_points<T: std::ops::Div<Output = T>>(point: Vec2<T>, size: Vec2
     let y = point.y / size.y;
     Vec2 { x, y }
 }
-
-#[rustfmt::skip]
-/// Helper function to make a 2d rotation matrix
-pub fn calculate_rotation_matrix(degree: f32) -> cgmath::Matrix4<f32> {
-    let degree = degree.to_radians();
-    cgmath::Matrix4::new(
-        degree.cos(), -degree.sin(), 0.0, 0.0,
-        degree.sin(), degree.cos(), 0.0, 0.0,
-        0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 1.0,
-    )
-}
