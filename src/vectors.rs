@@ -1,6 +1,6 @@
 //! Generic implmentation of 2D Vectors
 
-use std::ops::{Add, Sub};
+use std::ops::{Add, Sub, AddAssign, Mul};
 
 /// A generic representation of 2D data
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -16,6 +16,12 @@ impl<T> Vec2<T> {
 
     pub fn to_raw(self) -> [T; 2] {
         [self.x, self.y]
+    }
+}
+
+impl<T: Mul<Output = T> + Copy> Vec2<T> {
+    pub fn scale(self, number: T) -> Vec2<T>{
+        Vec2{x: self.x * number, y: self.y * number}
     }
 }
 
@@ -77,6 +83,15 @@ impl<T: Sub<Output = T>> Sub for Vec2<T> {
         Self {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
+        }
+    }
+}
+
+impl<T: Add<Output = T> + Copy> AddAssign for Vec2<T> {
+    fn add_assign(&mut self, rhs: Self) {
+        *self = Self {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
         }
     }
 }
