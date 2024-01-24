@@ -44,7 +44,7 @@ impl Vertex {
     pub(crate) fn pixels_to_screenspace(mut self, screen_size: Vec2<u32>) -> Self {
         let width = screen_size.x as f32;
         let height = screen_size.y as f32;
-        self.position[0] = (2.0 * self.position[0] / width) - 1.0;
+        self.position[0] = 2.0 * self.position[0] / width - 1.0;
         self.position[1] = ((2.0 * self.position[1] / height) - 1.0) * -1.0;
         self
     }

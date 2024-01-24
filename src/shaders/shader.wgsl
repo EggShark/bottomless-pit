@@ -1,5 +1,5 @@
 struct CameraUniform {
-    view_proj: mat4x4<f32>,
+    view_proj: mat3x3<f32>,
 }
 
 @group(1) @binding(0)
@@ -22,7 +22,16 @@ struct VertexOutput {
 fn vs_main(model: VertexInput) -> VertexOutput {
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
-    out.clip_position = camera.view_proj * vec4<f32>(model.position, 0.0, 1.0); // the vectors on the right the matrices go on the left in order of importance
+    
+    // out.clip_position = vec4(camera.view_proj * vec3<f32>(model.position, 0.0), 1.0); // the vectors on the right the matrices go on the left in order of importance
+    var test_mat: mat3x3<f32> = mat3x3(
+        1.0, 0.0, -0.5,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 1.0,
+    );
+    
+    var final_pos = test_mat * vec3(model.position, 0.0);
+    out.clip_position = vec4(final_pos, 1.0);
     out.colour = model.colour;
     return out;
 }

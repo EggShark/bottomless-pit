@@ -117,9 +117,7 @@ where
         depth_stencil_attachment: None,
     });
 
-    render_pass.set_bind_group(1, engine.camera_bindgroup(), &[]);
-
-    let render_info = RenderInformation {
+    let mut render_info = RenderInformation {
         size: engine.get_window_size(),
         render_pass,
         resources: engine.get_resources(),
@@ -127,6 +125,16 @@ where
         camera_bindgroup: engine.camera_bindgroup(),
         wgpu,
     };
+
+    let pipeline = &render_info
+        .resources
+        .get_pipeline(&render_info.defualt_id)
+        .unwrap()
+        .pipeline;
+
+    render_info.render_pass.set_pipeline(pipeline);
+
+    render_info.render_pass.set_bind_group(1, render_info.camera_bindgroup, &[]);
 
     game.render(render_info);
 

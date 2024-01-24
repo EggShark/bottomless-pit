@@ -40,6 +40,7 @@
 //! }
 #![allow(clippy::needless_doctest_main)]
 
+pub mod camera;
 pub mod colour;
 pub mod engine_handle;
 #[allow(clippy::all)]
@@ -72,11 +73,10 @@ pub trait Game {
 }
 
 #[rustfmt::skip]
-const IDENTITY_MATRIX: [f32; 16] = [
+const IDENTITY_MATRIX: [f32; 12] = [
     1.0,  0.0,  0.0,  0.0,
     0.0,  1.0,  0.0,  0.0,
     0.0,  0.0,  1.0,  0.0,
-    0.0,  0.0,  0.0,  1.0,
 ];
 
 #[rustfmt::skip]

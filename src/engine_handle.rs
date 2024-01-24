@@ -52,7 +52,7 @@ pub struct Engine {
     texture_sampler: wgpu::Sampler,
     clear_colour: Colour,
     config: wgpu::SurfaceConfiguration,
-    camera_matrix: [f32; 16],
+    camera_matrix: [f32; 12],
     camera_bind_group: wgpu::BindGroup,
     camera_buffer: wgpu::Buffer,
     pub(crate) wgpu_clump: WgpuClump,
@@ -535,17 +535,6 @@ impl Engine {
     pub fn show_cursor(&mut self) {
         self.window.set_cursor_visible(true);
         self.cursor_visibility = true;
-    }
-
-    /// Will update the camera matrix as of version 0.1.0 it will effect
-    /// all things drawn is also 3D
-    pub fn change_camera_matrix(&mut self, matrix: [f32; 16]) {
-        self.camera_matrix = matrix;
-        self.wgpu_clump.queue.write_buffer(
-            &self.camera_buffer,
-            0,
-            bytemuck::cast_slice(&[self.camera_matrix]),
-        );
     }
 
     /// nessicary for creating shaders and wanting to include the camera in the layouts
