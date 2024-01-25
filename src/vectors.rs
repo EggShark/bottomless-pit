@@ -1,5 +1,4 @@
 //! Generic implmentation of 2D Vectors
-
 use std::ops::{Add, Sub, AddAssign, Mul};
 
 /// A generic representation of 2D data
@@ -18,6 +17,41 @@ impl<T> Vec2<T> {
         [self.x, self.y]
     }
 }
+
+macro_rules! into_vec2_impl {
+    ($type_one:ident, $type_two:ident) => {
+        impl Into<Vec2<$type_two>> for Vec2<$type_one> {
+            fn into(self) -> Vec2<$type_two> {
+                Vec2 {
+                    x: self.x.into(),
+                    y: self.y.into(),
+                }
+            }
+        }
+    };
+}
+
+into_vec2_impl!(i8, i16);
+into_vec2_impl!(i8, i32);
+into_vec2_impl!(i8, i64);
+into_vec2_impl!(i8, i128);
+into_vec2_impl!(i16, i32);
+into_vec2_impl!(i16, i64);
+into_vec2_impl!(i16, i128);
+into_vec2_impl!(i32, i64);
+into_vec2_impl!(i32, i128);
+into_vec2_impl!(i64, i128);
+into_vec2_impl!(u8, u16);
+into_vec2_impl!(u8, u32);
+into_vec2_impl!(u8, u64);
+into_vec2_impl!(u8, u128);
+into_vec2_impl!(u16, u32);
+into_vec2_impl!(u16, u64);
+into_vec2_impl!(u16, u128);
+into_vec2_impl!(u32, u64);
+into_vec2_impl!(u32, u128);
+into_vec2_impl!(u64, u128);
+into_vec2_impl!(f32, f64);
 
 impl<T: Mul<Output = T> + Copy> Vec2<T> {
     pub fn scale(self, number: T) -> Vec2<T>{
