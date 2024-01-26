@@ -8,6 +8,8 @@ use bottomless_pit::shader::Shader;
 use bottomless_pit::shader::UniformData;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
+use bottomless_pit::vec2;
+
 use encase::ShaderType;
 
 fn main() {
@@ -65,7 +67,7 @@ impl Game for Position {
         self.regular_material.add_regular_n_gon(
             120,
             200.0,
-            Vec2 { x: 250.0, y: 250.0 },
+            vec2! { 250.0 },
             Colour::BLUE,
             &render_handle,
         );

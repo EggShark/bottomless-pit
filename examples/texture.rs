@@ -2,9 +2,11 @@ use bottomless_pit::input::MouseKey;
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderInformation;
 use bottomless_pit::texture::Texture;
-use bottomless_pit::{engine_handle::EngineBuilder, *};
-use colour::Colour;
-use vectors::Vec2;
+use bottomless_pit::engine_handle::{EngineBuilder, Engine};
+use bottomless_pit::colour::Colour;
+use bottomless_pit::vectors::Vec2;
+use bottomless_pit::Game;
+use bottomless_pit::vec2;
 
 fn main() {
     let mut engine = EngineBuilder::new()
@@ -23,7 +25,7 @@ fn main() {
     let s = TextureExample {
         current: texture,
         other: defualt,
-        pos: Vec2 { x: 0.0, y: 0.0 },
+        pos: vec2! { 0.0 },
     };
 
     engine.run(s);
@@ -43,15 +45,15 @@ impl Game for TextureExample {
         'others: 'pass,
     {
         self.current.add_rectangle(
-            Vec2 { x: 0.0, y: 0.0 },
-            Vec2 { x: 400.0, y: 400.0 },
+            vec2! { 0.0 },
+            vec2! { 400.0 },
             Colour::WHITE,
             &render_handle,
         );
         self.current.draw(&mut render_handle);
     }
 
-    fn update(&mut self, engine_handle: &mut engine_handle::Engine) {
+    fn update(&mut self, engine_handle: &mut Engine) {
         let dt = engine_handle.get_frame_delta_time();
         println!("{}", dt);
         if engine_handle.is_mouse_key_pressed(MouseKey::Left) {

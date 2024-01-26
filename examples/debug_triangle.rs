@@ -4,6 +4,7 @@ use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderInformation;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
+use bottomless_pit::vec2;
 
 fn main() {
     let mut engine = EngineBuilder::new()
@@ -32,16 +33,18 @@ impl Game for DebugTriangle {
     {
         self.material.add_triangle_with_coloured_verticies(
             [
-                Vec2 { x: 200.0, y: 0.0 },
-                Vec2 { x: 400.0, y: 400.0 },
-                Vec2 { x: 0.0, y: 400.0 },
+                vec2! { 200.0, 0.0 },
+                // supplying one value to the macro will
+                // make x and y the same value
+                vec2! { 400.0 },
+                vec2! { 0.0, 400.0 },
             ],
             [Colour::RED, Colour::GREEN, Colour::BLUE],
             &render_handle,
         );
         self.material.add_rectangle(
-            Vec2 { x: 0.0, y: 0.0 },
-            Vec2 { x: 100.0, y: 100.0 },
+            vec2! { 0.0 },
+            vec2! { 100.0 },
             Colour::RED,
             &render_handle,
         );

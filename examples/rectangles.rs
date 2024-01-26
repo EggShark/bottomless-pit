@@ -5,6 +5,7 @@ use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderInformation;
 use bottomless_pit::texture::Texture;
 use bottomless_pit::vectors::Vec2;
+use bottomless_pit::vec2;
 use bottomless_pit::Game;
 
 fn main() {
@@ -21,7 +22,7 @@ fn main() {
     let regular_material = MaterialBuilder::new().build(&mut engine);
 
     let pos = Position {
-        pos: Vec2 { x: 0.0, y: 0.0 },
+        pos: vec2! { 0.0 },
         regular_material,
         texture_material,
     };
@@ -42,21 +43,21 @@ impl Game for Position {
     ) where
         'others: 'pass,
     {
-        let defualt_size = Vec2 { x: 50.0, y: 50.0 };
+        let defualt_size = vec2! { 50.0 };
         self.regular_material.add_rectangle(
-            Vec2 { x: 0.0, y: 0.0 },
+            vec2! { 0.0 },
             defualt_size,
             Colour::RED,
             &render_handle,
         );
         self.regular_material.add_rectangle(
             self.pos,
-            Vec2 { x: 100.0, y: 100.0 },
+            vec2! { 100.0 },
             Colour::RED,
             &render_handle,
         );
         self.texture_material.add_rectangle(
-            Vec2 { x: 0.0, y: 50.0 },
+            vec2! { 0.0, 50.0 },
             defualt_size,
             Colour::WHITE,
             &render_handle,
@@ -64,8 +65,8 @@ impl Game for Position {
         self.texture_material.add_rectangle_with_uv(
             Vec2 { x: 0.0, y: 100.0 },
             defualt_size,
-            Vec2 { x: 311.0, y: 311.0 },
-            Vec2 { x: 311.0, y: 311.0 },
+            vec2! { 311.0 },
+            vec2! { 311.0 },
             Colour::WHITE,
             &render_handle,
         );
@@ -84,9 +85,9 @@ impl Game for Position {
             Vec2 { x: 60.0, y: 400.0 },
         ];
         let uvs = [
-            Vec2 { x: 0.0, y: 0.0 },
+            vec2! { 0.0 },
             Vec2 { x: 1.0, y: 0.0 },
-            Vec2 { x: 1.0, y: 1.0 },
+            vec2! { 1.0 },
             Vec2 { x: 0.0, y: 1.0 },
         ];
 

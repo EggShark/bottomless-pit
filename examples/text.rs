@@ -6,6 +6,7 @@ use bottomless_pit::resource::ResourceId;
 use bottomless_pit::text::{Font, TextMaterial};
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
+use bottomless_pit::vec2;
 
 fn main() {
     let mut engine = EngineBuilder::new()
@@ -35,7 +36,7 @@ impl Game for TextExample {
         'others: 'pass,
     {
         self.text_mat
-            .add_instance(Vec2 { x: 0.0, y: 0.0 }, Colour::WHITE, &render_handle);
+            .add_instance(vec2! { 0.0 }, Colour::WHITE, &render_handle);
         self.text_mat.add_instance_with_rotation(
             Vec2 { x: 100.0, y: 0.0 },
             Colour::WHITE,

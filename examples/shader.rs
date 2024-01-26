@@ -7,6 +7,8 @@ use bottomless_pit::render::RenderInformation;
 use bottomless_pit::shader::{Shader, UniformData};
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
+use bottomless_pit::vec2;
+
 use encase::ShaderType;
 
 fn main() {
@@ -79,20 +81,20 @@ impl Game for ShaderExample {
         'others: 'pass,
     {
         self.mouse_material.add_rectangle(
-            Vec2 { x: 0.0, y: 0.0 },
-            Vec2 { x: 100.0, y: 100.0 },
+            vec2! { 0.0 },
+            vec2! { 100.0 },
             Colour::RED,
             &render_handle,
         );
         self.circle_material.add_rectangle(
-            Vec2 { x: 100.0, y: 100.0 },
-            Vec2 { x: 100.0, y: 100.0 },
+            vec2! { 100.0 },
+            vec2! { 100.0 },
             Colour::RED,
             &render_handle,
         );
         self.defualt_material.add_rectangle(
             Vec2 { x: 0.0, y: 200.0 },
-            Vec2 { x: 100.0, y: 100.0 },
+            vec2! { 100.0 },
             Colour::RED,
             &render_handle,
         );

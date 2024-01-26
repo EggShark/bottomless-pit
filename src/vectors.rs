@@ -18,40 +18,71 @@ impl<T> Vec2<T> {
     }
 }
 
-macro_rules! into_vec2_impl {
+#[macro_export]
+macro_rules! vec2 {
+    ($x:expr, $y:expr) => {
+        Vec2{x: $x, y: $y}
+    };
+
+    ($x:expr) => {
+        Vec2{x: $x, y: $x}
+    };
+}
+
+macro_rules! from_vec2_impl {
     ($type_one:ident, $type_two:ident) => {
-        impl Into<Vec2<$type_two>> for Vec2<$type_one> {
-            fn into(self) -> Vec2<$type_two> {
+        impl From<Vec2<$type_two>> for Vec2<$type_one> {
+            fn from(value: Vec2<$type_two>) -> Self {
                 Vec2 {
-                    x: self.x.into(),
-                    y: self.y.into(),
+                    x: $type_one::from(value.x),
+                    y: $type_one::from(value.y),
                 }
             }
         }
     };
 }
 
-into_vec2_impl!(i8, i16);
-into_vec2_impl!(i8, i32);
-into_vec2_impl!(i8, i64);
-into_vec2_impl!(i8, i128);
-into_vec2_impl!(i16, i32);
-into_vec2_impl!(i16, i64);
-into_vec2_impl!(i16, i128);
-into_vec2_impl!(i32, i64);
-into_vec2_impl!(i32, i128);
-into_vec2_impl!(i64, i128);
-into_vec2_impl!(u8, u16);
-into_vec2_impl!(u8, u32);
-into_vec2_impl!(u8, u64);
-into_vec2_impl!(u8, u128);
-into_vec2_impl!(u16, u32);
-into_vec2_impl!(u16, u64);
-into_vec2_impl!(u16, u128);
-into_vec2_impl!(u32, u64);
-into_vec2_impl!(u32, u128);
-into_vec2_impl!(u64, u128);
-into_vec2_impl!(f32, f64);
+from_vec2_impl!(i128, i8);
+from_vec2_impl!(i128, i16);
+from_vec2_impl!(i128, i32);
+from_vec2_impl!(i128, i64);
+from_vec2_impl!(i128, u8);
+from_vec2_impl!(i128, u16);
+from_vec2_impl!(i128, u32);
+from_vec2_impl!(i128, u64);
+from_vec2_impl!(i64, i8);
+from_vec2_impl!(i64, i16);
+from_vec2_impl!(i64, i32);
+from_vec2_impl!(i64, u8);
+from_vec2_impl!(i64, u16);
+from_vec2_impl!(i64, u32);
+from_vec2_impl!(i32, i8);
+from_vec2_impl!(i32, i16);
+from_vec2_impl!(i32, u8);
+from_vec2_impl!(i32, u16);
+from_vec2_impl!(i16, i8);
+from_vec2_impl!(i16, u8);
+from_vec2_impl!(u128, u8);
+from_vec2_impl!(u128, u16);
+from_vec2_impl!(u128, u32);
+from_vec2_impl!(u128, u64);
+from_vec2_impl!(u64, u8);
+from_vec2_impl!(u64, u16);
+from_vec2_impl!(u64, u32);
+from_vec2_impl!(u32, u8);
+from_vec2_impl!(u32, u16);
+from_vec2_impl!(u16, u8);
+from_vec2_impl!(f64, f32);
+from_vec2_impl!(f64, i32);
+from_vec2_impl!(f64, i16);
+from_vec2_impl!(f64, i8);
+from_vec2_impl!(f64, u32);
+from_vec2_impl!(f64, u16);
+from_vec2_impl!(f64, u8);
+from_vec2_impl!(f32, i16);
+from_vec2_impl!(f32, i8);
+from_vec2_impl!(f32, u16);
+from_vec2_impl!(f32, u8);
 
 impl<T: Mul<Output = T> + Copy> Vec2<T> {
     pub fn scale(self, number: T) -> Vec2<T>{
