@@ -13,8 +13,6 @@ fn main() {
     let line_material = MaterialBuilder::new().build(&mut engine);
     let mut camera = Camera::new(&engine);
 
-    camera.set_translation(Vec2{x: 1.0, y: 1.0}, &engine);
-
     let game = CameraExample {
         material: line_material,
         camera,
@@ -35,7 +33,7 @@ impl Game for CameraExample {
     ) where
         'others: 'pass,
     {
-        self.material.add_rectangle(Vec2 { x: 0.0, y: 0.0 }, Vec2{x: 200.0, y: 200.0}, Colour::WHITE, &render_handle);
+        self.material.add_rectangle(Vec2 { x: 0.0, y: 0.0 }, Vec2{x: 600.0, y: 600.0}, Colour::WHITE, &render_handle);
 
         self.camera.set_active(&mut render_handle);
         self.material.draw(&mut render_handle);
