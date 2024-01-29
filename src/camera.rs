@@ -6,13 +6,6 @@ use crate::{layouts, IDENTITY_MATRIX, vec2};
 use crate::render::RenderInformation;
 use crate::vectors::Vec2;
 
-// const OPENGL_TO_WGPU_MATRIX: Mat4 = Mat4::from_cols_array(&[
-//     1.0, 0.0, 0.0, 0.0,
-//     0.0, 1.0, 0.0, 0.0,
-//     0.0, 0.0, 0.5, 0.5,
-//     0.0, 0.0, 0.0, 1.0, 
-// ]);
-
 pub struct Camera {
     bind_group: wgpu::BindGroup,
     buffer: wgpu::Buffer,
@@ -69,24 +62,35 @@ impl Camera {
         self.center = self.center + translation;
     }
 
+    pub fn set_rotation(&mut self, rotation: f32) {
+        self.rotation = rotation;
+    }
+
+    pub fn get_rotation(&self) -> f32 {
+        self.rotation
+    }
+
     fn write_matrix(&self, wgpu: &WgpuClump, screen_size: Vec2<u32>) {
         let screen_size = Vec2{x: screen_size.x as f32, y: screen_size.y as f32};
 
         // get normalized translation and mult by scale
         let x_trans = (self.center.x / screen_size.x + 1.0) * self.scale.x;
-        let y_trans = (self.center.y / screen_size.y - 1.0) * self.scale.y;
+        let y_trans = (self.center.x / screen_size.x + 1.0) * self.scale.y;
+
+        let sin = self.rotation.to_radians().sin();
+        let cos = self.rotation.to_radians().cos();
 
         let matrix = [
-            self.scale.x, 0.0,          x_trans, 0.0,
-            0.0,          self.scale.y, y_trans, 0.0,
-            0.0,          0.0,          1.0,     0.0
+            self.scale.x * cos, self.scale.x * -sin, x_trans, 0.0,
+            self.scale.y * sin, self.scale.y * cos,  y_trans, 0.0,
+            0.0,                0.0,                 1.0,     0.0
         ];
+
+        println!("{:?}", matrix);
 
         wgpu
             .queue
             .write_buffer(&self.buffer, 0, bytemuck::cast_slice(&matrix));
-
-        println!("{:?}", matrix);
     }
 
     pub fn set_active<'others, 'pass>(&'others self, renderer: &mut RenderInformation<'pass, 'others>) where 'others: 'pass {

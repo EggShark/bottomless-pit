@@ -13,6 +13,8 @@ fn main() {
     let line_material = MaterialBuilder::new().build(&mut engine);
     let mut camera = Camera::new(&engine);
 
+    camera.set_scale(0.1);
+
     let game = CameraExample {
         material: line_material,
         camera,
@@ -33,13 +35,17 @@ impl Game for CameraExample {
     ) where
         'others: 'pass,
     {
-        self.material.add_rectangle(Vec2 { x: 0.0, y: 0.0 }, Vec2{x: 600.0, y: 600.0}, Colour::WHITE, &render_handle);
+        self.material.add_rectangle(Vec2 { x: -150.0, y: -150.0 }, Vec2{x: 300.0, y: 300.0}, Colour::WHITE, &render_handle);
 
         self.camera.set_active(&mut render_handle);
         self.material.draw(&mut render_handle);
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
+        let dt = engine_handle.get_frame_delta_time();
 
+        self.camera.set_rotation(self.camera.get_rotation() + (5.0 * dt));
+
+        println!("{}", self.camera.get_rotation());
     }
 }
