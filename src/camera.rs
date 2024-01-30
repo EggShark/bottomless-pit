@@ -9,9 +9,10 @@ use crate::vectors::Vec2;
 pub struct Camera {
     bind_group: wgpu::BindGroup,
     buffer: wgpu::Buffer,
-    center: Vec2<f32>,
-    rotation: f32,
-    scale: Vec2<f32>,
+    pub center: Vec2<f32>,
+    /// needs to be in degrees
+    pub rotation: f32,
+    pub scale: Vec2<f32>,
 }
 
 impl Camera {
@@ -75,7 +76,7 @@ impl Camera {
 
         // get normalized translation and mult by scale
         let x_trans = (self.center.x / screen_size.x + 1.0) * self.scale.x;
-        let y_trans = (self.center.x / screen_size.x + 1.0) * self.scale.y;
+        let y_trans = (self.center.y / screen_size.y - 1.0) * self.scale.y;
 
         let sin = self.rotation.to_radians().sin();
         let cos = self.rotation.to_radians().cos();
