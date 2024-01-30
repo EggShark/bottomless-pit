@@ -1,5 +1,5 @@
 struct CameraUniform {
-    view_proj: mat3x3<f32>,
+    camera: mat3x3<f32>,
 }
 
 @group(1) @binding(0)
@@ -30,7 +30,7 @@ fn vs_main(model: VertexInput) -> VertexOutput {
     //     0.0, 0.0, 1.0,
     // );
     
-    var final_pos = vec3(model.position, 1.0) * camera.view_proj;
+    var final_pos = vec3(model.position, 1.0) * camera.camera;
     final_pos = final_pos / final_pos.z;
     out.clip_position = vec4(final_pos.xy, 0.0, 1.0);
     out.colour = model.colour;

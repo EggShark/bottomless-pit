@@ -13,7 +13,7 @@ fn main() {
     let line_material = MaterialBuilder::new().build(&mut engine);
     let mut camera = Camera::new(&engine);
 
-    camera.set_scale(0.1);
+    // camera.set_scale(03);
 
     let game = CameraExample {
         material: line_material,
@@ -44,7 +44,31 @@ impl Game for CameraExample {
     fn update(&mut self, engine_handle: &mut Engine) {
         let dt = engine_handle.get_frame_delta_time();
 
-        self.camera.set_rotation(self.camera.get_rotation() + (5.0 * dt));
+        let move_factor = 15.0;
+
+        if engine_handle.is_key_down(Key::A) {
+            self.camera.center.x -= move_factor * dt;
+        }
+
+        if engine_handle.is_key_down(Key::D) {
+            self.camera.center.x += move_factor * dt;
+        }
+
+        if engine_handle.is_key_down(Key::W) {
+            self.camera.center.y += move_factor * dt;
+        }
+
+        if engine_handle.is_key_down(Key::S) {
+            self.camera.center.y -= move_factor * dt;
+        }
+
+        if engine_handle.is_key_down(Key::Left) {
+            self.camera.rotation += move_factor * dt;
+        }
+
+        if engine_handle.is_key_down(Key::Right) {
+            self.camera.rotation -= move_factor * dt;
+        }
 
         println!("{}", self.camera.get_rotation());
     }
