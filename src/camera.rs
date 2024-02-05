@@ -1,4 +1,3 @@
-use glam::Mat3;
 use wgpu::util::DeviceExt;
 
 use crate::engine_handle::{Engine, WgpuClump};
@@ -81,29 +80,15 @@ impl Camera {
         let x_trans = self.center.x / screen_size.x + 1.0;
         let y_trans = self.center.y / screen_size.y - 1.0;
 
-        // pixels to wgsl NDC coordantes
-        // x is 2.0 * 0.0 / screen_size.x - 1.0
-        // y is ((2.0 * 0.0 / screen_size.y) - 1.0) * -1.0
-        // this will rotate around the center of the screen / camera
-        // need to find good center point
-        // ahhhhhhhhhhhhhh
-        // let center_x = 2.0 * (self.center.x) / screen_size.x - 1.0;
-        // let center_y = ((2.0 * (self.center.y) / screen_size.y) - 1.0) * -1.0;
-        let center_x = self.center.x / screen_size.x - 1.0;
-        let center_y = self.center.y / screen_size.y + 1.0;
-        println!("center: {} {}", center_x, center_y);
-
-
         let sin = self.rotation.to_radians().sin();
         let cos = self.rotation.to_radians().cos();
 
+        // wgsl does matrix multiplication backwards?
         let matrix = [
-            cos * scale_x, -sin * scale_y, ((1.0 - scale_x * cos) * center_x + scale_y * sin * center_y) + (x_trans * scale_x),  0.0,
-            sin * scale_x, cos * scale_y,  (-scale_x * sin * center_x + (1.0 - scale_y * cos) * center_y) + (y_trans * scale_y), 0.0,
-            0.0,                0.0,                 1.0,                                                                                                 0.0
+            scale_x * cos, -scale_y * sin, scale_x * x_trans * cos - sin * scale_y * y_trans, 0.0,
+            scale_x * sin, scale_y * cos,  scale_x * x_trans * sin + cos * scale_y * y_trans, 0.0,
+            0.0,           0.0,            1.0,                                               0.0,
         ];
-
-        println!("{:?}", matrix);
 
         wgpu
             .queue

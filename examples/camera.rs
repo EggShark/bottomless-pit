@@ -5,15 +5,13 @@ use bottomless_pit::input::Key;
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderInformation;
 use bottomless_pit::vectors::Vec2;
-use bottomless_pit::Game;
+use bottomless_pit::{vec2, Game};
 
 fn main() {
     let mut engine = EngineBuilder::new().build().unwrap();
 
     let line_material = MaterialBuilder::new().build(&mut engine);
-    let mut camera = Camera::new(&engine);
-
-    // camera.set_scale(03);
+    let camera = Camera::new(&engine);
 
     let game = CameraExample {
         material: line_material,
@@ -35,7 +33,7 @@ impl Game for CameraExample {
     ) where
         'others: 'pass,
     {
-        self.material.add_rectangle(Vec2 { x: -150.0, y: -150.0 }, Vec2{x: 300.0, y: 300.0}, Colour::WHITE, &render_handle);
+        self.material.add_rectangle(Vec2 { x: -0.0, y: -0.0 }, Vec2{x: 300.0, y: 300.0}, Colour::WHITE, &render_handle);
 
         self.camera.set_active(&mut render_handle);
         self.material.draw(&mut render_handle);
@@ -70,6 +68,14 @@ impl Game for CameraExample {
             self.camera.rotation -= move_factor * dt;
         }
 
-        println!("{}", self.camera.get_rotation());
+        if engine_handle.is_key_down(Key::L) {
+            self.camera.scale += vec2!(2.0 * dt, 2.0 * dt);
+        }
+
+        if engine_handle.is_key_down(Key::K) {
+            self.camera.scale -= vec2!(2.0 * dt, 2.0 * dt);
+        }
+
+        println!("{:?}", self.camera.center);
     }
 }

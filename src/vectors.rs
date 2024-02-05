@@ -1,5 +1,5 @@
 //! Generic implmentation of 2D Vectors
-use std::ops::{Add, Sub, AddAssign, Mul};
+use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
 
 /// A generic representation of 2D data
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -158,11 +158,16 @@ impl<T: Sub<Output = T>> Sub for Vec2<T> {
     }
 }
 
-impl<T: Add<Output = T> + Copy> AddAssign for Vec2<T> {
+impl<T: AddAssign> AddAssign for Vec2<T> {
     fn add_assign(&mut self, rhs: Self) {
-        *self = Self {
-            x: self.x + rhs.x,
-            y: self.y + rhs.y,
-        }
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+
+impl<T: SubAssign> SubAssign for Vec2<T> {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
     }
 }
