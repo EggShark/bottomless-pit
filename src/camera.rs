@@ -77,8 +77,8 @@ impl Camera {
         let scale_y = self.scale.y;
 
         // get normalized translation and mult by scale
-        let x_trans = self.center.x / screen_size.x + 1.0;
-        let y_trans = self.center.y / screen_size.y - 1.0;
+        let x_trans = (self.center.x * -2.0) / screen_size.x + 1.0;
+        let y_trans = (self.center.y * -2.0) / screen_size.y - 1.0;
 
         let sin = self.rotation.to_radians().sin();
         let cos = self.rotation.to_radians().cos();

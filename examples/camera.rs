@@ -6,12 +6,20 @@ use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderInformation;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::{vec2, Game};
+use bottomless_pit::texture::Texture;
 
 fn main() {
     let mut engine = EngineBuilder::new().build().unwrap();
 
-    let line_material = MaterialBuilder::new().build(&mut engine);
-    let camera = Camera::new(&engine);
+    let texture = Texture::new(&mut engine, "examples/bplogo.png");
+
+    let line_material = MaterialBuilder::new()
+        .add_texture(texture)
+        .build(&mut engine);
+    
+    let mut camera = Camera::new(&engine);
+
+    camera.center = vec2!(150.0, -150.0);
 
     let game = CameraExample {
         material: line_material,
