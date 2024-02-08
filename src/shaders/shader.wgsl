@@ -23,7 +23,7 @@ fn vs_main(model: VertexInput) -> VertexOutput {
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
     
-    var final_pos = vec3(model.position, 1.0) * camera.camera;
+    var final_pos = camera.camera * vec3(model.position, 1.0);
     final_pos = final_pos / final_pos.z;
     out.clip_position = vec4(final_pos.xy, 0.0, 1.0);
     out.colour = model.colour;

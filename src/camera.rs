@@ -83,11 +83,11 @@ impl Camera {
         let sin = self.rotation.to_radians().sin();
         let cos = self.rotation.to_radians().cos();
 
-        // wgsl does matrix multiplication backwards?
+        //TSR MATRIX
         let matrix = [
-            scale_x * cos, -scale_y * sin, scale_x * x_trans * cos - sin * scale_y * y_trans, 0.0,
-            scale_x * sin, scale_y * cos,  scale_x * x_trans * sin + cos * scale_y * y_trans, 0.0,
-            0.0,           0.0,            1.0,                                               0.0,
+            scale_x * cos, -scale_x * sin, 0.0, 0.0,
+            scale_y * sin, scale_y * cos, 0.0, 0.0,
+            scale_y * y_trans * sin + x_trans * scale_x * cos, scale_y * y_trans * cos - scale_x * x_trans * sin, 1.0, 0.0
         ];
 
         wgpu
