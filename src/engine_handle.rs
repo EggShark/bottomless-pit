@@ -32,7 +32,7 @@ use crate::text::{Font, TextRenderer};
 use crate::texture::Texture;
 use crate::vectors::Vec2;
 use crate::vertex::{LineVertex, Vertex};
-use crate::{glyphon, resource, WHITE_PIXEL};
+use crate::{resource, WHITE_PIXEL};
 use crate::{layouts, Game, IDENTITY_MATRIX};
 
 /// The thing that makes the computer go

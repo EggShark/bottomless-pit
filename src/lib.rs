@@ -43,8 +43,6 @@
 pub mod camera;
 pub mod colour;
 pub mod engine_handle;
-#[allow(clippy::all)]
-mod glyphon;
 pub mod input;
 mod io;
 mod layouts;

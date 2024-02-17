@@ -37,8 +37,8 @@
 use std::path::Path;
 use std::sync::Arc;
 
-use crate::glyphon::fontdb::Source;
-use crate::glyphon::{
+use glyphon::fontdb::Source;
+use glyphon::{
     self, Attrs, Family, FontSystem, Metrics, Shaping, SwashCache, TextArea, TextAtlas, TextBounds,
 };
 
