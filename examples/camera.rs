@@ -84,6 +84,8 @@ impl Game for CameraExample {
             self.camera.scale -= vec2!(2.0 * dt, 2.0 * dt);
         }
 
-        println!("{:?}", self.camera.center);
+        if engine_handle.is_key_pressed(Key::Enter) {
+            self.camera.rotation += 45.0;
+        }
     }
 }

@@ -83,11 +83,20 @@ impl Camera {
         let sin = self.rotation.to_radians().sin();
         let cos = self.rotation.to_radians().cos();
 
-        //TSR MATRIX
+        // SRT matrix in collum major order I belive
+        // row major order withouth padding looks like:                                                               //padding byte
+        // [
+        //   scale_x * cos, -scale_x * sin, scale_x * x_trans * cos - scale_x * y_trans * sin,
+        //   scale_y * sin, scale_y * cos,  scale_y * x_trans * sin + scale_y * y_trans * sim,
+        //   0.0,           0.0,            1.0,
+        // ]
         let matrix = [
-            scale_x * cos, -scale_x * sin, 0.0, 0.0,
-            scale_y * sin, scale_y * cos, 0.0, 0.0,
-            scale_y * y_trans * sin + x_trans * scale_x * cos, scale_y * y_trans * cos - scale_x * x_trans * sin, 1.0, 0.0
+            //c1:
+            scale_x * cos,                                     scale_y * sin,                                     0.0, 0.0,
+            //c2:
+            scale_x * -sin,                                    scale_y * cos,                                     0.0, 0.0,
+            //c3:
+            scale_x * x_trans * cos - scale_x * y_trans * sin, scale_x * x_trans * sin + scale_y * y_trans * cos, 1.0, 0.0,
         ];
 
         wgpu
