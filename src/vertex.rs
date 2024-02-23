@@ -126,15 +126,10 @@ pub fn from_pixels(
     let size = size.to_raw();
 
     [
-        Vertex::from_2d(pos, [0.0, 0.0], colour)
-            .to_owned()
-            .pixels_to_screenspace(screen_size),
-        Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour)
-            .pixels_to_screenspace(screen_size),
-        Vertex::from_2d([pos[0] + size[0], pos[1] + size[1]], [1.0, 1.0], colour)
-            .pixels_to_screenspace(screen_size),
+        Vertex::from_2d(pos, [0.0, 0.0], colour),
+        Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour),
+        Vertex::from_2d([pos[0] + size[0], pos[1] + size[1]], [1.0, 1.0], colour),
         Vertex::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour)
-            .pixels_to_screenspace(screen_size),
     ]
 }
 
@@ -151,25 +146,22 @@ pub fn from_pixels_with_uv(
     let uv_pos = uv_pos.to_raw();
 
     [
-        Vertex::from_2d(pos, uv_pos, colour).pixels_to_screenspace(screen_size),
+        Vertex::from_2d(pos, uv_pos, colour),
         Vertex::from_2d(
             [pos[0] + size[0], pos[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1]],
             colour,
-        )
-        .pixels_to_screenspace(screen_size),
+        ),
         Vertex::from_2d(
             [pos[0] + size[0], pos[1] + size[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1] + uv_size.y],
             colour,
-        )
-        .pixels_to_screenspace(screen_size),
+        ),
         Vertex::from_2d(
             [pos[0], pos[1] + size[1]],
             [uv_pos[0], uv_pos[1] + uv_size.y],
             colour,
-        )
-        .pixels_to_screenspace(screen_size),
+        ),
     ]
 }
 
@@ -190,17 +182,13 @@ pub(crate) fn from_pixels_with_rotation(
 
     [
         Vertex::from_2d(pos, [0.0, 0.0], colour)
-            .rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+            .rotate(rotation, center),
         Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour)
-            .rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+            .rotate(rotation, center),
         Vertex::from_2d([pos[0] + size[0], pos[1] + size[1]], [1.0, 1.0], colour)
-            .rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+            .rotate(rotation, center),
         Vertex::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour)
-            .rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+            .rotate(rotation, center),
     ]
 }
 
@@ -223,32 +211,29 @@ pub(crate) fn from_pixels_ex(
     };
     [
         Vertex::from_2d(pos, uv_pos, colour)
-            .rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+            .rotate(rotation, center),
         Vertex::from_2d(
             [pos[0] + size[0], pos[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1]],
             colour,
         )
-        .rotate(rotation, center)
-        .pixels_to_screenspace(screen_size),
+        .rotate(rotation, center),
         Vertex::from_2d(
             [pos[0] + size[0], pos[1] + size[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1] + uv_size.y],
             colour,
         )
-        .rotate(rotation, center)
-        .pixels_to_screenspace(screen_size),
+        .rotate(rotation, center),
         Vertex::from_2d(
             [pos[0], pos[1] + size[1]],
             [uv_pos[0], uv_pos[1] + uv_size.y],
             colour,
         )
-        .rotate(rotation, center)
-        .pixels_to_screenspace(screen_size),
+        .rotate(rotation, center),
     ]
 }
 
+// TODO: Calculate Screenspace to PIXELS
 pub(crate) fn new_ex(
     pos: Vec2<f32>,
     size: Vec2<f32>,
@@ -300,17 +285,13 @@ pub(crate) fn from_pixels_custom(
 
     [
         Vertex::from_2d(points[0].to_raw(), uvs[0].to_raw(), colour)
-            .rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+            .rotate(rotation, center),
         Vertex::from_2d(points[1].to_raw(), uvs[1].to_raw(), colour)
-            .rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+            .rotate(rotation, center),
         Vertex::from_2d(points[2].to_raw(), uvs[2].to_raw(), colour)
-            .rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+            .rotate(rotation, center),
         Vertex::from_2d(points[3].to_raw(), uvs[3].to_raw(), colour)
-            .rotate(rotation, center)
-            .pixels_to_screenspace(screen_size),
+            .rotate(rotation, center),
     ]
 }
 

@@ -77,8 +77,8 @@ impl Camera {
         let scale_y = self.scale.y;
 
         // get normalized translation and mult by scale
-        let x_trans = (self.center.x * -2.0) / screen_size.x + 1.0;
-        let y_trans = (self.center.y * -2.0) / screen_size.y - 1.0;
+        let x_trans = screen_size.x / 2.0 - self.center.x;
+        let y_trans = screen_size.y / 2.0 + self.center.y;
 
         let sin = self.rotation.to_radians().sin();
         let cos = self.rotation.to_radians().cos();
@@ -90,13 +90,18 @@ impl Camera {
         //   scale_y * sin, scale_y * cos,  scale_y * x_trans * sin + scale_y * y_trans * sim,
         //   0.0,           0.0,            1.0,
         // ]
-        let matrix = [
-            //c1:
-            scale_x * cos,                                     scale_y * sin,                                     0.0, 0.0,
-            //c2:
-            scale_x * -sin,                                    scale_y * cos,                                     0.0, 0.0,
-            //c3:
-            scale_x * x_trans * cos - scale_x * y_trans * sin, scale_x * x_trans * sin + scale_y * y_trans * cos, 1.0, 0.0,
+        // let matrix = [
+        //     //c1:
+        //     scale_x * cos,                                     scale_y * sin,                                     0.0, 0.0,
+        //     //c2:
+        //     scale_x * -sin,                                    scale_y * cos,                                     0.0, 0.0,
+        //     //c3:
+        //     scale_x * x_trans * cos - scale_x * y_trans * sin, scale_x * x_trans * sin + scale_y * y_trans * cos, 1.0, 0.0,
+        // ];
+        let matrix: [f32; 12] = [
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            x_trans, y_trans, 1.0, 0.0,
         ];
 
         wgpu

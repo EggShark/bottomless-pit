@@ -25,6 +25,8 @@ fn vs_main(model: VertexInput) -> VertexOutput {
     
     var final_pos = camera.camera * vec3(model.position, 1.0);
     final_pos = final_pos / final_pos.z;
+    final_pos.x = 2.0 * final_pos.x / 600.0 - 1.0;
+    final_pos.y = ((2.0 * final_pos.y / 600.0) - 1.0) * -1.0;
     out.clip_position = vec4(final_pos.xy, 0.0, 1.0);
     out.colour = model.colour;
     return out;
