@@ -33,7 +33,7 @@ use crate::texture::Texture;
 use crate::vectors::Vec2;
 use crate::vertex::{LineVertex, Vertex};
 use crate::{resource, WHITE_PIXEL};
-use crate::{layouts, Game, IDENTITY_MATRIX};
+use crate::{layouts, Game};
 
 /// The thing that makes the computer go
 pub struct Engine {
@@ -53,6 +53,7 @@ pub struct Engine {
     clear_colour: Colour,
     config: wgpu::SurfaceConfiguration,
     camera_bind_group: wgpu::BindGroup,
+    camera_buffer: wgpu::Buffer,
     pub(crate) wgpu_clump: WgpuClump,
     size: Vec2<u32>,
     in_progress_resources: Vec<InProgressResource>,
@@ -200,7 +201,12 @@ impl Engine {
             ..Default::default()
         });
 
-        let camera_matrix = IDENTITY_MATRIX;
+        let camera_matrix = [
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            builder.resolution.0 as f32, builder.resolution.1 as f32, 0.0, 0.0,
+        ];
         let camera_buffer =
             wgpu_clump
                 .device
@@ -371,6 +377,7 @@ impl Engine {
             clear_colour: builder.clear_colour,
             config,
             camera_bind_group,
+            camera_buffer,
             wgpu_clump,
             size,
             in_progress_resources: Vec::new(),
@@ -806,6 +813,10 @@ impl Engine {
             self.surface
                 .configure(&self.wgpu_clump.device, &self.config);
             self.size = new_size;
+            self
+                .wgpu_clump
+                .queue
+                .write_buffer(&self.camera_buffer, 48, bytemuck::cast_slice(&[new_size.x as f32, new_size.y as f32]));
         }
     }
 

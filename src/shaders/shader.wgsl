@@ -1,9 +1,10 @@
-struct CameraUniform {
+struct EngineUniforms {
     camera: mat3x3<f32>,
+    screen_size: vec2<f32>,
 }
 
 @group(1) @binding(0)
-var<uniform> camera: CameraUniform;
+var<uniform> engine: EngineUniforms;
 
 struct VertexInput {
     @location(0) position: vec2<f32>,
@@ -23,10 +24,10 @@ fn vs_main(model: VertexInput) -> VertexOutput {
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
     
-    var final_pos = camera.camera * vec3(model.position, 1.0);
+    var final_pos = engine.camera * vec3(model.position, 1.0);
     final_pos = final_pos / final_pos.z;
-    final_pos.x = 2.0 * final_pos.x / 600.0 - 1.0;
-    final_pos.y = ((2.0 * final_pos.y / 600.0) - 1.0) * -1.0;
+    final_pos.x = 2.0 * final_pos.x / engine.screen_size.x - 1.0;
+    final_pos.y = ((2.0 * final_pos.y / engine.screen_size.y) - 1.0) * -1.0;
     out.clip_position = vec4(final_pos.xy, 0.0, 1.0);
     out.colour = model.colour;
     return out;

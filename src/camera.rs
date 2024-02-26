@@ -1,7 +1,7 @@
 use wgpu::util::DeviceExt;
 
 use crate::engine_handle::{Engine, WgpuClump};
-use crate::{layouts, IDENTITY_MATRIX, vec2};
+use crate::{layouts, vec2};
 use crate::render::RenderInformation;
 use crate::vectors::Vec2;
 
@@ -17,10 +17,18 @@ pub struct Camera {
 impl Camera {
     pub fn new(engine: &Engine) -> Self {
         let wgpu = engine.get_wgpu();
+        let size = engine.get_window_size();
+
+        let starting = [
+            1.0, 0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0, 0.0,
+            0.0, 0.0, 1.0, 0.0,
+            size.x as f32, size.y as f32, 0.0, 0.0,
+        ];
 
         let buffer = wgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(&IDENTITY_MATRIX),
+            contents: bytemuck::cast_slice(&starting),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST
         });
 
@@ -98,10 +106,15 @@ impl Camera {
         //     //c3:
         //     scale_x * x_trans * cos - scale_x * y_trans * sin, scale_x * x_trans * sin + scale_y * y_trans * cos, 1.0, 0.0,
         // ];
-        let matrix: [f32; 12] = [
+        let matrix: [f32; 16] = [
+            //c1
             1.0, 0.0, 0.0, 0.0,
+            //c2
             0.0, 1.0, 0.0, 0.0,
+            //c3
             x_trans, y_trans, 1.0, 0.0,
+            //screen size
+            screen_size.x, screen_size.y, 0.0, 0.0,
         ];
 
         wgpu
