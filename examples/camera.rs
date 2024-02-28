@@ -19,7 +19,7 @@ fn main() {
     
     let mut camera = Camera::new(&engine);
 
-    camera.center = vec2!(150.0, -150.0);
+    camera.center = vec2!(0.0, 0.0);
 
     let game = CameraExample {
         material: line_material,
@@ -41,7 +41,7 @@ impl Game for CameraExample {
     ) where
         'others: 'pass,
     {
-        self.material.add_rectangle(Vec2 { x: -0.0, y: -0.0 }, Vec2{x: 300.0, y: 300.0}, Colour::WHITE, &render_handle);
+        self.material.add_rectangle(Vec2 { x: 0.0, y: 0.0 }, Vec2{x: 300.0, y: 300.0}, Colour::WHITE, &render_handle);
 
         self.camera.set_active(&mut render_handle);
         self.material.draw(&mut render_handle);

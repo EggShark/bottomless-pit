@@ -84,9 +84,8 @@ impl Camera {
         let scale_x = self.scale.x;
         let scale_y = self.scale.y;
 
-        // get normalized translation and mult by scale
-        let x_trans = screen_size.x / 2.0 - self.center.x;
-        let y_trans = screen_size.y / 2.0 + self.center.y;
+        let x_trans = (screen_size.x / 2.0) - self.center.x;
+        let y_trans = (screen_size.y / 2.0) + self.center.y;
 
         let sin = self.rotation.to_radians().sin();
         let cos = self.rotation.to_radians().cos();
@@ -108,11 +107,11 @@ impl Camera {
         // ];
         let matrix: [f32; 16] = [
             //c1
-            1.0, 0.0, 0.0, 0.0,
+            cos, sin, 0.0, 0.0,
             //c2
-            0.0, 1.0, 0.0, 0.0,
+            -sin, cos, 0.0, 0.0,
             //c3
-            x_trans, y_trans, 1.0, 0.0,
+            -x_trans * cos + y_trans * sin + x_trans, -x_trans * sin - y_trans * cos + y_trans, 1.0, 0.0,
             //screen size
             screen_size.x, screen_size.y, 0.0, 0.0,
         ];
