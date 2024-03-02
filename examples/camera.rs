@@ -19,7 +19,7 @@ fn main() {
     
     let mut camera = Camera::new(&engine);
 
-    camera.center = vec2!(0.0, 0.0);
+    camera.center = vec2!(150.0, 150.0);
 
     let game = CameraExample {
         material: line_material,

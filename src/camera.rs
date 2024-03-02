@@ -84,8 +84,11 @@ impl Camera {
         let scale_x = self.scale.x;
         let scale_y = self.scale.y;
 
-        let x_trans = (screen_size.x / 2.0) - self.center.x;
-        let y_trans = (screen_size.y / 2.0) + self.center.y;
+        let rot_x = screen_size.x / 2.0;
+        let rot_y = screen_size.y / 2.0;
+
+        let x_trans = rot_x - self.center.x;
+        let y_trans = rot_y - self.center.y;
 
         let sin = self.rotation.to_radians().sin();
         let cos = self.rotation.to_radians().cos();
@@ -105,13 +108,15 @@ impl Camera {
         //     //c3:
         //     scale_x * x_trans * cos - scale_x * y_trans * sin, scale_x * x_trans * sin + scale_y * y_trans * cos, 1.0, 0.0,
         // ];
+
+        // DONT ROTATE AROUND X_TRANS OR Y_TRANS ROTATE AROUND SCREEEN / 2
         let matrix: [f32; 16] = [
             //c1
             cos, sin, 0.0, 0.0,
             //c2
             -sin, cos, 0.0, 0.0,
             //c3
-            -x_trans * cos + y_trans * sin + x_trans, -x_trans * sin - y_trans * cos + y_trans, 1.0, 0.0,
+            x_trans * cos - y_trans * sin - rot_x * cos + rot_y * sin + rot_x, x_trans * sin + y_trans * cos + - rot_x * sin - rot_y * cos + rot_y, 1.0, 0.0,
             //screen size
             screen_size.x, screen_size.y, 0.0, 0.0,
         ];
