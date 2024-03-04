@@ -114,9 +114,9 @@ impl Camera {
             //c1
             scale_x * cos, scale_y * sin, 0.0, 0.0,
             //c2
-            scale_x * -sin, scale_y * cos, 0.0, 0.0,
+            -scale_x * sin, scale_y * cos, 0.0, 0.0,
             //c3
-            scale_x * x_trans * cos - scale_x * y_trans * sin - scale_x * rot_x * cos + scale_x * rot_y * sin + scale_x * rot_x, scale_y * x_trans * sin + scale_y * y_trans * cos - scale_y * rot_x * scale_y * sin - scale_y * rot_y * scale_y * cos + rot_y, 1.0, 0.0,
+            scale_x * x_trans * cos - scale_x * y_trans * sin - rot_x * scale_x * cos + rot_y * scale_x * sin + rot_x, scale_y * x_trans * sin + scale_y * y_trans * cos - rot_x * scale_y * sin - rot_y * scale_y * cos + rot_y, 1.0, 0.0,
             //screen size
             screen_size.x, screen_size.y, 0.0, 0.0,
         ];
