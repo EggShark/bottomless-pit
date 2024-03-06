@@ -120,7 +120,6 @@ pub fn from_pixels(
     pos: Vec2<f32>,
     size: Vec2<f32>,
     colour: [f32; 4],
-    screen_size: Vec2<u32>,
 ) -> [Vertex; 4] {
     let pos = pos.to_raw();
     let size = size.to_raw();
@@ -137,7 +136,6 @@ pub fn from_pixels_with_uv(
     pos: Vec2<f32>,
     size: Vec2<f32>,
     colour: [f32; 4],
-    screen_size: Vec2<u32>,
     uv_pos: Vec2<f32>,
     uv_size: Vec2<f32>,
 ) -> [Vertex; 4] {
@@ -169,7 +167,6 @@ pub(crate) fn from_pixels_with_rotation(
     pos: Vec2<f32>,
     size: Vec2<f32>,
     colour: [f32; 4],
-    screen_size: Vec2<u32>,
     rotation: f32,
 ) -> [Vertex; 4] {
     let pos = pos.to_raw();
@@ -196,7 +193,6 @@ pub(crate) fn from_pixels_ex(
     pos: Vec2<f32>,
     size: Vec2<f32>,
     colour: [f32; 4],
-    screen_size: Vec2<u32>,
     rotation: f32,
     uv_pos: Vec2<f32>,
     uv_size: Vec2<f32>,
@@ -279,7 +275,6 @@ pub(crate) fn from_pixels_custom(
     uvs: [Vec2<f32>; 4],
     rotation: f32,
     colour: [f32; 4],
-    screen_size: Vec2<u32>,
 ) -> [Vertex; 4] {
     let center = get_center_of_four_points(points);
 

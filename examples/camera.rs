@@ -17,7 +17,7 @@ fn main() {
         .add_texture(texture)
         .build(&mut engine);
     
-    let mut camera = Camera::new(&engine);
+    let camera = Camera::new(&engine);
 
 
     let game = CameraExample {

@@ -364,13 +364,12 @@ impl TextMaterial {
     /// Queues a peice of text at the specified position. Its size will be the size of the entire
     /// text.
     pub fn add_instance(&mut self, position: Vec2<f32>, tint: Colour, render: &RenderInformation) {
-        let window_size = render.size;
         let rect_size = Vec2 {
             x: self.size.x as f32,
             y: self.size.y as f32,
         };
         let wgpu = render.wgpu;
-        let verts = vertex::from_pixels(position, rect_size, tint.as_raw(), window_size);
+        let verts = vertex::from_pixels(position, rect_size, tint.as_raw());
 
         self.push_rectangle(wgpu, verts);
     }
@@ -384,7 +383,6 @@ impl TextMaterial {
         degrees: f32,
         render: &RenderInformation,
     ) {
-        let window_size = render.size;
         let rect_size = Vec2 {
             x: self.size.x as f32,
             y: self.size.y as f32,
@@ -394,7 +392,6 @@ impl TextMaterial {
             position,
             rect_size,
             tint.as_raw(),
-            window_size,
             degrees,
         );
 
@@ -412,7 +409,6 @@ impl TextMaterial {
         tint: Colour,
         render: &RenderInformation,
     ) {
-        let window_size = render.size;
         let wgpu = render.wgpu;
 
         let uv_pos = normalize_points(
@@ -434,7 +430,6 @@ impl TextMaterial {
             position,
             size,
             tint.as_raw(),
-            window_size,
             uv_pos,
             uv_size,
         );
@@ -454,7 +449,6 @@ impl TextMaterial {
         tint: Colour,
         render: &RenderInformation,
     ) {
-        let window_size = render.size;
         let wgpu = render.wgpu;
 
         let uv_pos = normalize_points(
@@ -476,7 +470,6 @@ impl TextMaterial {
             position,
             size,
             tint.as_raw(),
-            window_size,
             degrees,
             uv_pos,
             uv_size,
@@ -495,7 +488,6 @@ impl TextMaterial {
         tint: Colour,
         render: &RenderInformation,
     ) {
-        let window_size = render.size;
         let wgpu = render.wgpu;
 
         let uv_points = [
@@ -530,7 +522,7 @@ impl TextMaterial {
         ];
 
         let verts =
-            vertex::from_pixels_custom(points, uv_points, degrees, tint.as_raw(), window_size);
+            vertex::from_pixels_custom(points, uv_points, degrees, tint.as_raw());
 
         self.push_rectangle(wgpu, verts);
     }

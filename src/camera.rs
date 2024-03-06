@@ -1,16 +1,18 @@
 use wgpu::util::DeviceExt;
 
 use crate::engine_handle::{Engine, WgpuClump};
-use crate::{layouts, vec2};
+use crate::layouts;
 use crate::render::RenderInformation;
 use crate::vectors::Vec2;
 
 pub struct Camera {
     bind_group: wgpu::BindGroup,
     buffer: wgpu::Buffer,
+    /// The center of the camera becomes the center of the screen
     pub center: Vec2<f32>,
     /// needs to be in degrees
     pub rotation: f32,
+    /// This controls the size of every object in view
     pub scale: Vec2<f32>,
 }
 
@@ -54,30 +56,6 @@ impl Camera {
         }
     }
 
-    pub fn set_scale(&mut self, scale: f32) {
-        self.scale = vec2!(scale);
-    }
-
-    pub fn set_xy_scale(&mut self, scale: Vec2<f32>) {
-        self.scale = scale;
-    }
-
-    pub fn set_center(&mut self, new_pos: Vec2<f32>) {
-        self.center = new_pos;
-    }
-
-    pub fn move_center(&mut self, translation: Vec2<f32>) {
-        self.center = self.center + translation;
-    }
-
-    pub fn set_rotation(&mut self, rotation: f32) {
-        self.rotation = rotation;
-    }
-
-    pub fn get_rotation(&self) -> f32 {
-        self.rotation
-    }
-
     fn write_matrix(&self, wgpu: &WgpuClump, screen_size: Vec2<u32>) {
         let screen_size = Vec2{x: screen_size.x as f32, y: screen_size.y as f32};
 
@@ -93,23 +71,7 @@ impl Camera {
         let sin = self.rotation.to_radians().sin();
         let cos = self.rotation.to_radians().cos();
 
-        // SRT matrix in collum major order I belive
-        // row major order withouth padding looks like:                                                               //padding byte
-        // [
-        //   scale_x * cos, -scale_x * sin, scale_x * x_trans * cos - scale_x * y_trans * sin,
-        //   scale_y * sin, scale_y * cos,  scale_y * x_trans * sin + scale_y * y_trans * sim,
-        //   0.0,           0.0,            1.0,
-        // ]
-        // let matrix = [
-        //     //c1:
-        //     scale_x * cos,                                     scale_y * sin,                                     0.0, 0.0,
-        //     //c2:
-        //     scale_x * -sin,                                    scale_y * cos,                                     0.0, 0.0,
-        //     //c3:
-        //     scale_x * x_trans * cos - scale_x * y_trans * sin, scale_x * x_trans * sin + scale_y * y_trans * cos, 1.0, 0.0,
-        // ];
-
-        // DONT ROTATE AROUND X_TRANS OR Y_TRANS ROTATE AROUND SCREEEN / 2
+        //THIS IS T(rot)S(x_scale, y_scale)R(d)T(-rot)T(x_trans, y_trans)
         let matrix: [f32; 16] = [
             //c1
             scale_x * cos, scale_y * sin, 0.0, 0.0,
@@ -126,6 +88,7 @@ impl Camera {
             .write_buffer(&self.buffer, 0, bytemuck::cast_slice(&matrix));
     }
 
+    /// Sets this camera to the active camera transforming all objects with this camera.
     pub fn set_active<'others, 'pass>(&'others self, renderer: &mut RenderInformation<'pass, 'others>) where 'others: 'pass {
         self.write_matrix(renderer.wgpu, renderer.size);
 

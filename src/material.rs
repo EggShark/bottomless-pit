@@ -95,9 +95,8 @@ impl Material {
         colour: Colour,
         render: &RenderInformation,
     ) {
-        let window_size = render.size;
         let wgpu = render.wgpu;
-        let verts = vertex::from_pixels(position, size, colour.as_raw(), window_size);
+        let verts = vertex::from_pixels(position, size, colour.as_raw());
 
         self.push_rectangle(wgpu, verts);
     }
@@ -128,7 +127,6 @@ impl Material {
         render: &RenderInformation,
     ) {
         let wgpu = render.wgpu;
-        let window_size = render.size;
 
         let texture_size = render.resources.get_texture(&self.texture_id).unwrap().size;
 
@@ -139,7 +137,6 @@ impl Material {
             position,
             size,
             colour.as_raw(),
-            window_size,
             uv_position,
             uv_size,
         );
@@ -157,13 +154,11 @@ impl Material {
         render: &RenderInformation,
     ) {
         let wgpu = render.wgpu;
-        let window_size = render.size;
 
         let verts = vertex::from_pixels_with_rotation(
             position,
             size,
             colour.as_raw(),
-            window_size,
             rotation,
         );
 
@@ -183,7 +178,6 @@ impl Material {
         render: &RenderInformation,
     ) {
         let wgpu = render.wgpu;
-        let window_size = render.size;
 
         let texture_size = render.resources.get_texture(&self.texture_id).unwrap().size;
 
@@ -194,7 +188,6 @@ impl Material {
             position,
             size,
             colour.as_raw(),
-            window_size,
             rotation,
             uv_position,
             uv_size,
@@ -249,7 +242,7 @@ impl Material {
         ];
 
         let verts =
-            vertex::from_pixels_custom(points, uv_points, rotation, colour.as_raw(), render.size);
+            vertex::from_pixels_custom(points, uv_points, rotation, colour.as_raw());
 
         self.push_rectangle(wgpu, verts);
     }
