@@ -49,6 +49,16 @@ impl Vertex {
         self
     }
 
+    pub(crate) fn screenspace_to_pixels(mut self, screen_size: Vec2<u32>) -> Self {
+        let width = screen_size.x as f32;
+        let height = screen_size.y as f32;
+
+        self.position[0] = ((self.position[0] + 1.0) * width) / 2.0;
+        self.position[1] = (((self.position[1] * -1.0) + 1.0) * height) / 2.0;
+
+        self
+    }
+
     pub(crate) fn rotate(mut self, rotation: f32, center: Vec2<f32>) -> Self {
         let rotaion_matrix = glam::Mat3::from_angle(rotation.to_radians());
         let translation_matrix = glam::Mat3::from_translation(center.into());
@@ -103,16 +113,30 @@ impl LineVertex {
         self.pos[1] = ((2.0 * self.pos[1] / height) - 1.0) * -1.0;
         self
     }
+
+    pub fn screenspace_to_pixels(mut self, screen_size: Vec2<u32>) -> Self {
+        let width = screen_size.x as f32;
+        let height = screen_size.y as f32;
+
+        self.pos[0] = (self.pos[0] / 2.0 * width) + 1.0;
+        self.pos[1] = ((self.pos[1] / 2.0 * height) + 1.0) * -1.0;
+
+        self
+    }
 }
 
-pub(crate) fn new(pos: Vec2<f32>, size: Vec2<f32>, colour: [f32; 4]) -> [Vertex; 4] {
+pub(crate) fn new(pos: Vec2<f32>, size: Vec2<f32>, colour: [f32; 4], screen_size: Vec2<u32>) -> [Vertex; 4] {
     let pos = pos.to_raw();
     let size = size.to_raw();
     [
-        Vertex::from_2d(pos, [0.0, 0.0], colour),
-        Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour),
-        Vertex::from_2d([pos[0] + size[0], pos[1] - size[1]], [1.0, 1.0], colour),
-        Vertex::from_2d([pos[0], pos[1] - size[1]], [0.0, 1.0], colour),
+        Vertex::from_2d(pos, [0.0, 0.0], colour)
+            .screenspace_to_pixels(screen_size),
+        Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour)
+            .screenspace_to_pixels(screen_size),
+        Vertex::from_2d([pos[0] + size[0], pos[1] - size[1]], [1.0, 1.0], colour)
+            .screenspace_to_pixels(screen_size),
+        Vertex::from_2d([pos[0], pos[1] - size[1]], [0.0, 1.0], colour)
+            .screenspace_to_pixels(screen_size),
     ]
 }
 

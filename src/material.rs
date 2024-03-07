@@ -110,8 +110,9 @@ impl Material {
         render: &RenderInformation,
     ) {
         let wgpu = render.wgpu;
+        let screen_size = render.size;
 
-        let verts = vertex::new(position, size, colour.as_raw());
+        let verts = vertex::new(position, size, colour.as_raw(), screen_size);
         self.push_rectangle(wgpu, verts);
     }
 
