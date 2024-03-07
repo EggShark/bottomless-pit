@@ -36,6 +36,8 @@ impl Game for LineExample {
             &render_handle,
         );
 
+        self.material.add_screenspace_line(vec2!(-1.0, 1.0), vec2!(1.0, -1.0), Colour::RED, &render_handle);
+
         self.material.draw(&mut render_handle);
     }
 

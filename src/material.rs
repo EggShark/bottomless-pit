@@ -257,16 +257,15 @@ impl Material {
         colour: Colour,
         render: &RenderInformation,
     ) {
-        let window_size = render.size;
         let wgpu = render.wgpu;
 
         let colour = colour.as_raw();
         let tex_coords = [0.0, 0.0];
 
         let verts = [
-            Vertex::from_2d([p1.x, p1.y], tex_coords, colour).pixels_to_screenspace(window_size),
-            Vertex::from_2d([p2.x, p2.y], tex_coords, colour).pixels_to_screenspace(window_size),
-            Vertex::from_2d([p3.x, p3.y], tex_coords, colour).pixels_to_screenspace(window_size),
+            Vertex::from_2d([p1.x, p1.y], tex_coords, colour),
+            Vertex::from_2d([p2.x, p2.y], tex_coords, colour),
+            Vertex::from_2d([p3.x, p3.y], tex_coords, colour),
         ];
 
         self.push_triangle(wgpu, verts);
@@ -280,17 +279,13 @@ impl Material {
         colours: [Colour; 3],
         render: &RenderInformation,
     ) {
-        let window_size = render.size;
         let wgpu = render.wgpu;
 
         let tex_coords = [0.0, 0.0];
         let verts = [
-            Vertex::from_2d([points[0].x, points[0].y], tex_coords, colours[0].as_raw())
-                .pixels_to_screenspace(window_size),
-            Vertex::from_2d([points[1].x, points[1].y], tex_coords, colours[1].as_raw())
-                .pixels_to_screenspace(window_size),
-            Vertex::from_2d([points[2].x, points[2].y], tex_coords, colours[2].as_raw())
-                .pixels_to_screenspace(window_size),
+            Vertex::from_2d([points[0].x, points[0].y], tex_coords, colours[0].as_raw()),
+            Vertex::from_2d([points[1].x, points[1].y], tex_coords, colours[1].as_raw()),
+            Vertex::from_2d([points[2].x, points[2].y], tex_coords, colours[2].as_raw()),
         ];
 
         self.push_triangle(wgpu, verts);
@@ -311,7 +306,6 @@ impl Material {
         }
 
         let wgpu = render.wgpu;
-        let screen_size = render.size;
 
         let vertices = (0..number_of_sides)
             .map(|num| Vec2 {
@@ -320,7 +314,6 @@ impl Material {
             })
             .map(|point| {
                 Vertex::from_2d([point.x, point.y], [0.0, 0.0], colour.as_raw())
-                    .pixels_to_screenspace(screen_size)
             })
             .collect::<Vec<Vertex>>();
 
@@ -670,12 +663,41 @@ impl LineMaterial {
         colour: Colour,
         renderer: &RenderInformation,
     ) {
-        let screen_size = renderer.size;
         let wgpu = renderer.wgpu;
 
         let verts = [
-            LineVertex::new(start.to_raw(), colour.as_raw()).pixels_to_screenspace(screen_size),
-            LineVertex::new(end.to_raw(), colour.as_raw()).pixels_to_screenspace(screen_size),
+            LineVertex::new(start.to_raw(), colour.as_raw()),
+            LineVertex::new(end.to_raw(), colour.as_raw()),
+        ];
+
+        let max_verts = self.vertex_buffer.size();
+        let vert_size = std::mem::size_of::<LineVertex>() as u64;
+        if self.vertex_count + (2 * vert_size) > max_verts {
+            grow_buffer(&mut self.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
+        }
+
+        wgpu.queue.write_buffer(
+            &self.vertex_buffer,
+            self.vertex_count,
+            bytemuck::cast_slice(&verts),
+        );
+
+        self.vertex_count += 2 * self.vertex_size;
+    }
+
+    pub fn add_screenspace_line(
+        &mut self,
+        start: Vec2<f32>,
+        end: Vec2<f32>,
+        colour: Colour,
+        renderer: &RenderInformation,
+    ) {
+        let wgpu = renderer.wgpu;
+        let size = renderer.size;
+
+        let verts = [
+            LineVertex::new(start.to_raw(), colour.as_raw()).screenspace_to_pixels(size),
+            LineVertex::new(end.to_raw(), colour.as_raw()).screenspace_to_pixels(size),
         ];
 
         let max_verts = self.vertex_buffer.size();
@@ -700,6 +722,10 @@ impl LineMaterial {
     ) where
         'others: 'pass,
     {
+        if self.vertex_count == 0 {
+            return;
+        }
+
         let pipeline = &information
             .resources
             .get_pipeline(&self.pipe_id)
