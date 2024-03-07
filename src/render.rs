@@ -82,6 +82,12 @@ pub struct RenderInformation<'pass, 'others> {
     pub(crate) wgpu: &'others WgpuClump,
 }
 
+impl<'p, 'o> RenderInformation<'p, 'o> where 'o: 'p {
+    pub fn reset_camera(&mut self) {
+        self.render_pass.set_bind_group(1, self.camera_bindgroup, &[]);
+    }
+}
+
 pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::SurfaceError>
 where
     T: Game,

@@ -13,15 +13,18 @@ fn main() {
 
     let texture = Texture::new(&mut engine, "examples/bplogo.png");
 
-    let line_material = MaterialBuilder::new()
+    let material = MaterialBuilder::new()
         .add_texture(texture)
         .build(&mut engine);
+
+    let static_mat = MaterialBuilder::new().build(&mut engine);
     
     let camera = Camera::new(&engine);
 
 
     let game = CameraExample {
-        material: line_material,
+        material,
+        static_mat,
         camera,
     };
 
@@ -30,6 +33,7 @@ fn main() {
 
 struct CameraExample {
     material: Material,
+    static_mat: Material,
     camera: Camera,
 }
 
@@ -44,6 +48,11 @@ impl Game for CameraExample {
 
         self.camera.set_active(&mut render_handle);
         self.material.draw(&mut render_handle);
+
+        render_handle.reset_camera();
+
+        self.static_mat.add_rectangle(vec2!(0.0), vec2!(200.0), Colour::RED,&render_handle);
+        self.static_mat.draw(&mut render_handle);
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
