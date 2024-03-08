@@ -94,7 +94,7 @@ impl Game for Position {
         self.regular_material
             .add_custom(points, uvs, 0.0, Colour::RED, &render_handle);
 
-        self.regular_material.add_screenspace_rectangle(vec2!(-1.0, 1.0), vec2!(1.0), Colour::YELLOW, &render_handle);
+        self.regular_material.add_screenspace_rectangle(vec2!(0.0, 0.0), vec2!(1.0), Colour::YELLOW, &render_handle);
 
         self.texture_material.draw(&mut render_handle);
         self.regular_material.draw(&mut render_handle);
