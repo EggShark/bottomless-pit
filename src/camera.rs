@@ -1,3 +1,23 @@
+//! This contains a simple 2D camera that can be used to transform 
+//! the world.
+//! ```rust
+//!     fn render<'pass, 'others>(
+//!         &'others mut self,
+//!         mut render_handle: RenderInformation<'pass, 'others>,
+//!     ) where
+//!     'others: 'pass,
+//!     {
+//!         self.material.add_rectangle(Vec2 { x: 0.0, y: 0.0 }, Vec2{x: 300.0, y: 300.0}, Colour::WHITE, &render_handle);
+//!         // Draws objects with a cameras transform
+//!         self.camera.set_active(&mut render_handle);
+//!         self.material.draw(&mut render_handle);
+//!         // Resets back to the default camera great for static elements like a HUD or UI
+//!         render_handle.reset_camera();
+//!         self.text.add_instance(vec2!(0.0), Colour::WHITE, &render_handle);
+//!         self.text.draw(&mut render_handle);
+//! }
+//! ```
+
 use glam::Mat3;
 use wgpu::util::DeviceExt;
 
@@ -6,6 +26,7 @@ use crate::layouts;
 use crate::render::RenderInformation;
 use crate::vectors::Vec2;
 
+/// A simple 2D camera that can translate, rotate, and scale everything on the screen.
 pub struct Camera {
     bind_group: wgpu::BindGroup,
     buffer: wgpu::Buffer,
@@ -18,6 +39,14 @@ pub struct Camera {
 }
 
 impl Camera {
+    /// creates a new camera with these values:
+    /// ```rust
+    /// Camera {
+    ///     center: Vec2{x : 0.0, y: 0.0},
+    ///     rotation: 0.0,
+    ///     scale: Vec2{x: 1.0, y: 1.0},
+    /// }
+    /// ```
     pub fn new(engine: &Engine) -> Self {
         let wgpu = engine.get_wgpu();
         let size = engine.get_window_size();
@@ -57,6 +86,8 @@ impl Camera {
         }
     }
 
+    /// This will transform a point in screen space to camera space.
+    /// You can get the screen size from [Engine::get_window_size]
     pub fn transform_point(&self, point: Vec2<f32>, screen_size: Vec2<u32>) -> Vec2<f32> {
         let screen_size = Vec2{x: screen_size.x as f32, y: screen_size.y as f32};
 
