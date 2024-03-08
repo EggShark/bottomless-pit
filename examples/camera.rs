@@ -7,6 +7,7 @@ use bottomless_pit::render::RenderInformation;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::{vec2, Game};
 use bottomless_pit::texture::Texture;
+use bottomless_pit::text::TextMaterial;
 
 fn main() {
     let mut engine = EngineBuilder::new().build().unwrap();
@@ -16,15 +17,14 @@ fn main() {
     let material = MaterialBuilder::new()
         .add_texture(texture)
         .build(&mut engine);
-
-    let static_mat = MaterialBuilder::new().build(&mut engine);
     
     let camera = Camera::new(&engine);
 
+    let text = TextMaterial::new("Mouse pos: 0,0 \n Mouse pos: 0, 0", Colour::WHITE, 15.0, 20.0, &mut engine);
 
     let game = CameraExample {
         material,
-        static_mat,
+        text,
         camera,
     };
 
@@ -33,7 +33,7 @@ fn main() {
 
 struct CameraExample {
     material: Material,
-    static_mat: Material,
+    text: TextMaterial,
     camera: Camera,
 }
 
@@ -50,13 +50,14 @@ impl Game for CameraExample {
         self.material.draw(&mut render_handle);
 
         render_handle.reset_camera();
-
-        self.static_mat.add_rectangle(vec2!(0.0), vec2!(200.0), Colour::RED,&render_handle);
-        self.static_mat.draw(&mut render_handle);
+        self.text.add_instance(vec2!(0.0), Colour::WHITE, &render_handle);
+        self.text.draw(&mut render_handle);
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {
         let dt = engine_handle.get_frame_delta_time();
+        let mouse_pos = engine_handle.get_mouse_position();
+        let size = engine_handle.get_window_size();
 
         let move_factor = 15.0;
 
@@ -95,5 +96,15 @@ impl Game for CameraExample {
         if engine_handle.is_key_pressed(Key::Enter) {
             self.camera.rotation += 45.0;
         }
+
+        let trans_mouse = self.camera.transform_point(mouse_pos, size);
+
+        self.text.set_text(
+            &format!("Screen mouse pos: {:.3}, {:.3}\nWorld mouse pos: {:.3}, {:.3}", mouse_pos.x, mouse_pos.y, trans_mouse.x, trans_mouse.y),
+            Colour::WHITE,
+            engine_handle,
+        );
+
+        self.text.prepare(engine_handle);
     }
 }

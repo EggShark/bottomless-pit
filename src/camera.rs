@@ -1,3 +1,4 @@
+use glam::Mat3;
 use wgpu::util::DeviceExt;
 
 use crate::engine_handle::{Engine, WgpuClump};
@@ -54,6 +55,32 @@ impl Camera {
             rotation: 0.0,
             scale: Vec2{x: 1.0, y: 1.0},
         }
+    }
+
+    pub fn transform_point(&self, point: Vec2<f32>, screen_size: Vec2<u32>) -> Vec2<f32> {
+        let screen_size = Vec2{x: screen_size.x as f32, y: screen_size.y as f32};
+
+        let scale_x = self.scale.x;
+        let scale_y = self.scale.y;
+
+        let rot_x = screen_size.x / 2.0;
+        let rot_y = screen_size.y / 2.0;
+
+        let x_trans = rot_x - self.center.x;
+        let y_trans = rot_y - self.center.y;
+
+        let sin = self.rotation.to_radians().sin();
+        let cos = self.rotation.to_radians().cos();
+
+        let mat: Mat3 = Mat3::from_cols_array(&[
+            scale_x * cos, scale_y * sin, 0.0,
+            //c2
+            -scale_x * sin, scale_y * cos, 0.0,
+            //c3
+            scale_x * x_trans * cos - scale_x * y_trans * sin - rot_x * scale_x * cos + rot_y * scale_x * sin + rot_x, scale_y * x_trans * sin + scale_y * y_trans * cos - rot_x * scale_y * sin - rot_y * scale_y * cos + rot_y, 1.0,
+        ]).inverse();
+
+        mat.transform_point2(point.into()).into()
     }
 
     fn write_matrix(&self, wgpu: &WgpuClump, screen_size: Vec2<u32>) {
