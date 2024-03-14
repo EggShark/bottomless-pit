@@ -126,11 +126,7 @@ impl Engine {
             }
         }
 
-        let backend = if cfg!(target_os = "windows") {
-            wgpu::Backends::DX12 // text rendering gets angry on vulkan
-        } else {
-            wgpu::Backends::all()
-        };
+        let backend = wgpu::Backends::all();
 
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: backend,
@@ -152,11 +148,7 @@ impl Engine {
             None => Err(BuildError::FailedToCreateAdapter),
         }?;
 
-        let limits = if cfg!(target_arch = "wasm32") {
-            wgpu::Limits::downlevel_webgl2_defaults()
-        } else {
-            wgpu::Limits::default()
-        };
+        let limits = adapter.limits();
 
         let (device, queue) = pollster::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
