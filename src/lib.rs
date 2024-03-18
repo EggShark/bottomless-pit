@@ -40,6 +40,7 @@
 //! }
 #![allow(clippy::needless_doctest_main)]
 
+pub mod buffer;
 pub mod camera;
 pub mod colour;
 pub mod engine_handle;

@@ -20,6 +20,7 @@ use winit::event::*;
 use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy};
 use winit::window::{BadIcon, Window};
 
+use crate::buffer::Buffer;
 use crate::colour::Colour;
 use crate::input::{InputHandle, Key, MouseKey};
 use crate::render::{make_pipeline, render};
@@ -64,6 +65,7 @@ pub struct Engine {
     pub(crate) text_renderer: TextRenderer,
     #[cfg(not(target_arch = "wasm32"))]
     thread_pool: ThreadPool,
+    frame_time_buffer: Buffer<f32, 10>,
 }
 
 impl Engine {
@@ -352,6 +354,8 @@ impl Engine {
         let white_pixel_id = resource::generate_id::<Texture>();
         resource_manager.insert_texture(white_pixel_id, white_pixel);
 
+        let frame_time_buffer = Buffer::new([0.0_f32; 10]);
+
         Ok(Self {
             input_handle,
             window,
@@ -380,6 +384,7 @@ impl Engine {
             text_renderer,
             #[cfg(not(target_arch = "wasm32"))]
             thread_pool: ThreadPool::new().expect("Failed To Make Pool"),
+            frame_time_buffer,
         })
     }
 
@@ -558,6 +563,10 @@ impl Engine {
     /// Gets the time since the previous frame or change in time between now and last frame
     pub fn get_frame_delta_time(&self) -> f32 {
         Instant::now().duration_since(self.last_frame).as_secs_f32()
+    }
+
+    pub fn get_accurate_fps(&self) -> f32 {
+        self.frame_time_buffer.iter().sum::<f32>() / self.frame_time_buffer.len() as f32
     }
 
     /// Gets the current target fps
@@ -768,6 +777,11 @@ impl Engine {
 
     fn update(&mut self, control_flow: &mut ControlFlow) {
         self.last_frame = Instant::now();
+        let fps = 1.0 / self.last_frame
+            .duration_since(self.current_frametime)
+            .as_secs_f32();
+
+        self.frame_time_buffer.insert_data(fps);
 
         if self.should_close {
             *control_flow = ControlFlow::Exit;
