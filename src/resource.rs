@@ -49,7 +49,7 @@ use crate::engine_handle::{BpEvent, Engine};
 use crate::io::{self, ReadError};
 use crate::shader::Shader;
 use crate::text::Font;
-use crate::texture::Texture;
+use crate::texture::{SamplerType, Texture};
 
 #[derive(Debug)]
 pub(crate) struct Resource {
@@ -128,7 +128,7 @@ impl InProgressResource {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ResourceType {
-    Image,
+    Image(SamplerType, SamplerType),
     Shader(bool),
     Bytes,
     Font,

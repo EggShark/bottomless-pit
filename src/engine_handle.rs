@@ -29,7 +29,7 @@ use crate::resource::{
 };
 use crate::shader::Shader;
 use crate::text::{Font, TextRenderer};
-use crate::texture::Texture;
+use crate::texture::{SamplerType, Texture};
 use crate::vectors::Vec2;
 use crate::vertex::{LineVertex, Vertex};
 use crate::{resource, WHITE_PIXEL};
@@ -844,7 +844,7 @@ impl Engine {
         match resource {
             Ok(data) => match data.resource_type {
                 ResourceType::Bytes => self.add_finished_bytes(data),
-                ResourceType::Image => self.add_finished_image(data),
+                ResourceType::Image(mag, min) => self.add_finished_image(data, mag, min),
                 ResourceType::Shader(has_uniforms) => self.add_finished_shader(data, has_uniforms),
                 ResourceType::Font => self.add_finished_font(data),
             },
@@ -856,7 +856,7 @@ impl Engine {
                 );
                 match e.resource_type {
                     ResourceType::Bytes => self.add_defualt_bytes(e.id),
-                    ResourceType::Image => self.add_defualt_image(e.id),
+                    ResourceType::Image(..) => self.add_defualt_image(e.id),
                     ResourceType::Shader(_) => self.add_defualt_shader(e.id),
                     ResourceType::Font => self.add_defualt_font(e.id),
                 }
@@ -869,9 +869,9 @@ impl Engine {
         self.resource_manager.insert_bytes(typed_id, resource.data);
     }
 
-    fn add_finished_image(&mut self, resource: Resource) {
+    fn add_finished_image(&mut self, resource: Resource, mag: SamplerType, min: SamplerType) {
         let typed_id: ResourceId<Texture> = ResourceId::from_number(resource.id);
-        let texture = Texture::from_resource_data(self, None, &resource.data);
+        let texture = Texture::from_resource_data(self, None, resource, mag, min);
         match texture {
             Ok(texture) => self.resource_manager.insert_texture(typed_id, texture),
             Err(e) => log::error!("{:?}, loading defualt replacement", e),
