@@ -17,7 +17,7 @@ use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
 use winit::error::OsError;
 use winit::event::*;
-use winit::event_loop::{ControlFlow, EventLoop, EventLoopBuilder, EventLoopProxy};
+use winit::event_loop::{EventLoop, EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget};
 use winit::window::{BadIcon, Window};
 
 use crate::colour::Colour;
@@ -38,8 +38,8 @@ use crate::{layouts, Game};
 /// The thing that makes the computer go
 pub struct Engine {
     input_handle: InputHandle,
-    window: Window,
-    surface: wgpu::Surface,
+    window: Arc<Window>,
+    surface: wgpu::Surface<'static>,
     event_loop: Option<EventLoop<BpEvent>>,
     event_loop_proxy: Arc<EventLoopProxy<BpEvent>>,
     cursor_visibility: bool,
@@ -83,7 +83,7 @@ impl Engine {
         let size: Vec2<u32> = builder.resolution.into();
         let target_fps = builder.target_fps;
 
-        let event_loop: EventLoop<BpEvent> = EventLoopBuilder::with_user_event().build();
+        let event_loop: EventLoop<BpEvent> = EventLoopBuilder::with_user_event().build().unwrap();
         let event_loop_proxy = Arc::new(event_loop.create_proxy());
         let window_builder = winit::window::WindowBuilder::new()
             .with_title(&builder.window_title)
@@ -100,13 +100,13 @@ impl Engine {
             window_builder
         };
 
-        let window = window_builder.build(&event_loop)?;
+        let window = Arc::new(window_builder.build(&event_loop)?);
 
         #[cfg(target_arch = "wasm32")]
         {
             use winit::platform::web::WindowExtWebSys;
             let web_window = web_sys::window().ok_or(BuildError::CantGetWebWindow)?;
-            let canvas = web_sys::Element::from(window.canvas());
+            let canvas = web_sys::Element::from(window.canvas().unwrap());
             let document = web_window.document().ok_or(BuildError::CantGetDocument)?;
 
             match document.get_element_by_id(&builder.window_title) {
@@ -136,7 +136,7 @@ impl Engine {
             gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
         });
 
-        let surface = unsafe { instance.create_surface(&window) }?;
+        let surface = instance.create_surface(window.clone())?;
 
         let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
             power_preference: wgpu::PowerPreference::default(),
@@ -153,8 +153,8 @@ impl Engine {
 
         let (device, queue) = pollster::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
-                features: wgpu::Features::empty(),
-                limits,
+                required_features: wgpu::Features::empty(),
+                required_limits: limits,
                 label: None,
             },
             None,
@@ -178,6 +178,7 @@ impl Engine {
             present_mode: builder.vsync,
             alpha_mode: surface_capabilities.alpha_modes[0],
             view_formats: vec![],
+            desired_maximum_frame_latency: 2,
         };
         surface.configure(&wgpu_clump.device, &config);
 
@@ -715,33 +716,14 @@ impl Engine {
     }
 
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
-    pub fn run<T: 'static>(mut self, mut game: T) -> !
+    pub fn run<T: 'static>(mut self, mut game: T)
     where
         T: Game,
     {
         let event_loop = self.event_loop.take().unwrap(); //should never panic
-        event_loop.run(move |event, _, control_flow| {
+        let _ = event_loop.run(move |event, control_flow| {
             match event {
-                Event::RedrawRequested(window_id) if window_id == self.window.id() => {
-                    if self.is_loading() {
-                        self.update(control_flow);
-                    } else {
-                        game.update(&mut self);
-                        self.update(control_flow);
-                        self.current_frametime = Instant::now();
-
-                        match render(&mut game, &mut self) {
-                            Ok(_) => {}
-                            // reconfigure surface if lost
-                            Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
-                            Err(wgpu::SurfaceError::OutOfMemory) => {
-                                *control_flow = ControlFlow::Exit
-                            }
-                            Err(e) => eprintln!("{:?}", e),
-                        }
-                    }
-                }
-                Event::MainEventsCleared => {
+                Event::AboutToWait => {
                     //RedrawRequested will only trigger once, unless we manually request it
                     self.window.request_redraw();
                 }
@@ -751,14 +733,29 @@ impl Engine {
                 } if window_id == self.window.id() => {
                     if !self.input(event) {
                         match event {
-                            WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
+                            WindowEvent::CloseRequested => control_flow.exit(),
                             WindowEvent::Resized(physical_size) => {
                                 let s = *physical_size;
                                 self.resize(s.into())
                             }
-                            WindowEvent::ScaleFactorChanged { new_inner_size, .. } => {
-                                let s = **new_inner_size;
-                                self.resize(s.into());
+                            WindowEvent::RedrawRequested => {
+                                if self.is_loading() {
+                                    self.update(control_flow);
+                                } else {
+                                    game.update(&mut self);
+                                    self.update(control_flow);
+                                    self.current_frametime = Instant::now();
+            
+                                    match render(&mut game, &mut self) {
+                                        Ok(_) => {}
+                                        // reconfigure surface if lost
+                                        Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
+                                        Err(wgpu::SurfaceError::OutOfMemory) => {
+                                            control_flow.exit();
+                                        }
+                                        Err(e) => eprintln!("{:?}", e),
+                                    }
+                                }
                             }
                             _ => {}
                         }
@@ -772,7 +769,7 @@ impl Engine {
         });
     }
 
-    fn update(&mut self, control_flow: &mut ControlFlow) {
+    fn update<T>(&mut self, elwt: &EventLoopWindowTarget<T>) {
         self.last_frame = Instant::now();
         let dt = self.last_frame
             .duration_since(self.current_frametime)
@@ -781,14 +778,14 @@ impl Engine {
         self.ma_frame_time = (self.ma_frame_time + dt) / 2.0;
 
         if self.should_close {
-            *control_flow = ControlFlow::Exit;
+            elwt.exit();
             return;
         }
 
         self.input_handle.end_of_frame_refresh();
         if let Some(key) = self.close_key {
             if self.input_handle.is_key_down(key) {
-                *control_flow = ControlFlow::Exit;
+                elwt.exit();
                 return;
             }
         }

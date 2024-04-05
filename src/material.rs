@@ -27,6 +27,7 @@ use crate::vertex::{self, LineVertex, Vertex};
 
 /// A material represents a unique combination of a Texture
 /// and RenderPipeline, while also containing all nessicary buffers
+#[derive(Debug)]
 pub struct Material {
     pipeline_id: ResourceId<Shader>,
     vertex_buffer: wgpu::Buffer,
