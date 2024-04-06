@@ -11,26 +11,30 @@
 //!     }
 //! }
 
+const INPUT_MAP_SIZE: usize = 112;
+
 use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
 use winit::keyboard::{PhysicalKey, KeyCode};
 
 use crate::vectors::Vec2;
 
 pub(crate) struct InputHandle {
-    previous_keyboard_state: [bool; 111],
-    current_keyboard_state: [bool; 111],
+    previous_keyboard_state: [bool; INPUT_MAP_SIZE],
+    current_keyboard_state: [bool; INPUT_MAP_SIZE],
     previous_mouse_state: [bool; 6],
     current_mouse_state: [bool; 6],
+    current_text: Option<String>,
     mouse_position: Vec2<f32>,
 }
 
 impl InputHandle {
     pub(crate) fn new() -> Self {
         Self {
-            previous_keyboard_state: [false; 111],
-            current_keyboard_state: [false; 111],
+            previous_keyboard_state: [false; INPUT_MAP_SIZE],
+            current_keyboard_state: [false; INPUT_MAP_SIZE],
             previous_mouse_state: [false; 6],
             current_mouse_state: [false; 6],
+            current_text: None,
             mouse_position: Vec2 { x: 0.0, y: 0.0 },
         }
     }
@@ -38,6 +42,7 @@ impl InputHandle {
     pub(crate) fn end_of_frame_refresh(&mut self) {
         self.previous_keyboard_state = self.current_keyboard_state;
         self.previous_mouse_state = self.current_mouse_state;
+        self.current_text = None;
     }
 
     pub(crate) fn process_input(&mut self, event: &WindowEvent) -> bool {
@@ -80,7 +85,18 @@ impl InputHandle {
             PhysicalKey::Unidentified(_) => return false,
         };
 
+        if key_bool {
+            self.current_text = event
+                .text
+                .as_ref()
+                .map(|s| s.to_string());
+        }
+
         let key: Key = key_code.into(); 
+
+        if key == Key::Unrecognized {
+            return false;
+        }
 
         let index = key as usize;
         self.current_keyboard_state[index] = key_bool;
@@ -115,6 +131,13 @@ impl InputHandle {
     pub(crate) fn is_mouse_key_up(&self, key: MouseKey) -> bool {
         let index = key as usize;
         !self.current_keyboard_state[index]
+    }
+
+    pub(crate) fn get_text_value(&self) -> Option<&str> {
+        self
+            .current_text
+            .as_ref()
+            .map(|s| s.as_str())
     }
 
     pub(crate) fn is_mouse_key_pressed(&self, key: MouseKey) -> bool {
@@ -272,6 +295,7 @@ pub enum Key {
     SemiColon,
     Slash,
     Tab,
+    BackQoute,
     Unrecognized,
 }
 
@@ -388,6 +412,7 @@ impl From<KeyCode> for Key {
             KeyCode::Semicolon => Key::SemiColon,
             KeyCode::Slash => Key::Slash,
             KeyCode::Tab => Key::Tab,
+            KeyCode::Backquote => Key::BackQoute,
             _ => Key::Unrecognized,
         }
     }

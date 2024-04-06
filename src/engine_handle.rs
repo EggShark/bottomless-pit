@@ -406,6 +406,12 @@ impl Engine {
         self.input_handle.is_key_released(key)
     }
 
+    /// returns the text vule of any keys held down helpfull for text
+    /// entry. As if Shift + w is held this will return `Some("W")`
+    pub fn get_current_text(&self) -> Option<&str> {
+        self.input_handle.get_text_value()
+    }
+
     /// Checks if a mouse key is down
     pub fn is_mouse_key_down(&self, key: MouseKey) -> bool {
         self.input_handle.is_mouse_key_down(key)
