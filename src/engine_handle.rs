@@ -21,7 +21,7 @@ use winit::event_loop::{EventLoop, EventLoopBuilder, EventLoopProxy, EventLoopWi
 use winit::window::{BadIcon, Window};
 
 use crate::colour::Colour;
-use crate::input::{InputHandle, Key, MouseKey};
+use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::{make_pipeline, render};
 use crate::resource::{
     compare_resources, InProgressResource, Resource, ResourceError, ResourceId, ResourceManager,
@@ -404,6 +404,10 @@ impl Engine {
     /// Only returns `true` on the frame where the key first returns back up
     pub fn is_key_released(&self, key: Key) -> bool {
         self.input_handle.is_key_released(key)
+    }
+
+    pub fn check_modifers(&self, modifer: ModifierKeys) -> bool {
+        self.input_handle.check_modifiers(modifer)
     }
 
     /// returns the text vule of any keys held down helpfull for text

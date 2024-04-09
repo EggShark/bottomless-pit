@@ -13,14 +13,15 @@
 
 const INPUT_MAP_SIZE: usize = 112;
 
-use winit::event::{ElementState, KeyEvent, MouseButton, WindowEvent};
-use winit::keyboard::{PhysicalKey, KeyCode};
+use winit::event::{ElementState, KeyEvent, Modifiers, MouseButton, WindowEvent};
+use winit::keyboard::{KeyCode, ModifiersState, PhysicalKey};
 
 use crate::vectors::Vec2;
 
 pub(crate) struct InputHandle {
     previous_keyboard_state: [bool; INPUT_MAP_SIZE],
     current_keyboard_state: [bool; INPUT_MAP_SIZE],
+    modifier_state: ModifiersState,
     previous_mouse_state: [bool; 6],
     current_mouse_state: [bool; 6],
     current_text: Option<String>,
@@ -32,6 +33,7 @@ impl InputHandle {
         Self {
             previous_keyboard_state: [false; INPUT_MAP_SIZE],
             current_keyboard_state: [false; INPUT_MAP_SIZE],
+            modifier_state: ModifiersState::empty(),
             previous_mouse_state: [false; 6],
             current_mouse_state: [false; 6],
             current_text: None,
@@ -62,6 +64,7 @@ impl InputHandle {
                 self.mouse_position = pos;
                 true
             }
+            WindowEvent::ModifiersChanged(m) => self.process_modifiers(m),
             _ => false,
         }
     }
@@ -103,6 +106,12 @@ impl InputHandle {
         true
     }
 
+    fn process_modifiers(&mut self, modifier: &Modifiers) -> bool {
+        self.modifier_state = modifier.state();
+
+        true
+    }
+
     pub(crate) fn is_key_down(&self, key: Key) -> bool {
         let index = key as usize;
         self.current_keyboard_state[index]
@@ -128,16 +137,22 @@ impl InputHandle {
         self.current_mouse_state[index]
     }
 
-    pub(crate) fn is_mouse_key_up(&self, key: MouseKey) -> bool {
-        let index = key as usize;
-        !self.current_keyboard_state[index]
-    }
-
     pub(crate) fn get_text_value(&self) -> Option<&str> {
         self
             .current_text
             .as_ref()
             .map(|s| s.as_str())
+    }
+
+    pub(crate) fn check_modifiers(&self, modifer: ModifierKeys) -> bool {
+        let state: ModifiersState = modifer.into();
+
+        self.modifier_state.intersects(state)
+    }
+
+    pub(crate) fn is_mouse_key_up(&self, key: MouseKey) -> bool {
+        let index = key as usize;
+        !self.current_keyboard_state[index]
     }
 
     pub(crate) fn is_mouse_key_pressed(&self, key: MouseKey) -> bool {
@@ -182,7 +197,7 @@ impl From<MouseButton> for MouseKey {
 
 /// Representation of keyboard keys
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum Key {
     Key1,
     Key2,
@@ -414,6 +429,25 @@ impl From<KeyCode> for Key {
             KeyCode::Tab => Key::Tab,
             KeyCode::Backquote => Key::BackQoute,
             _ => Key::Unrecognized,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ModifierKeys {
+    Shift,
+    Alt,
+    Ctrl,
+    Super,
+}
+
+impl From<ModifierKeys> for ModifiersState {
+    fn from(value: ModifierKeys) -> Self {
+        match value {
+            ModifierKeys::Shift => ModifiersState::SHIFT,
+            ModifierKeys::Alt => ModifiersState::ALT,
+            ModifierKeys::Ctrl => ModifiersState::CONTROL,
+            ModifierKeys::Super => ModifiersState::SUPER,
         }
     }
 }
