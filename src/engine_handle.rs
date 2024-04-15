@@ -406,7 +406,7 @@ impl Engine {
         self.input_handle.is_key_released(key)
     }
 
-    pub fn check_modifers(&self, modifer: ModifierKeys) -> bool {
+    pub fn check_modifiers(&self, modifer: ModifierKeys) -> bool {
         self.input_handle.check_modifiers(modifer)
     }
 

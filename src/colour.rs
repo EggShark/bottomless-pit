@@ -88,12 +88,13 @@ impl Colour {
     }
 
     /// Creates a colour from seperate values beteen 0.0 and 255.0
+    /// and an alpha value of 0 to 1.
     pub fn from_rgba(r: f32, g: f32, b: f32, a: f32) -> Self {
         Self {
             r: r / 255.0,
             g: g / 255.0,
             b: b / 255.0,
-            a: a / 255.0,
+            a: a,
         }
     }
 
