@@ -217,7 +217,7 @@ impl TextMaterial {
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
 
         let (vertex_buffer, index_buffer) =
-            Material::create_buffers(&engine.wgpu_clump.device, vertex_size, 8, 2, 12);
+            Material::create_buffers(&engine.wgpu_clump.device, vertex_size, 16, 2, 32);
 
         let bind_group = engine
             .wgpu_clump
@@ -548,7 +548,7 @@ impl TextMaterial {
 
         let max_indicies = self.index_buffer.size();
         if self.index_count + (6 * index_size) > max_indicies {
-            material::grow_buffer(&mut self.vertex_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
+            material::grow_buffer(&mut self.index_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
         }
 
         wgpu.queue.write_buffer(
@@ -624,7 +624,7 @@ impl TextMaterial {
 
         information
             .render_pass
-            .set_vertex_buffer(0, self.vertex_buffer.slice(0..self.get_vertex_number()));
+            .set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
         information.render_pass.set_index_buffer(
             self.index_buffer.slice(0..self.index_count),
             wgpu::IndexFormat::Uint16,
