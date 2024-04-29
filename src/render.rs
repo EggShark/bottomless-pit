@@ -31,6 +31,7 @@ pub(crate) fn make_pipeline(
             module: shader,
             entry_point: "vs_main", //specify the entry point (can be whatever as long as it exists)
             buffers: vertex_buffers, // specfies what type of vertices we want to pass to the shader,
+            compilation_options: wgpu::PipelineCompilationOptions::default()
         },
         fragment: Some(wgpu::FragmentState {
             // techically optional. Used to store colour data to the surface
@@ -42,6 +43,7 @@ pub(crate) fn make_pipeline(
                 blend: Some(wgpu::BlendState::ALPHA_BLENDING), // specifies that the blending should just replace old pixel data wiht new data,
                 write_mask: wgpu::ColorWrites::ALL,            // writes all colours
             })],
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
         }),
         primitive: wgpu::PrimitiveState {
             topology,

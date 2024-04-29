@@ -3,7 +3,7 @@
 //! builder lets you customize the engine at the start, and the
 //! Engine gives you access to all the crucial logic functions
 
-use cosmic_text::{Attrs, Metrics, Shaping};
+use glyphon::{Attrs, Metrics, Shaping};
 #[cfg(not(target_arch = "wasm32"))]
 use futures::executor::ThreadPool;
 
