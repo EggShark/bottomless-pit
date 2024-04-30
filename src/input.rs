@@ -39,7 +39,7 @@ impl InputHandle {
             current_mouse_state: [false; 6],
             current_text: None,
             mouse_position: Vec2 { x: 0.0, y: 0.0 },
-            mouse_delta: Vec2 { x: 0.0, y: 0.0},
+            mouse_delta: Vec2{ x: 0.0, y: 0.0 },
         }
     }
 
@@ -47,7 +47,7 @@ impl InputHandle {
         self.previous_keyboard_state = self.current_keyboard_state;
         self.previous_mouse_state = self.current_mouse_state;
         self.current_text = None;
-        self.mouse_delta = Vec2{ x: 0.0, y: 0.0 }
+        self.mouse_delta = Vec2{ x: 0.0, y: 0.0};
     }
 
     pub(crate) fn process_input(&mut self, event: &WindowEvent) -> bool {
@@ -64,7 +64,8 @@ impl InputHandle {
                     x: position.x as f32,
                     y: position.y as f32,
                 };
-                self.mouse_delta = self.mouse_position - pos;
+                self.mouse_delta += pos - self.mouse_position;
+
                 self.mouse_position = pos;
                 true
             }
