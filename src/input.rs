@@ -64,7 +64,7 @@ impl InputHandle {
                     x: position.x as f32,
                     y: position.y as f32,
                 };
-                self.mouse_delta = pos - self.mouse_position;
+                self.mouse_delta = self.mouse_position - pos;
                 self.mouse_position = pos;
                 true
             }
