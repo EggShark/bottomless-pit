@@ -26,6 +26,7 @@ pub(crate) struct InputHandle {
     current_mouse_state: [bool; 6],
     current_text: Option<String>,
     mouse_position: Vec2<f32>,
+    mouse_delta: Vec2<f32>,
 }
 
 impl InputHandle {
@@ -38,6 +39,7 @@ impl InputHandle {
             current_mouse_state: [false; 6],
             current_text: None,
             mouse_position: Vec2 { x: 0.0, y: 0.0 },
+            mouse_delta: Vec2 { x: 0.0, y: 0.0},
         }
     }
 
@@ -61,6 +63,7 @@ impl InputHandle {
                     x: position.x as f32,
                     y: position.y as f32,
                 };
+                self.mouse_delta = pos - self.mouse_position;
                 self.mouse_position = pos;
                 true
             }
@@ -167,6 +170,10 @@ impl InputHandle {
 
     pub(crate) fn get_mouse_position(&self) -> Vec2<f32> {
         self.mouse_position
+    }
+
+    pub(crate) fn get_mouse_delta(&self) -> Vec2<f32> {
+        self.mouse_delta
     }
 }
 

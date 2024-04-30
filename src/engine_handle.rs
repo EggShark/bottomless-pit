@@ -441,6 +441,11 @@ impl Engine {
         self.input_handle.get_mouse_position()
     }
 
+    /// Returns how much the mouse has moved in the last frame
+    pub fn get_mouse_delta(&self) -> Vec2<f32> {
+        self.input_handle.get_mouse_delta()
+    }
+
     /// Checks if the window has focus
     pub fn window_has_focus(&self) -> bool {
         self.window.has_focus()

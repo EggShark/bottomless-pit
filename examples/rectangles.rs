@@ -1,6 +1,6 @@
 use bottomless_pit::colour::Colour;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
-use bottomless_pit::input::MouseKey;
+use bottomless_pit::input::{Key, MouseKey};
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderInformation;
 use bottomless_pit::texture::Texture;
@@ -25,6 +25,7 @@ fn main() {
         pos: vec2! { 0.0 },
         regular_material,
         texture_material,
+        state: false,
     };
 
     engine.run(pos);
@@ -34,6 +35,7 @@ struct Position {
     pos: Vec2<f32>,
     regular_material: Material,
     texture_material: Material,
+    state: bool,
 }
 
 impl Game for Position {
@@ -96,6 +98,10 @@ impl Game for Position {
 
         self.regular_material.add_screenspace_rectangle(vec2!(0.0, 0.0), vec2!(1.0), Colour::YELLOW, &render_handle);
 
+        if self.state {
+            self.regular_material.add_rectangle(vec2!(300.0), vec2!(100.0), Colour::GREEN, &render_handle);
+        }
+
         self.texture_material.draw(&mut render_handle);
         self.regular_material.draw(&mut render_handle);
     }
@@ -107,5 +113,7 @@ impl Game for Position {
             let new_texture = Texture::new(engine_handle, "examples/eggshark.png");
             self.texture_material.change_texture(new_texture);
         }
+
+        self.state = engine_handle.is_key_down(Key::Space);
     }
 }
