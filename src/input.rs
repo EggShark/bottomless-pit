@@ -47,6 +47,7 @@ impl InputHandle {
         self.previous_keyboard_state = self.current_keyboard_state;
         self.previous_mouse_state = self.current_mouse_state;
         self.current_text = None;
+        self.mouse_delta = Vec2{ x: 0.0, y: 0.0 }
     }
 
     pub(crate) fn process_input(&mut self, event: &WindowEvent) -> bool {
