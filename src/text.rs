@@ -125,6 +125,7 @@ pub struct TextMaterial {
     line_height: f32,
     bounds: Vec2<Vec2<i32>>,
     text_buffer: glyphon::Buffer,
+    text: String,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     texture: wgpu::Texture,
@@ -243,6 +244,7 @@ impl TextMaterial {
             line_height,
             bounds,
             text_buffer,
+            text: text.into(),
             vertex_buffer,
             index_buffer,
             texture,
@@ -329,6 +331,10 @@ impl TextMaterial {
     /// Measuers the text contained within the widget
     pub fn get_measurements(&self) -> Vec2<u32> {
         self.size
+    }
+
+    pub fn get_text(&self) -> &str {
+        &self.text
     }
 
     fn update_measurements(&mut self, font_info: FontInformation) {
