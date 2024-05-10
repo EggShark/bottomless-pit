@@ -1,6 +1,8 @@
 //! Contains the Renderer struct which also contains all the
 //! functions and logic to draw things to the screen
 
+use std::mem::ManuallyDrop;
+
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
@@ -150,4 +152,82 @@ where
     output.present();
 
     Ok(())
+}
+
+pub struct RenderHandle<'a> {
+    // ME WHEN BC HACKS :3
+    encoder: Option<wgpu::CommandEncoder>,
+    resources: &'a ResourceManager,
+    defualt_id: ResourceId<Shader>,
+    defualt_view: wgpu::TextureView,
+    camera_bindgroup: &'a wgpu::BindGroup,
+    wgpu: &'a WgpuClump,
+}
+
+impl<'a> RenderHandle<'a> {
+    fn start_pass<'p, 'o>(&'o mut self, view: &'o wgpu::TextureView, clear_colour: wgpu::Color) -> Renderer<'o, 'p> {
+        match &mut self.encoder {
+            Some(encoder) => {
+                let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("Render Pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(clear_colour),
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                    depth_stencil_attachment: None,
+                });
+
+                Renderer{
+                    pass: render_pass,
+                    resources: &self.resources,
+                    defualt_id: self.defualt_id,
+                    camera_bindgroup: &self.camera_bindgroup,
+                    wgpu: &self.wgpu
+                }
+            }
+            None => unreachable!(),
+        }
+    }
+}
+
+impl<'a> From<&'a Engine> for RenderHandle<'a> {
+    fn from(value: &'a Engine) -> Self {
+        let encoder = value.get_wgpu().device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("render encoder")
+        });
+
+        let view = value
+            .get_current_texture()
+            .unwrap().texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+
+        Self {
+            encoder: Some(encoder),
+            resources: value.get_resources(),
+            defualt_id: value.defualt_pipe_id(),
+            defualt_view: view,
+            camera_bindgroup: value.camera_bindgroup(),
+            wgpu: value.get_wgpu(),
+        }
+    }
+}
+
+impl Drop for RenderHandle<'_> {
+    fn drop(&mut self) {
+        self.wgpu.queue.submit(std::iter::once(self.encoder.take().unwrap().finish()));
+    }
+}
+
+pub struct Renderer<'o, 'p> where 'o: 'p {
+    pass: wgpu::RenderPass<'p>,
+    pub(crate) resources: &'o ResourceManager,
+    pub(crate) defualt_id: ResourceId<Shader>,
+    pub(crate) camera_bindgroup: &'o wgpu::BindGroup,
+    pub(crate) wgpu: &'o WgpuClump,
 }
