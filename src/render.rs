@@ -7,7 +7,7 @@ use crate::engine_handle::{Engine, WgpuClump};
 use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
 use crate::vectors::Vec2;
-use crate::Game;
+use crate::{Game, vec2};
 
 pub(crate) fn make_pipeline(
     device: &wgpu::Device,
@@ -103,6 +103,9 @@ where
 
     let wgpu = engine.get_wgpu();
     let output = engine.get_current_texture()?;
+
+    let size = output.texture.size();
+
     let view = output
         .texture
         .create_view(&wgpu::TextureViewDescriptor::default());
@@ -165,13 +168,13 @@ pub struct RenderHandle<'a> {
 }
 
 impl<'a> RenderHandle<'a> {
-    fn start_pass<'p, 'o>(&'o mut self, view: &'o wgpu::TextureView, clear_colour: wgpu::Color) -> Renderer<'o, 'p> {
+    fn start_pass<'p, 'o>(&'o mut self, view: &'o wgpu::TextureView, size: Vec2<u32>, clear_colour: wgpu::Color) -> Renderer<'o, 'p> {
         match &mut self.encoder {
             Some(encoder) => {
                 let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                     label: Some("Render Pass"),
                     color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view: &view,
+                        view,
                         resolve_target: None,
                         ops: wgpu::Operations {
                             load: wgpu::LoadOp::Clear(clear_colour),
@@ -185,6 +188,7 @@ impl<'a> RenderHandle<'a> {
 
                 Renderer{
                     pass: render_pass,
+                    size,
                     resources: &self.resources,
                     defualt_id: self.defualt_id,
                     camera_bindgroup: &self.camera_bindgroup,
@@ -225,9 +229,16 @@ impl Drop for RenderHandle<'_> {
 }
 
 pub struct Renderer<'o, 'p> where 'o: 'p {
-    pass: wgpu::RenderPass<'p>,
+    pub(crate) pass: wgpu::RenderPass<'p>,
+    pub(crate) size: Vec2<u32>,
     pub(crate) resources: &'o ResourceManager,
     pub(crate) defualt_id: ResourceId<Shader>,
     pub(crate) camera_bindgroup: &'o wgpu::BindGroup,
     pub(crate) wgpu: &'o WgpuClump,
+}
+
+impl<'p, 'o> Renderer<'p, 'o> {
+    pub fn reset_camera(&mut self) {
+        self.pass.set_bind_group(1, self.camera_bindgroup, &[]);
+    }
 }

@@ -18,7 +18,7 @@ use encase::ShaderType;
 use crate::colour::Colour;
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::matrix_math::normalize_points;
-use crate::render::RenderInformation;
+use crate::render::{Renderer, RenderInformation};
 use crate::resource::ResourceId;
 use crate::shader::{Shader, UniformData};
 use crate::texture::Texture;
@@ -94,7 +94,7 @@ impl Material {
         position: Vec2<f32>,
         size: Vec2<f32>,
         colour: Colour,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
         let verts = vertex::from_pixels(position, size, colour.as_raw());
@@ -108,7 +108,7 @@ impl Material {
         position: Vec2<f32>,
         size: Vec2<f32>,
         colour: Colour,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
         let screen_size = render.size;
@@ -126,7 +126,7 @@ impl Material {
         uv_position: Vec2<f32>,
         uv_size: Vec2<f32>,
         colour: Colour,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
 
@@ -153,7 +153,7 @@ impl Material {
         size: Vec2<f32>,
         colour: Colour,
         rotation: f32,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
 
@@ -177,7 +177,7 @@ impl Material {
         rotation: f32,
         uv_position: Vec2<f32>,
         uv_size: Vec2<f32>,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
 
@@ -208,7 +208,7 @@ impl Material {
         rotation: f32,
         uv_position: Vec2<f32>,
         uv_size: Vec2<f32>,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
 
@@ -232,7 +232,7 @@ impl Material {
         uv_points: [Vec2<f32>; 4],
         rotation: f32,
         colour: Colour,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
         let texture_size = render.resources.get_texture(&self.texture_id).unwrap().size;
@@ -256,7 +256,7 @@ impl Material {
         p2: Vec2<f32>,
         p3: Vec2<f32>,
         colour: Colour,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
 
@@ -278,7 +278,7 @@ impl Material {
         &mut self,
         points: [Vec2<f32>; 3],
         colours: [Colour; 3],
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
 
@@ -300,7 +300,7 @@ impl Material {
         radius: f32,
         center: Vec2<f32>,
         colour: Colour,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         if number_of_sides < 4 {
             return;
@@ -491,10 +491,8 @@ impl Material {
     /// Draws all queued shapes to the screen.
     pub fn draw<'pass, 'others>(
         &'others mut self,
-        information: &mut RenderInformation<'pass, 'others>,
-    ) where
-        'others: 'pass,
-    {
+        information: &mut Renderer<'pass, 'others>,
+    ) {
         if self.vertex_count == 0 {
             return;
         }
@@ -510,24 +508,24 @@ impl Material {
             .unwrap()
             .bind_group;
 
-        information.render_pass.set_pipeline(pipeline);
-        information.render_pass.set_bind_group(0, texture, &[]);
+        information.pass.set_pipeline(pipeline);
+        information.pass.set_bind_group(0, texture, &[]);
 
         match &self.uniform_bindgroup {
-            Some(bg) => information.render_pass.set_bind_group(2, bg, &[]),
+            Some(bg) => information.pass.set_bind_group(2, bg, &[]),
             None => {}
         }
 
         information
-            .render_pass
+            .pass
             .set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
-        information.render_pass.set_index_buffer(
+        information.pass.set_index_buffer(
             self.index_buffer.slice(0..self.index_count),
             wgpu::IndexFormat::Uint16,
         );
 
         information
-            .render_pass
+            .pass
             .draw_indexed(0..self.get_index_number() as u32, 0, 0..1);
 
         self.vertex_count = 0;
@@ -662,7 +660,7 @@ impl LineMaterial {
         start: Vec2<f32>,
         end: Vec2<f32>,
         colour: Colour,
-        renderer: &RenderInformation,
+        renderer: &Renderer,
     ) {
         let wgpu = renderer.wgpu;
 
@@ -691,7 +689,7 @@ impl LineMaterial {
         start: Vec2<f32>,
         end: Vec2<f32>,
         colour: Colour,
-        renderer: &RenderInformation,
+        renderer: &Renderer,
     ) {
         let wgpu = renderer.wgpu;
         let size = renderer.size;
@@ -719,10 +717,8 @@ impl LineMaterial {
     /// Draws all queued lines to the screen.
     pub fn draw<'pass, 'others>(
         &'others mut self,
-        information: &mut RenderInformation<'pass, 'others>,
-    ) where
-        'others: 'pass,
-    {
+        information: &mut Renderer<'pass, 'others>,
+    ) {
         if self.vertex_count == 0 {
             return;
         }
@@ -733,16 +729,16 @@ impl LineMaterial {
             .unwrap()
             .pipeline;
 
-        information.render_pass.set_pipeline(pipeline);
+        information.pass.set_pipeline(pipeline);
         information
-            .render_pass
+            .pass
             .set_bind_group(0, information.camera_bindgroup, &[]);
         information
-            .render_pass
+            .pass
             .set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
 
         information
-            .render_pass
+            .pass
             .draw(0..self.get_vertex_count() as u32, 0..1);
 
         self.vertex_count = 0;

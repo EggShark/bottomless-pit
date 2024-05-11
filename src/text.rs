@@ -21,7 +21,7 @@
 //! }
 //!
 //! impl Game for UserStruct {
-//!     fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
+//!     fn render<'pass, 'others>(&'others mut self, mut render_handle: Renderer<'pass, 'others>) where 'others: 'pass {
 //!         // notice how you dont need to set the text every frame, and works the same as a Material
 //!         self.text_mat.add_instance(Vec2{x: 0.0, y: 0.0}, Colour::WHITE, &render_handle);
 //!
@@ -47,7 +47,7 @@ use crate::engine_handle::{Engine, WgpuClump};
 use crate::layouts;
 use crate::material::{self, Material};
 use crate::matrix_math::normalize_points;
-use crate::render::RenderInformation;
+use crate::render::{Renderer, RenderInformation};
 use crate::resource::{self, InProgressResource, ResourceId, ResourceManager, ResourceType};
 use crate::vectors::Vec2;
 use crate::vertex::{self, Vertex};
@@ -369,7 +369,7 @@ impl TextMaterial {
 
     /// Queues a peice of text at the specified position. Its size will be the size of the entire
     /// text.
-    pub fn add_instance(&mut self, position: Vec2<f32>, tint: Colour, render: &RenderInformation) {
+    pub fn add_instance(&mut self, position: Vec2<f32>, tint: Colour, render: &Renderer) {
         let rect_size = Vec2 {
             x: self.size.x as f32,
             y: self.size.y as f32,
@@ -387,7 +387,7 @@ impl TextMaterial {
         position: Vec2<f32>,
         tint: Colour,
         degrees: f32,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let rect_size = Vec2 {
             x: self.size.x as f32,
@@ -413,7 +413,7 @@ impl TextMaterial {
         uv_pos: Vec2<f32>,
         uv_size: Vec2<f32>,
         tint: Colour,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
 
@@ -453,7 +453,7 @@ impl TextMaterial {
         uv_size: Vec2<f32>,
         degrees: f32,
         tint: Colour,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
 
@@ -492,7 +492,7 @@ impl TextMaterial {
         uv_points: [Vec2<f32>; 4],
         degrees: f32,
         tint: Colour,
-        render: &RenderInformation,
+        render: &Renderer,
     ) {
         let wgpu = render.wgpu;
 
@@ -613,31 +613,29 @@ impl TextMaterial {
     /// Draws all queued text instances to the screen
     pub fn draw<'pass, 'others>(
         &'others mut self,
-        information: &mut RenderInformation<'pass, 'others>,
-    ) where
-        'others: 'pass,
-    {
+        information: &mut Renderer<'pass, 'others>,
+    ) {
         let pipeline = &information
             .resources
             .get_pipeline(&information.defualt_id)
             .unwrap()
             .pipeline;
 
-        information.render_pass.set_pipeline(pipeline);
+        information.pass.set_pipeline(pipeline);
         information
-            .render_pass
+            .pass
             .set_bind_group(0, &self.bind_group, &[]);
 
         information
-            .render_pass
+            .pass
             .set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
-        information.render_pass.set_index_buffer(
+        information.pass.set_index_buffer(
             self.index_buffer.slice(0..self.index_count),
             wgpu::IndexFormat::Uint16,
         );
 
         information
-            .render_pass
+            .pass
             .draw_indexed(0..self.get_index_number() as u32, 0, 0..1);
 
         self.vertex_count = 0;
