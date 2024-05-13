@@ -1,6 +1,6 @@
 use bottomless_pit::input::MouseKey;
 use bottomless_pit::material::{Material, MaterialBuilder};
-use bottomless_pit::render::RenderInformation;
+use bottomless_pit::render::RenderHandle;
 use bottomless_pit::texture::Texture;
 use bottomless_pit::engine_handle::{EngineBuilder, Engine};
 use bottomless_pit::colour::Colour;
@@ -38,12 +38,12 @@ struct TextureExample {
 }
 
 impl Game for TextureExample {
-    fn render<'pass, 'others>(
-        &'others mut self,
-        mut render_handle: RenderInformation<'pass, 'others>,
-    ) where
-        'others: 'pass,
-    {
+    fn render<'o>(
+        &'o mut self,
+        mut render: RenderHandle<'o>,
+    ) {
+        let mut render_handle = render.begin_pass();
+
         self.current.add_rectangle(
             vec2! { 0.0 },
             vec2! { 400.0 },

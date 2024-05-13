@@ -23,7 +23,7 @@ use wgpu::util::DeviceExt;
 
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::layouts;
-use crate::render::RenderInformation;
+use crate::render::Renderer;
 use crate::vectors::Vec2;
 
 /// A simple 2D camera that can translate, rotate, and scale everything on the screen.
@@ -147,9 +147,9 @@ impl Camera {
     }
 
     /// Sets this camera to the active camera transforming all objects with this camera.
-    pub fn set_active<'others, 'pass>(&'others self, renderer: &mut RenderInformation<'pass, 'others>) where 'others: 'pass {
+    pub fn set_active<'others, 'pass>(&'others self, renderer: &mut Renderer<'pass, 'others>) {
         self.write_matrix(renderer.wgpu, renderer.size);
 
-        renderer.render_pass.set_bind_group(1, &self.bind_group, &[]);
+        renderer.pass.set_bind_group(1, &self.bind_group, &[]);
     }
 }

@@ -47,7 +47,7 @@ use crate::engine_handle::{Engine, WgpuClump};
 use crate::layouts;
 use crate::material::{self, Material};
 use crate::matrix_math::normalize_points;
-use crate::render::{Renderer, RenderInformation};
+use crate::render::Renderer;
 use crate::resource::{self, InProgressResource, ResourceId, ResourceManager, ResourceType};
 use crate::vectors::Vec2;
 use crate::vertex::{self, Vertex};

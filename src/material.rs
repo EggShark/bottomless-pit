@@ -18,7 +18,7 @@ use encase::ShaderType;
 use crate::colour::Colour;
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::matrix_math::normalize_points;
-use crate::render::{Renderer, RenderInformation};
+use crate::render::Renderer;
 use crate::resource::ResourceId;
 use crate::shader::{Shader, UniformData};
 use crate::texture::Texture;

@@ -3,7 +3,7 @@ use bottomless_pit::colour::Colour;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::input::Key;
 use bottomless_pit::material::{Material, MaterialBuilder};
-use bottomless_pit::render::RenderInformation;
+use bottomless_pit::render::RenderHandle;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::{vec2, Game};
 use bottomless_pit::texture::Texture;
@@ -38,12 +38,12 @@ struct CameraExample {
 }
 
 impl Game for CameraExample {
-    fn render<'pass, 'others>(
-        &'others mut self,
-        mut render_handle: RenderInformation<'pass, 'others>,
-    ) where
-        'others: 'pass,
-    {
+    fn render<'o>(
+        &'o mut self,
+        mut render: RenderHandle<'o>,
+    ) {
+        let mut render_handle = render.begin_pass();
+
         self.material.add_rectangle(Vec2 { x: 0.0, y: 0.0 }, Vec2{x: 300.0, y: 300.0}, Colour::WHITE, &render_handle);
 
         self.camera.set_active(&mut render_handle);

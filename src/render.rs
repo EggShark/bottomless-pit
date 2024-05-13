@@ -1,8 +1,5 @@
 //! Contains the Renderer struct which also contains all the
 //! functions and logic to draw things to the screen
-
-use std::mem::ManuallyDrop;
-
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
@@ -77,21 +74,6 @@ pub(crate) fn make_pipeline(
 ///     // do something here
 /// }
 /// ```
-pub struct RenderInformation<'pass, 'others> {
-    pub(crate) size: Vec2<u32>,
-    pub(crate) render_pass: wgpu::RenderPass<'pass>,
-    pub(crate) resources: &'others ResourceManager,
-    pub(crate) defualt_id: ResourceId<Shader>,
-    pub(crate) camera_bindgroup: &'others wgpu::BindGroup,
-    pub(crate) wgpu: &'others WgpuClump,
-}
-
-impl<'p, 'o> RenderInformation<'p, 'o> where 'o: 'p {
-    pub fn reset_camera(&mut self) {
-        self.render_pass.set_bind_group(1, self.camera_bindgroup, &[]);
-    }
-}
-
 pub(crate) fn render<T>(game: &mut T, engine: &mut Engine) -> Result<(), wgpu::SurfaceError>
 where
     T: Game,
@@ -117,6 +99,7 @@ pub struct RenderHandle<'a> {
     defualt_view: wgpu::TextureView,
     defualt_view_size: Vec2<u32>,
     camera_bindgroup: &'a wgpu::BindGroup,
+    default_clear_colour: wgpu::Color,
     wgpu: &'a WgpuClump,
 }
 
@@ -125,7 +108,7 @@ impl<'a> RenderHandle<'a> {
 
         let mut pass = match &mut self.encoder {
             Some(encoder) => {
-                Self::create_pass(encoder, &self.defualt_view)
+                Self::create_pass(encoder, &self.defualt_view, self.default_clear_colour)
             }
             None => unreachable!(),
         };
@@ -149,14 +132,14 @@ impl<'a> RenderHandle<'a> {
         }
     }
 
-    fn create_pass<'p>(encoder: &'p mut wgpu::CommandEncoder, view: &'p wgpu::TextureView) -> wgpu::RenderPass<'p> {
+    fn create_pass<'p>(encoder: &'p mut wgpu::CommandEncoder, view: &'p wgpu::TextureView, clear_colour: wgpu::Color) -> wgpu::RenderPass<'p> {
         let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                 view,
                 resolve_target: None,
                 ops: wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                    load: wgpu::LoadOp::Clear(clear_colour),
                     store: wgpu::StoreOp::Store,
                 },
             })],
@@ -191,6 +174,7 @@ impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
             defualt_id: value.defualt_pipe_id(),
             defualt_view,
             defualt_view_size,
+            default_clear_colour: value.wgpu_colour(),
             camera_bindgroup: value.camera_bindgroup(),
             wgpu: value.get_wgpu(),
         }

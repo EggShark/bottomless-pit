@@ -1,7 +1,7 @@
 use bottomless_pit::colour::Colour;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::material::{Material, MaterialBuilder};
-use bottomless_pit::render::{RenderHandle, RenderInformation};
+use bottomless_pit::render::RenderHandle;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
 use bottomless_pit::vec2;
