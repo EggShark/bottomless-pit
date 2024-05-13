@@ -101,58 +101,9 @@ where
         return Ok(());
     }
 
-    let wgpu = engine.get_wgpu();
-    let output = engine.get_current_texture()?;
+    let render_handle = RenderHandle::from(engine);
 
-    let size = output.texture.size();
-
-    let view = output
-        .texture
-        .create_view(&wgpu::TextureViewDescriptor::default());
-    let mut encoder = wgpu
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Render Encoder"),
-        });
-
-    let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some("Render Pass"),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view: &view,
-            resolve_target: None,
-            ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(engine.wgpu_colour()),
-                store: wgpu::StoreOp::Store,
-            },
-        })],
-        timestamp_writes: None,
-        occlusion_query_set: None,
-        depth_stencil_attachment: None,
-    });
-
-    let mut render_info = RenderInformation {
-        size: engine.get_window_size(),
-        render_pass,
-        resources: engine.get_resources(),
-        defualt_id: engine.defualt_pipe_id(),
-        camera_bindgroup: engine.camera_bindgroup(),
-        wgpu,
-    };
-
-    let pipeline = &render_info
-        .resources
-        .get_pipeline(&render_info.defualt_id)
-        .unwrap()
-        .pipeline;
-
-    render_info.render_pass.set_pipeline(pipeline);
-
-    render_info.render_pass.set_bind_group(1, render_info.camera_bindgroup, &[]);
-
-    game.render(render_info);
-
-    wgpu.queue.submit(std::iter::once(encoder.finish()));
-    output.present();
+    game.render(render_handle);
 
     Ok(())
 }
@@ -160,62 +111,86 @@ where
 pub struct RenderHandle<'a> {
     // ME WHEN BC HACKS :3
     encoder: Option<wgpu::CommandEncoder>,
+    surface: Option<wgpu::SurfaceTexture>,
     resources: &'a ResourceManager,
     defualt_id: ResourceId<Shader>,
     defualt_view: wgpu::TextureView,
+    defualt_view_size: Vec2<u32>,
     camera_bindgroup: &'a wgpu::BindGroup,
     wgpu: &'a WgpuClump,
 }
 
 impl<'a> RenderHandle<'a> {
-    fn start_pass<'p, 'o>(&'o mut self, view: &'o wgpu::TextureView, size: Vec2<u32>, clear_colour: wgpu::Color) -> Renderer<'o, 'p> {
-        match &mut self.encoder {
-            Some(encoder) => {
-                let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("Render Pass"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Clear(clear_colour),
-                            store: wgpu::StoreOp::Store,
-                        },
-                    })],
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                    depth_stencil_attachment: None,
-                });
+    pub fn begin_pass<'o, 'p>(&'o mut self) -> Renderer<'o, 'p> {
 
-                Renderer{
-                    pass: render_pass,
-                    size,
-                    resources: &self.resources,
-                    defualt_id: self.defualt_id,
-                    camera_bindgroup: &self.camera_bindgroup,
-                    wgpu: &self.wgpu
-                }
+        let mut pass = match &mut self.encoder {
+            Some(encoder) => {
+                Self::create_pass(encoder, &self.defualt_view)
             }
             None => unreachable!(),
+        };
+
+        let pipeline = &self
+            .resources
+            .get_pipeline(&self.defualt_id)
+            .unwrap()
+            .pipeline;
+
+        pass.set_pipeline(pipeline);
+        pass.set_bind_group(1, self.camera_bindgroup, &[]);
+
+        Renderer {
+            pass,
+            size: self.defualt_view_size,
+            defualt_id: self.defualt_id,
+            resources: &self.resources,
+            camera_bindgroup: &self.camera_bindgroup,
+            wgpu: &self.wgpu
         }
     }
+
+    fn create_pass<'p>(encoder: &'p mut wgpu::CommandEncoder, view: &'p wgpu::TextureView) -> wgpu::RenderPass<'p> {
+        let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("Render Pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            timestamp_writes: None,
+            occlusion_query_set: None,
+            depth_stencil_attachment: None,
+        });
+
+        render_pass
+    }
+
 }
 
-impl<'a> From<&'a Engine> for RenderHandle<'a> {
-    fn from(value: &'a Engine) -> Self {
+impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
+    fn from(value: &'a mut Engine) -> Self {
         let encoder = value.get_wgpu().device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("render encoder")
         });
 
-        let view = value
+        let texture = value
             .get_current_texture()
-            .unwrap().texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+            .unwrap();
+
+        let defualt_view_size = texture.texture.size();
+        let defualt_view_size = vec2!(defualt_view_size.width, defualt_view_size.height);
+        let defualt_view = texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
 
         Self {
             encoder: Some(encoder),
+            surface: Some(texture),
             resources: value.get_resources(),
             defualt_id: value.defualt_pipe_id(),
-            defualt_view: view,
+            defualt_view,
+            defualt_view_size,
             camera_bindgroup: value.camera_bindgroup(),
             wgpu: value.get_wgpu(),
         }
@@ -225,6 +200,8 @@ impl<'a> From<&'a Engine> for RenderHandle<'a> {
 impl Drop for RenderHandle<'_> {
     fn drop(&mut self) {
         self.wgpu.queue.submit(std::iter::once(self.encoder.take().unwrap().finish()));
+
+        self.surface.take().unwrap().present();
     }
 }
 

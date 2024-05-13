@@ -58,13 +58,11 @@ pub mod vectors;
 mod vertex;
 
 use engine_handle::Engine;
-use render::RenderInformation;
+use render::RenderHandle;
 /// The Trait needed for structs to be used in with the Engine
 pub trait Game {
     /// Rendering code goes here
-    fn render<'pass, 'others>(&'others mut self, render_handle: RenderInformation<'pass, 'others>)
-    where
-        'others: 'pass;
+    fn render<'o>(&'o mut self, render_handle: RenderHandle<'o>);
     /// Updating code goes here
     fn update(&mut self, engine_handle: &mut Engine);
     /// Things to do when the window closes
