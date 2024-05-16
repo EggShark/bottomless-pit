@@ -129,7 +129,6 @@ pub struct TextMaterial {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     texture: wgpu::Texture,
-    // texture_view: wgpu::TextureView,
     bind_group: wgpu::BindGroup,
     vertex_count: u64,
     index_count: u64,

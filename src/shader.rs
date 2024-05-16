@@ -11,6 +11,7 @@ use wgpu::util::DeviceExt;
 
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::resource::{self, InProgressResource, ResourceId, ResourceType};
+use crate::texture::UniformTexture;
 use crate::vertex::Vertex;
 use crate::{layouts, render};
 
@@ -170,5 +171,61 @@ impl UniformData {
         });
 
         (buffer, bind_group)
+    }
+}
+
+pub struct ShaderOptions {
+    uniform_data: Option<wgpu::Buffer>,
+    uniform_texture: Option<wgpu::TextureView>,
+}
+
+impl ShaderOptions {
+    //TODO add support for custom texture samplers
+    pub const EMPTY: Self = Self {
+        uniform_data: None,
+        uniform_texture: None,
+    };
+
+    pub fn with_uniform_data(engine: &Engine, data: &UniformData) -> Self {
+        let device = &engine.get_wgpu().device;
+
+        let starting_buffer = device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("User uniform buffer"),
+                contents: &data.initial_data,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
+
+        Self {
+            uniform_data: Some(starting_buffer),
+            uniform_texture: None,
+        }
+    }
+
+    pub fn with_uniform_texture(texture: &UniformTexture) -> Self {
+        let starting_view = texture.make_view();
+
+        Self {
+            uniform_data: None,
+            uniform_texture: Some(starting_view),
+        }
+    }
+
+    pub fn with_all(engine: &Engine, data: &UniformData, texture: &UniformTexture) -> Self {
+        let device = &engine.get_wgpu().device;
+
+        let starting_buffer = device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("User uniform buffer"),
+                contents: &data.initial_data,
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
+
+        let starting_view = texture.make_view();
+
+        Self {
+            uniform_data: Some(starting_buffer),
+            uniform_texture: Some(starting_view),
+        }
     }
 }

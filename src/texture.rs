@@ -2,6 +2,7 @@
 //! extension accsss the texture interface
 
 use crate::engine_handle::Engine;
+use crate::render::RenderHandle;
 use crate::resource::{self, InProgressResource, Resource, ResourceId, ResourceType};
 use crate::vectors::Vec2;
 use crate::{layouts, ERROR_TEXTURE_DATA};
@@ -223,6 +224,54 @@ impl From<Error> for TextureError {
 impl From<ImageError> for TextureError {
     fn from(value: ImageError) -> Self {
         Self::ImageError(value)
+    }
+}
+
+pub struct UniformTexture {
+    inner_texture: wgpu::Texture,
+    view: wgpu::TextureView,
+    size: Vec2<u32>,
+}
+
+impl UniformTexture {
+    pub fn new(engine: &Engine, size: Vec2<u32>) -> Self {
+        let wgpu = engine.get_wgpu();
+        let format = engine.get_texture_format();
+
+        let inner_texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Uniform Texture"),
+            size: wgpu::Extent3d { width: size.x, height: size.y, depth_or_array_layers: 1 },
+            dimension: wgpu::TextureDimension::D2,
+            mip_level_count: 1,
+            sample_count: 1,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+
+        let view = inner_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        Self {
+            inner_texture,
+            view,
+            size,
+        }
+    }
+
+    pub(crate) fn make_render_view<'a>(&'a mut self) -> &'a wgpu::TextureView {
+        self.view = self.inner_texture.create_view(&wgpu::TextureViewDescriptor {
+            label: Some("Uniform Texture View"),
+            ..Default::default()
+        });
+
+        &self.view
+    }
+
+    pub(crate) fn make_view(&self) -> wgpu::TextureView {
+        self.inner_texture.create_view(&wgpu::TextureViewDescriptor {
+            label: Some("Uniform Texture View"),
+            ..Default::default()
+        })
     }
 }
 

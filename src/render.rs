@@ -3,6 +3,7 @@
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
+use crate::texture::UniformTexture;
 use crate::vectors::Vec2;
 use crate::{Game, vec2};
 
@@ -118,6 +119,33 @@ impl<'a> RenderHandle<'a> {
             .get_pipeline(&self.defualt_id)
             .unwrap()
             .pipeline;
+
+        pass.set_pipeline(pipeline);
+        pass.set_bind_group(1, self.camera_bindgroup, &[]);
+
+        Renderer {
+            pass,
+            size: self.defualt_view_size,
+            defualt_id: self.defualt_id,
+            resources: &self.resources,
+            camera_bindgroup: &self.camera_bindgroup,
+            wgpu: &self.wgpu
+        }
+    }
+
+    pub fn begin_texture_pass<'o, 'p>(&'o mut self, texture: &'o mut UniformTexture) -> Renderer<'o, 'p> {
+        let mut pass = match &mut self.encoder {
+            Some(encoder) => {
+                Self::create_pass(encoder, texture.make_render_view(), self.default_clear_colour)
+            }
+            None => unreachable!(),
+        };
+
+        let pipeline = &self
+        .resources
+        .get_pipeline(&self.defualt_id)
+        .unwrap()
+        .pipeline;
 
         pass.set_pipeline(pipeline);
         pass.set_bind_group(1, self.camera_bindgroup, &[]);
