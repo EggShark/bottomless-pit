@@ -35,7 +35,7 @@ pub struct Material {
     pub(crate) vertex_size: u64,
     pub(crate) vertex_count: u64,
     index_buffer: wgpu::Buffer,
-    /// counts the bytes of the index no the actual number
+    /// counts the bytes of the index not the actual number
     pub(crate) index_count: u64,
     pub(crate) index_size: u64,
     texture_id: ResourceId<Texture>,
