@@ -32,9 +32,9 @@ impl Texture {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor));
 
-        resource::start_load(engine, path, &ip_resource);
+        resource::start_load(engine, path, ip_resource);
 
-        engine.add_in_progress_resource(ip_resource);
+        engine.add_in_progress_resource();
         typed_id
     }
 
@@ -51,8 +51,8 @@ impl Texture {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image(sampler, sampler));
 
-        resource::start_load(engine, path, &ip_resource);
-        engine.add_in_progress_resource(ip_resource);
+        resource::start_load(engine, path, ip_resource);
+        engine.add_in_progress_resource();
 
         typed_id
     }
@@ -69,8 +69,8 @@ impl Texture {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image(mag_sampler, min_sampler));
 
-        resource::start_load(engine, path, &ip_resource);
-        engine.add_in_progress_resource(ip_resource);
+        resource::start_load(engine, path, ip_resource);
+        engine.add_in_progress_resource();
 
         typed_id
     }
@@ -98,11 +98,11 @@ impl Texture {
     pub(crate) fn from_resource_data(
         engine: &Engine,
         label: Option<&str>,
-        resource: Resource,
+        data: Vec<u8>,
         mag_sampler: SamplerType,
         min_sampler: SamplerType
     ) -> Result<Self, TextureError> {
-        let img = image::load_from_memory(&resource.data)?;
+        let img = image::load_from_memory(&data)?;
         Ok(Self::from_image(engine, img, label, mag_sampler, min_sampler))
     }
 

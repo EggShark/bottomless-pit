@@ -673,9 +673,9 @@ impl Font {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Font);
 
-        resource::start_load(engine, path, &ip_resource);
+        resource::start_load(engine, path, ip_resource);
 
-        engine.add_in_progress_resource(ip_resource);
+        engine.add_in_progress_resource();
         typed_id
     }
 

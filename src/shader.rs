@@ -21,6 +21,7 @@ use crate::{layouts, render};
 #[derive(Debug)]
 pub struct Shader {
     pub(crate) pipeline: wgpu::RenderPipeline,
+    options: ShaderOptions,
 }
 
 impl Shader {
@@ -28,26 +29,26 @@ impl Shader {
     /// the [resource module](crate::resource) for more information.
     pub fn new<P: AsRef<Path>>(
         path: P,
-        has_uniforms: bool,
+        options: ShaderOptions,
         engine: &mut Engine,
     ) -> ResourceId<Shader> {
         let typed_id = resource::generate_id::<Shader>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(has_uniforms));
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(options));
 
-        resource::start_load(engine, path, &ip_resource);
-        engine.add_in_progress_resource(ip_resource);
+        resource::start_load(engine, path, ip_resource);
+        engine.add_in_progress_resource();
 
         typed_id
     }
 
     /// Attempts to create a shader from a byte array, this will not halt the engine. See the
     /// [resource module](crate::resource) for more information on this halting behavior.
-    pub fn from_btyes(engine: &mut Engine, has_uniforms: bool, bytes: &[u8]) -> ResourceId<Shader> {
-        let shader = Self::from_resource_data(bytes, has_uniforms, engine).unwrap_or_else(|e| {
+    pub fn from_btyes(engine: &mut Engine, options: ShaderOptions, bytes: &[u8]) -> ResourceId<Shader> {
+        let shader = Self::from_resource_data(bytes, options, engine).unwrap_or_else(|e| {
             log::warn!("{}, occured loading defualt replacement", e);
-            Self::defualt(engine)
+            Self::defualt(engine.get_wgpu(), engine.get_texture_format())
         });
 
         let typed_id = resource::generate_id::<Shader>();
@@ -58,7 +59,7 @@ impl Shader {
 
     pub(crate) fn from_resource_data(
         data: &[u8],
-        has_uniforms: bool,
+        options: ShaderOptions,
         engine: &Engine,
     ) -> Result<Self, FromUtf8Error> {
         let wgpu = engine.get_wgpu();
@@ -71,14 +72,15 @@ impl Shader {
                 source: wgpu::ShaderSource::Wgsl(string.into()),
             });
 
-        let pipeline = if has_uniforms {
+        let optional_layout = options.make_layout(&wgpu.device);
+        let pipeline = if let Some(layout) = optional_layout {
             render::make_pipeline(
                 &wgpu.device,
                 wgpu::PrimitiveTopology::TriangleList,
                 &[
                     &layouts::create_texture_layout(&wgpu.device),
                     &layouts::create_camera_layout(&wgpu.device),
-                    &layouts::create_uniform_layout(&wgpu.device),
+                    &layout
                 ],
                 &[Vertex::desc()],
                 &shader,
@@ -100,12 +102,20 @@ impl Shader {
             )
         };
 
-        Ok(Self { pipeline })
+        Ok(Self {
+            pipeline,
+            options,
+        })
     }
 
-    pub(crate) fn defualt(engine: &Engine) -> Self {
-        let wgpu = engine.get_wgpu();
+    pub(crate) fn from_pipeline(pipeline: wgpu::RenderPipeline) -> Self {
+        Self {
+            pipeline,
+            options: ShaderOptions::EMPTY,
+        }
+    }
 
+    pub(crate) fn defualt(wgpu: &WgpuClump, texture_format: wgpu::TextureFormat) -> Self {
         let shader_descriptor = include_wgsl!("shaders/shader.wgsl");
         let shader = wgpu.device.create_shader_module(shader_descriptor);
         let pipeline = render::make_pipeline(
@@ -117,11 +127,14 @@ impl Shader {
             ],
             &[Vertex::desc()],
             &shader,
-            engine.get_texture_format(),
+            texture_format,
             Some("Defualt Shader From Error"),
         );
 
-        Self { pipeline }
+        Self {
+            pipeline,
+            options: ShaderOptions::EMPTY,
+        }
     }
 }
 
@@ -174,6 +187,7 @@ impl UniformData {
     }
 }
 
+#[derive(Debug)]
 pub struct ShaderOptions {
     uniform_data: Option<wgpu::Buffer>,
     uniform_texture: Option<wgpu::TextureView>,
@@ -227,5 +241,18 @@ impl ShaderOptions {
             uniform_data: Some(starting_buffer),
             uniform_texture: Some(starting_view),
         }
+    }
+
+    pub(crate) fn make_layout(&self, device: &wgpu::Device) -> Option<wgpu::BindGroupLayout> {
+        match (&self.uniform_data, &self.uniform_texture) {
+            (Some(_), Some(_)) => Some(layouts::create_texture_uniform_layout(device)),
+            (Some(_), None) => Some(layouts::create_uniform_layout(device)),
+            (None, Some(_)) => Some(layouts::create_texture_layout(device)),
+            (None, None) => None,
+        }
+    }
+
+    pub(crate) fn check_has(&self) -> (bool, bool) {
+        (self.uniform_data.is_some(), self.uniform_texture.is_some())
     }
 }

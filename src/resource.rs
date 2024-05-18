@@ -47,7 +47,7 @@ use std::sync::atomic::AtomicU64;
 
 use crate::engine_handle::{BpEvent, Engine};
 use crate::io::{self, ReadError};
-use crate::shader::Shader;
+use crate::shader::{Shader, ShaderOptions};
 use crate::text::Font;
 use crate::texture::{SamplerType, Texture};
 
@@ -126,12 +126,28 @@ impl InProgressResource {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Debug)]
 pub(crate) enum ResourceType {
     Image(SamplerType, SamplerType),
-    Shader(bool),
+    Shader(ShaderOptions),
     Bytes,
     Font,
+}
+
+impl PartialEq for ResourceType {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Bytes, Self::Bytes) => true,
+            (Self::Font, Self::Font) => true,
+            (Self::Shader(option_1), Self::Shader(option_2)) => {
+                option_1.check_has() == option_2.check_has()
+            } 
+            (Self::Image(s1, s2), Self::Image(s3, s4)) => {
+                s1 == s3 && s2 == s4
+            }
+            _ => false,
+        }
+    }
 }
 
 pub(crate) fn generate_id<T>() -> ResourceId<T> {
@@ -143,7 +159,7 @@ pub(crate) fn generate_id<T>() -> ResourceId<T> {
 pub(crate) fn start_load<P: AsRef<Path>>(
     engine: &Engine,
     path: P,
-    ip_resource: &InProgressResource,
+    ip_resource: InProgressResource,
 ) {
     let path = path.as_ref().to_owned();
     let id = ip_resource.id;

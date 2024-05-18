@@ -27,7 +27,7 @@ use crate::resource::{
     compare_resources, InProgressResource, Resource, ResourceError, ResourceId, ResourceManager,
     ResourceType,
 };
-use crate::shader::Shader;
+use crate::shader::{Shader, ShaderOptions};
 use crate::text::{Font, TextRenderer};
 use crate::texture::{SamplerType, Texture};
 use crate::vectors::Vec2;
@@ -56,7 +56,7 @@ pub struct Engine {
     camera_buffer: wgpu::Buffer,
     pub(crate) wgpu_clump: WgpuClump,
     size: Vec2<u32>,
-    in_progress_resources: Vec<InProgressResource>,
+    in_progress_resources: u32,
     defualt_texture_id: ResourceId<Texture>,
     default_pipeline_id: ResourceId<Shader>,
     line_pipeline_id: ResourceId<Shader>,
@@ -342,12 +342,9 @@ impl Engine {
 
         let line_id = resource::generate_id::<Shader>();
         let generic_id = resource::generate_id::<Shader>();
-        let line_shader = Shader {
-            pipeline: line_pipeline,
-        };
-        let generic_shader = Shader {
-            pipeline: generic_pipeline,
-        };
+        let line_shader = Shader::from_pipeline(line_pipeline);
+        let generic_shader = Shader::defualt(&wgpu_clump, texture_format);
+
         resource_manager.insert_pipeline(line_id, line_shader);
         resource_manager.insert_pipeline(generic_id, generic_shader);
 
@@ -374,7 +371,7 @@ impl Engine {
             camera_buffer,
             wgpu_clump,
             size,
-            in_progress_resources: Vec::new(),
+            in_progress_resources: 0,
             defualt_texture_id: white_pixel_id,
             default_pipeline_id: generic_id,
             line_pipeline_id: line_id,
@@ -666,9 +663,9 @@ impl Engine {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Bytes);
 
-        resource::start_load(self, path, &ip_resource);
+        resource::start_load(self, path, ip_resource);
 
-        self.in_progress_resources.push(ip_resource);
+        self.in_progress_resources += 1;
         typed_id
     }
 
@@ -681,8 +678,8 @@ impl Engine {
         self.resource_manager.get_byte_resource(&id)
     }
 
-    pub(crate) fn add_in_progress_resource(&mut self, ip_resource: InProgressResource) {
-        self.in_progress_resources.push(ip_resource);
+    pub(crate) fn add_in_progress_resource(&mut self) {
+        self.in_progress_resources += 1;
     }
 
     pub(crate) fn get_wgpu(&self) -> &WgpuClump {
@@ -843,21 +840,13 @@ impl Engine {
 
     fn handle_resource(&mut self, resource: Result<Resource, ResourceError>) {
         // remove ip resource
-        let idx = self
-            .in_progress_resources
-            .iter()
-            .enumerate()
-            .find(|(_, ip_resource)| compare_resources(ip_resource, &resource))
-            .map(|(idx, _)| idx)
-            .expect("Finished resource doesnt match any in progress resources");
-
-        self.in_progress_resources.remove(idx);
+        self.in_progress_resources -= 1;
 
         match resource {
             Ok(data) => match data.resource_type {
-                ResourceType::Bytes => self.add_finished_bytes(data),
-                ResourceType::Image(mag, min) => self.add_finished_image(data, mag, min),
-                ResourceType::Shader(has_uniforms) => self.add_finished_shader(data, has_uniforms),
+                ResourceType::Bytes => self.add_finished_bytes(data.data, data.id),
+                ResourceType::Image(mag, min) => self.add_finished_image(data.data, data.id, mag, min),
+                ResourceType::Shader(options) => self.add_finished_shader(data.data, data.id, options),
                 ResourceType::Font => self.add_finished_font(data),
             },
             Err(e) => {
@@ -876,28 +865,28 @@ impl Engine {
         }
     }
 
-    fn add_finished_bytes(&mut self, resource: Resource) {
-        let typed_id: ResourceId<Vec<u8>> = ResourceId::from_number(resource.id);
-        self.resource_manager.insert_bytes(typed_id, resource.data);
+    fn add_finished_bytes(&mut self, data: Vec<u8>, id: NonZeroU64) {
+        let typed_id: ResourceId<Vec<u8>> = ResourceId::from_number(id);
+        self.resource_manager.insert_bytes(typed_id, data);
     }
 
-    fn add_finished_image(&mut self, resource: Resource, mag: SamplerType, min: SamplerType) {
-        let typed_id: ResourceId<Texture> = ResourceId::from_number(resource.id);
-        let texture = Texture::from_resource_data(self, None, resource, mag, min);
+    fn add_finished_image(&mut self, data: Vec<u8>, id: NonZeroU64, mag: SamplerType, min: SamplerType) {
+        let typed_id: ResourceId<Texture> = ResourceId::from_number(id);
+        let texture = Texture::from_resource_data(self, None, data, mag, min);
         match texture {
             Ok(texture) => self.resource_manager.insert_texture(typed_id, texture),
             Err(e) => log::error!("{:?}, loading defualt replacement", e),
         }
     }
 
-    fn add_finished_shader(&mut self, resource: Resource, has_uniforms: bool) {
-        let typed_id: ResourceId<Shader> = ResourceId::from_number(resource.id);
-        let shader = Shader::from_resource_data(&resource.data, has_uniforms, self);
+    fn add_finished_shader(&mut self, data: Vec<u8>, id: NonZeroU64, options: ShaderOptions) {
+        let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
+        let shader = Shader::from_resource_data(&data, options, self);
         match shader {
             Ok(shader) => self.resource_manager.insert_pipeline(typed_id, shader),
             Err(e) => {
                 log::error!("{:?}. loading defualt replacement", e);
-                self.add_defualt_shader(resource.id);
+                self.add_defualt_shader(id);
             }
         }
     }
@@ -921,7 +910,7 @@ impl Engine {
 
     fn add_defualt_shader(&mut self, id: NonZeroU64) {
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
-        let shader = Shader::defualt(self);
+        let shader = Shader::defualt(&self.wgpu_clump, self.get_texture_format());
         self.resource_manager.insert_pipeline(typed_id, shader);
     }
 
@@ -932,7 +921,7 @@ impl Engine {
     }
 
     pub(crate) fn is_loading(&self) -> bool {
-        !self.in_progress_resources.is_empty()
+        self.in_progress_resources > 0
     }
 }
 
