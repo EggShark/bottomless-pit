@@ -20,7 +20,7 @@ use crate::engine_handle::{Engine, WgpuClump};
 use crate::matrix_math::normalize_points;
 use crate::render::Renderer;
 use crate::resource::ResourceId;
-use crate::shader::{Shader, UniformData};
+use crate::shader::{Shader, ShaderOptions, UniformData};
 use crate::texture::Texture;
 use crate::vectors::Vec2;
 use crate::vertex::{self, LineVertex, Vertex};
@@ -39,8 +39,6 @@ pub struct Material {
     pub(crate) index_count: u64,
     pub(crate) index_size: u64,
     texture_id: ResourceId<Texture>,
-    uniform_buffer: Option<wgpu::Buffer>,
-    uniform_bindgroup: Option<wgpu::BindGroup>,
 }
 
 impl Material {
@@ -57,14 +55,6 @@ impl Material {
 
         let wgpu = engine.get_wgpu();
 
-        let uniform_information = match builder.uniform_data {
-            Some(data) => {
-                let (buffer, bg) = data.extract_buffer_and_bindgroup(wgpu);
-                (Some(buffer), Some(bg))
-            }
-            None => (None, None),
-        };
-
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
         let index_size = std::mem::size_of::<u16>() as u64;
         let (vertex_buffer, index_buffer) =
@@ -79,8 +69,6 @@ impl Material {
             index_count: 0,
             index_size,
             texture_id,
-            uniform_buffer: uniform_information.0,
-            uniform_bindgroup: uniform_information.1,
         }
     }
 
@@ -382,20 +370,10 @@ impl Material {
         self.index_count += indicies.len() as u64 * self.index_size;
     }
 
-    /// Updates the uniform buffer to contain the same type but new data. You can write in a diffrent
-    /// type from before but this could cause undefinded behavoir
-    pub fn update_uniform_data<T: ShaderType + WriteInto>(&mut self, data: &T, engine: &Engine) {
-        match &self.uniform_buffer {
-            Some(uniform_buffer) => {
-                let wgpu = engine.get_wgpu();
-                let mut buffer = encase::UniformBuffer::new(Vec::new());
-                buffer.write(&data).unwrap();
-                let byte_array = buffer.into_inner();
-
-                wgpu.queue.write_buffer(uniform_buffer, 0, &byte_array);
-            }
-            None => {}
-        }
+    // TODO Make RESULT
+    pub fn update_uniform_data<T: ShaderType + WriteInto>(&self, data: &T, engine: &Engine) -> () {
+        let options = engine.resource_manager.get_pipeline(&self.pipeline_id).unwrap();
+        options.update_uniform_data(data, engine);
     }
 
     /// Returns the number of verticies in the buffer
@@ -497,24 +475,20 @@ impl Material {
             return;
         }
 
-        let pipeline = &information
+        let shader = information
             .resources
             .get_pipeline(&self.pipeline_id)
-            .unwrap()
-            .pipeline;
+            .unwrap();
+
         let texture = &information
             .resources
             .get_texture(&self.texture_id)
             .unwrap()
             .bind_group;
 
-        information.pass.set_pipeline(pipeline);
-        information.pass.set_bind_group(0, texture, &[]);
+        shader.set_active(information);
 
-        match &self.uniform_bindgroup {
-            Some(bg) => information.pass.set_bind_group(2, bg, &[]),
-            None => {}
-        }
+        information.pass.set_bind_group(0, texture, &[]);
 
         information
             .pass
@@ -568,7 +542,7 @@ pub struct MaterialBuilder<'a> {
     // in the case of a texture the defualt is just the White_Pixel
     texture_change: Option<ResourceId<Texture>>,
     shader_change: Option<ResourceId<Shader>>,
-    uniform_data: Option<&'a UniformData>,
+    shader_options: Option<&'a ShaderOptions>,
 }
 
 impl<'a> MaterialBuilder<'a> {
@@ -578,7 +552,7 @@ impl<'a> MaterialBuilder<'a> {
         Self {
             texture_change: None,
             shader_change: None,
-            uniform_data: None,
+            shader_options: None,
         }
     }
 
@@ -587,16 +561,16 @@ impl<'a> MaterialBuilder<'a> {
         Self {
             texture_change: Some(texture),
             shader_change: self.shader_change,
-            uniform_data: self.uniform_data,
+            shader_options: self.shader_options,
         }
     }
 
     /// Sets the initial Uniform data for the shader
-    pub fn set_uniform(self, data: &'a UniformData) -> Self {
+    pub fn set_shader_options(self, data: &'a ShaderOptions) -> Self {
         Self {
             texture_change: self.texture_change,
             shader_change: self.shader_change,
-            uniform_data: Some(data),
+            shader_options: Some(data),
         }
     }
 
@@ -605,7 +579,7 @@ impl<'a> MaterialBuilder<'a> {
         Self {
             texture_change: self.texture_change,
             shader_change: Some(shader),
-            uniform_data: self.uniform_data,
+            shader_options: self.shader_options,
         }
     }
 

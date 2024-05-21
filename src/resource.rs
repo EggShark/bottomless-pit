@@ -282,4 +282,8 @@ impl ResourceManager {
     pub fn get_font(&self, key: &ResourceId<Font>) -> Option<&Font> {
         self.fonts.get(key)
     }
+
+    pub fn get_mut_shader(&mut self, key: &ResourceId<Shader>) -> Option<&mut Shader> {
+        self.pipeline_resource.get_mut(key)
+    }
 }
