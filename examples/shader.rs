@@ -4,7 +4,7 @@ use bottomless_pit::colour::Colour;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderHandle;
-use bottomless_pit::shader::{Shader, UniformData};
+use bottomless_pit::shader::{Shader, ShaderOptions, UniformData};
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
 use bottomless_pit::vec2;
@@ -17,31 +17,27 @@ fn main() {
         .build()
         .unwrap();
 
-    let mouse_shader = Shader::new("examples/mouse.wgsl", true, &mut engine);
-
-    let circle_shader = Shader::new("examples/movement.wgsl", true, &mut engine);
-
     let data = MousePos {
         x: 0.0,
         y: 0.0,
         _junk: 0.0,
         _padding2: 0.0,
     };
-
+    
     let mouse_uniform_data = UniformData::new(&engine, &data);
-
+    let mouse_shader = Shader::new("examples/mouse.wgsl", ShaderOptions::with_uniform_data(&engine, &mouse_uniform_data), &mut engine);
+    
     // On wasm we need this to be 16 bytes aligned so we have added this instead of
     // a 0.0_f32
     let circle_uniform_data = UniformData::new(&engine, &data);
-
+    let circle_shader = Shader::new("examples/movement.wgsl", ShaderOptions::with_uniform_data(&engine, &circle_uniform_data), &mut engine);
+    
     let mouse_material = MaterialBuilder::new()
         .set_shader(mouse_shader)
-        .set_uniform(&mouse_uniform_data)
         .build(&mut engine);
 
     let circle_material = MaterialBuilder::new()
         .set_shader(circle_shader)
-        .set_uniform(&circle_uniform_data)
         .build(&mut engine);
 
     let defualt_material = MaterialBuilder::new().build(&mut engine);
