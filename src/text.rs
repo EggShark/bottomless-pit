@@ -56,7 +56,8 @@ use crate::vertex::{self, Vertex};
 /// be created per application.
 pub(crate) struct TextRenderer {
     pub(crate) font_system: FontSystem,
-    cache: SwashCache,
+    swash_cache: SwashCache,
+    text_cache: glyphon::Cache,
     atlas: TextAtlas,
     text_renderer: glyphon::TextRenderer,
     defualt_font_name: String,
@@ -74,10 +75,13 @@ impl TextRenderer {
             .clone();
         // its expensive but whatever
 
-        let cache = SwashCache::new();
+        let text_cache = glyphon::Cache::new(&wgpu.device);
+
+        let swash_cache = SwashCache::new();
         let mut atlas = TextAtlas::new(
             &wgpu.device,
             &wgpu.queue,
+            &text_cache,
             wgpu::TextureFormat::Rgba8UnormSrgb,
         );
         let text_renderer = glyphon::TextRenderer::new(
@@ -89,7 +93,8 @@ impl TextRenderer {
 
         Self {
             font_system,
-            cache,
+            swash_cache,
+            text_cache,
             atlas,
             text_renderer,
             defualt_font_name,
@@ -129,6 +134,7 @@ pub struct TextMaterial {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     texture: wgpu::Texture,
+    viewport: glyphon::Viewport,
     bind_group: wgpu::BindGroup,
     vertex_count: u64,
     index_count: u64,
@@ -203,13 +209,16 @@ impl TextMaterial {
             y: hieght.ceil() as u32,
         };
 
+        let mut viewport = glyphon::Viewport::new(&font_info.wgpu.device, &font_info.text_handle.text_cache);
+        viewport.update(&font_info.wgpu.queue, texture_size.into());
+
         let texture_view = texture.create_view(&Default::default());
 
         render_text_to_texture(
             font_info.text_handle,
             &text_buffer,
             bounds,
-            texture_size,
+            &viewport,
             &texture_view,
             font_info.wgpu,
         );
@@ -247,6 +256,7 @@ impl TextMaterial {
             vertex_buffer,
             index_buffer,
             texture,
+            viewport,
             bind_group,
             vertex_count: 0,
             index_count: 0,
@@ -364,6 +374,8 @@ impl TextMaterial {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
+
+        self.viewport.update(&font_info.wgpu.queue, self.size.into());
     }
 
     /// Queues a peice of text at the specified position. Its size will be the size of the entire
@@ -586,7 +598,7 @@ impl TextMaterial {
             font_info.text_handle,
             &self.text_buffer,
             self.bounds,
-            self.size,
+            &self.viewport,
             &texture_view,
             font_info.wgpu,
         );
@@ -701,7 +713,7 @@ fn render_text_to_texture(
     text_handle: &mut TextRenderer,
     text: &glyphon::Buffer,
     bounds: Vec2<Vec2<i32>>,
-    texture_size: Vec2<u32>,
+    viewport: &glyphon::Viewport,
     texture_view: &wgpu::TextureView,
     wgpu: &WgpuClump,
 ) {
@@ -726,9 +738,9 @@ fn render_text_to_texture(
             &wgpu.queue,
             &mut text_handle.font_system,
             &mut text_handle.atlas,
-            texture_size.into(),
+            viewport,
             [text_area],
-            &mut text_handle.cache,
+            &mut text_handle.swash_cache,
         )
         .unwrap_or(());
 
@@ -760,7 +772,7 @@ fn render_text_to_texture(
 
     text_handle
         .text_renderer
-        .render(&text_handle.atlas, &mut text_pass)
+        .render(&text_handle.atlas, viewport, &mut text_pass)
         .unwrap();
 
     drop(text_pass);
