@@ -2,8 +2,7 @@
 //! extension accsss the texture interface
 
 use crate::engine_handle::Engine;
-use crate::render::RenderHandle;
-use crate::resource::{self, InProgressResource, Resource, ResourceId, ResourceType};
+use crate::resource::{self, InProgressResource, ResourceId, ResourceType};
 use crate::vectors::Vec2;
 use crate::{layouts, ERROR_TEXTURE_DATA};
 use image::{GenericImageView, ImageError};
@@ -32,7 +31,7 @@ impl Texture {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor));
 
-        resource::start_load(engine, path, ip_resource);
+        resource::start_load(engine, ip_resource);
 
         engine.add_in_progress_resource();
         typed_id
@@ -51,7 +50,7 @@ impl Texture {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image(sampler, sampler));
 
-        resource::start_load(engine, path, ip_resource);
+        resource::start_load(engine, ip_resource);
         engine.add_in_progress_resource();
 
         typed_id
@@ -69,7 +68,7 @@ impl Texture {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image(mag_sampler, min_sampler));
 
-        resource::start_load(engine, path, ip_resource);
+        resource::start_load(engine, ip_resource);
         engine.add_in_progress_resource();
 
         typed_id
@@ -256,6 +255,28 @@ impl UniformTexture {
             view,
             size,
         }
+    }
+
+    pub fn resize(&mut self, new_size: Vec2<u32>, engine: &Engine) {
+        let wgpu = engine.get_wgpu();
+        let format = engine.get_texture_format();
+
+        let inner_texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Uniform Texture"),
+            size: wgpu::Extent3d { width: new_size.x, height: new_size.y, depth_or_array_layers: 1 },
+            dimension: wgpu::TextureDimension::D2,
+            mip_level_count: 1,
+            sample_count: 1,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+
+        let new_view = self.make_view();
+
+        self.inner_texture = inner_texture;
+        self.size = new_size;
+        self.view = new_view;
     }
 
     pub(crate) fn make_render_view<'a>(&'a mut self) -> &'a wgpu::TextureView {

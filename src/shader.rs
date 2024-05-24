@@ -38,7 +38,7 @@ impl Shader {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(options));
 
-        resource::start_load(engine, path, ip_resource);
+        resource::start_load(engine, ip_resource);
         engine.add_in_progress_resource();
 
         typed_id
@@ -142,6 +142,10 @@ impl Shader {
         self.options.update_uniform_data(data, engine);
     }
 
+    pub(crate) fn update_uniform_texture(&mut self, texture: &UniformTexture, wgpu: &WgpuClump) {
+        self.options.update_uniform_texture(texture, wgpu);
+    }
+
     pub(crate) fn set_active<'o, 'p>(&'o self, renderer: &mut Renderer<'o, 'p>) {
         renderer.pass.set_pipeline(&self.pipeline);
         
@@ -160,8 +164,7 @@ pub struct UniformData {
 }
 
 impl UniformData {
-    pub fn new<T: ShaderType + WriteInto>(engine: &Engine, data: &T) -> Self {
-        let wgpu = engine.get_wgpu();
+    pub fn new<T: ShaderType + WriteInto>(data: &T) -> Self {
         let mut buffer = encase::UniformBuffer::new(Vec::new());
         buffer.write(&data).unwrap();
         let byte_array = buffer.into_inner();
@@ -176,7 +179,7 @@ impl UniformData {
 #[derive(Debug)]
 pub struct ShaderOptions {
     uniform_data: Option<wgpu::Buffer>,
-    uniform_texture: Option<wgpu::TextureView>,
+    uniform_texture: Option<(wgpu::TextureView, wgpu::Sampler)>,
     bind_group: Option<wgpu::BindGroup>,
 }
 
@@ -219,11 +222,23 @@ impl ShaderOptions {
 
     pub fn with_uniform_texture(texture: &UniformTexture, engine: &Engine) -> Self {
         let device = &engine.get_wgpu().device;
-        let sampler = engine.get_texture_sampler();
+
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            // what to do when given cordinates outside the textures height/width
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            // what do when give less or more than 1 pixel to sample
+            // linear interprelates between all of them nearest gives the closet colour
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
 
         let starting_view = texture.make_view();
 
-        let bind_group = Self::make_layout_internal(device, None, Some(&starting_view))
+        let bind_group = Self::make_layout_internal(device, None, Some((&starting_view, &sampler)))
             .and_then(|layout| Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Shader Options BindGroup"),
                 layout: &layout,
@@ -234,21 +249,20 @@ impl ShaderOptions {
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: wgpu::BindingResource::Sampler(sampler),
+                        resource: wgpu::BindingResource::Sampler(&sampler),
                     }
                 ],
             })));
 
         Self {
             uniform_data: None,
-            uniform_texture: Some(starting_view),
+            uniform_texture: Some((starting_view, sampler)),
             bind_group,
         }
     }
 
     pub fn with_all(engine: &Engine, data: &UniformData, texture: &UniformTexture) -> Self {
         let device = &engine.get_wgpu().device;
-        let sampler = engine.get_texture_sampler();
 
         let starting_buffer = device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -259,7 +273,20 @@ impl ShaderOptions {
 
         let starting_view = texture.make_view();
 
-        let bind_group = Self::make_layout_internal(device, Some(&starting_buffer), Some(&starting_view))
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            // what to do when given cordinates outside the textures height/width
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            // what do when give less or more than 1 pixel to sample
+            // linear interprelates between all of them nearest gives the closet colour
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let bind_group = Self::make_layout_internal(device, Some(&starting_buffer), Some((&starting_view, &sampler)))
             .and_then(|layout| Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Shader Options BindGroup"),
                 layout: &layout,
@@ -274,14 +301,14 @@ impl ShaderOptions {
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,
-                        resource: wgpu::BindingResource::Sampler(sampler),
+                        resource: wgpu::BindingResource::Sampler(&sampler),
                     }
                 ],
             })));
 
         Self {
             uniform_data: Some(starting_buffer),
-            uniform_texture: Some(starting_view),
+            uniform_texture: Some((starting_view, sampler)),
             bind_group,
         }
     }
@@ -297,11 +324,47 @@ impl ShaderOptions {
         }
     }
 
-    pub(crate) fn make_layout(&self, device: &wgpu::Device) -> Option<wgpu::BindGroupLayout> {
-        Self::make_layout_internal(device, self.uniform_data.as_ref(), self.uniform_texture.as_ref())
+    fn update_uniform_texture(&mut self, texture: &UniformTexture, wgpu: &WgpuClump) {
+        if let Some(view) = &mut self.uniform_texture {
+            view.0 = texture.make_view();
+
+            self.bind_group = Some(wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Shader Options BindGroup"),
+                entries: &self.make_entries(),
+                layout: &self.make_layout(&wgpu.device).unwrap(),
+            }));
+        }
     }
 
-    fn make_layout_internal(device: &wgpu::Device, uniform_data: Option<&wgpu::Buffer>, uniform_texture: Option<&wgpu::TextureView>) -> Option<wgpu::BindGroupLayout> {
+    fn make_entries(&self) -> Vec<wgpu::BindGroupEntry> {
+        let mut entries = Vec::with_capacity(3);
+
+        if let Some(buffer) = &self.uniform_data {
+            entries.push(wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer(buffer.as_entire_buffer_binding()),
+            });
+        }
+
+        if let Some((view, sampler)) = &self.uniform_texture {
+            entries.push(wgpu::BindGroupEntry {
+                binding: 1,
+                resource: wgpu::BindingResource::TextureView(&view),
+            });
+            entries.push(wgpu::BindGroupEntry {
+                binding: 2,
+                resource: wgpu::BindingResource::Sampler(&sampler),
+            });
+        }
+
+        entries
+    }
+
+    pub(crate) fn make_layout(&self, device: &wgpu::Device) -> Option<wgpu::BindGroupLayout> {
+        Self::make_layout_internal(device, self.uniform_data.as_ref(), self.uniform_texture.as_ref().map(|(a, b)| (a, b)))
+    }
+
+    fn make_layout_internal(device: &wgpu::Device, uniform_data: Option<&wgpu::Buffer>, uniform_texture: Option<(&wgpu::TextureView, &wgpu::Sampler)>) -> Option<wgpu::BindGroupLayout> {
         match (uniform_data, uniform_texture) {
             (Some(_), Some(_)) => Some(layouts::create_texture_uniform_layout(device)),
             (Some(_), None) => Some(layouts::create_uniform_layout(device)),

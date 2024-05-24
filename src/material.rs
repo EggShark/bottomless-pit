@@ -20,8 +20,8 @@ use crate::engine_handle::{Engine, WgpuClump};
 use crate::matrix_math::normalize_points;
 use crate::render::Renderer;
 use crate::resource::ResourceId;
-use crate::shader::{Shader, ShaderOptions, UniformData};
-use crate::texture::Texture;
+use crate::shader::{Shader, ShaderOptions};
+use crate::texture::{Texture, UniformTexture};
 use crate::vectors::Vec2;
 use crate::vertex::{self, LineVertex, Vertex};
 
@@ -374,6 +374,12 @@ impl Material {
     pub fn update_uniform_data<T: ShaderType + WriteInto>(&self, data: &T, engine: &Engine) -> () {
         let options = engine.resource_manager.get_pipeline(&self.pipeline_id).unwrap();
         options.update_uniform_data(data, engine);
+    }
+
+    // TODO MAKE RESULT
+    pub fn update_uniform_texture(&mut self, texture: &UniformTexture, engine: &mut Engine) -> () {
+        let options = engine.resource_manager.get_mut_shader(&self.pipeline_id).unwrap();
+        options.update_uniform_texture(texture, &engine.wgpu_clump);
     }
 
     /// Returns the number of verticies in the buffer

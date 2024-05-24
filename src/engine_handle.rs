@@ -24,14 +24,14 @@ use crate::colour::Colour;
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::{make_pipeline, render};
 use crate::resource::{
-    compare_resources, InProgressResource, Resource, ResourceError, ResourceId, ResourceManager,
+    InProgressResource, Resource, ResourceError, ResourceId, ResourceManager,
     ResourceType,
 };
 use crate::shader::{Shader, ShaderOptions};
 use crate::text::{Font, TextRenderer};
 use crate::texture::{SamplerType, Texture};
 use crate::vectors::Vec2;
-use crate::vertex::{LineVertex, Vertex};
+use crate::vertex::LineVertex;
 use crate::{resource, WHITE_PIXEL};
 use crate::{layouts, Game};
 
@@ -302,29 +302,12 @@ impl Engine {
             Vec2 { x: 1.0, y: 1.0 },
         );
 
-        let generic_shader = wgpu_clump
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Shader"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("shaders/shader.wgsl").into()),
-            });
-
         let line_shader = wgpu_clump
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("Line_Shader"),
                 source: wgpu::ShaderSource::Wgsl(include_str!("shaders/line_shader.wgsl").into()),
             });
-
-        let generic_pipeline = make_pipeline(
-            &wgpu_clump.device,
-            wgpu::PrimitiveTopology::TriangleList,
-            &[&texture_bind_group_layout, &camera_bind_group_layout],
-            &[Vertex::desc()],
-            &generic_shader,
-            texture_format,
-            Some("Defualt Pipeline"),
-        );
 
         let line_pipeline = make_pipeline(
             &wgpu_clump.device,
@@ -663,7 +646,7 @@ impl Engine {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Bytes);
 
-        resource::start_load(self, path, ip_resource);
+        resource::start_load(self, ip_resource);
 
         self.in_progress_resources += 1;
         typed_id
@@ -748,7 +731,8 @@ impl Engine {
                             WindowEvent::CloseRequested => control_flow.exit(),
                             WindowEvent::Resized(physical_size) => {
                                 let s = *physical_size;
-                                self.resize(s.into())
+                                self.resize(s.into());
+                                game.on_resize(s.into(), &mut self);
                             }
                             WindowEvent::RedrawRequested => {
                                 if self.is_loading() {
@@ -844,9 +828,9 @@ impl Engine {
 
         match resource {
             Ok(data) => match data.resource_type {
-                ResourceType::Bytes => self.add_finished_bytes(data.data, data.id),
-                ResourceType::Image(mag, min) => self.add_finished_image(data.data, data.id, mag, min),
-                ResourceType::Shader(options) => self.add_finished_shader(data.data, data.id, options),
+                ResourceType::Bytes => self.add_finished_bytes(data.data, data.id, &data.path),
+                ResourceType::Image(mag, min) => self.add_finished_image(data.data, data.id, mag, min, &data.path),
+                ResourceType::Shader(options) => self.add_finished_shader(data.data, data.id, options, &data.path),
                 ResourceType::Font => self.add_finished_font(data),
             },
             Err(e) => {
@@ -865,25 +849,32 @@ impl Engine {
         }
     }
 
-    fn add_finished_bytes(&mut self, data: Vec<u8>, id: NonZeroU64) {
+    fn add_finished_bytes(&mut self, data: Vec<u8>, id: NonZeroU64, path: &Path,) {
         let typed_id: ResourceId<Vec<u8>> = ResourceId::from_number(id);
         self.resource_manager.insert_bytes(typed_id, data);
+        log::info!("byte resource at: {:?} loaded succesfully", path);
     }
 
-    fn add_finished_image(&mut self, data: Vec<u8>, id: NonZeroU64, mag: SamplerType, min: SamplerType) {
+    fn add_finished_image(&mut self, data: Vec<u8>, id: NonZeroU64, mag: SamplerType, min: SamplerType, path: &Path) {
         let typed_id: ResourceId<Texture> = ResourceId::from_number(id);
         let texture = Texture::from_resource_data(self, None, data, mag, min);
         match texture {
-            Ok(texture) => self.resource_manager.insert_texture(typed_id, texture),
+            Ok(texture) => {
+                self.resource_manager.insert_texture(typed_id, texture);
+                log::info!("texture resource at: {:?} loaded succesfully", path);
+            },
             Err(e) => log::error!("{:?}, loading defualt replacement", e),
         }
     }
 
-    fn add_finished_shader(&mut self, data: Vec<u8>, id: NonZeroU64, options: ShaderOptions) {
+    fn add_finished_shader(&mut self, data: Vec<u8>, id: NonZeroU64, options: ShaderOptions, path: &Path) {
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
         let shader = Shader::from_resource_data(&data, options, self);
         match shader {
-            Ok(shader) => self.resource_manager.insert_pipeline(typed_id, shader),
+            Ok(shader) => {
+                self.resource_manager.insert_pipeline(typed_id, shader);
+                log::info!("shader resource at: {:?} loaded succesfully", path);
+            },
             Err(e) => {
                 log::error!("{:?}. loading defualt replacement", e);
                 self.add_defualt_shader(id);
@@ -895,6 +886,7 @@ impl Engine {
         let typed_id: ResourceId<Font> = ResourceId::from_number(resource.id);
         let font = self.text_renderer.load_font_from_bytes(&resource.data);
         self.resource_manager.insert_font(typed_id, font);
+        log::info!("Font resource at: {:?} loaded succesfully", resource.path);
     }
 
     fn add_defualt_bytes(&mut self, id: NonZeroU64) {

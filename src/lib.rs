@@ -59,6 +59,7 @@ mod vertex;
 
 use engine_handle::Engine;
 use render::RenderHandle;
+use vectors::Vec2;
 /// The Trait needed for structs to be used in with the Engine
 pub trait Game {
     /// Rendering code goes here
@@ -67,6 +68,7 @@ pub trait Game {
     fn update(&mut self, engine_handle: &mut Engine);
     /// Things to do when the window closes
     fn on_close(&self) {}
+    fn on_resize(&mut self, _new_window_size: Vec2<u32>, _engine_handle: &mut Engine) {}
 }
 
 #[rustfmt::skip]

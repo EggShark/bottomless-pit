@@ -24,12 +24,12 @@ fn main() {
         _padding2: 0.0,
     };
     
-    let mouse_uniform_data = UniformData::new(&engine, &data);
+    let mouse_uniform_data = UniformData::new(&data);
     let mouse_shader = Shader::new("examples/mouse.wgsl", ShaderOptions::with_uniform_data(&engine, &mouse_uniform_data), &mut engine);
     
     // On wasm we need this to be 16 bytes aligned so we have added this instead of
     // a 0.0_f32
-    let circle_uniform_data = UniformData::new(&engine, &data);
+    let circle_uniform_data = UniformData::new(&data);
     let circle_shader = Shader::new("examples/movement.wgsl", ShaderOptions::with_uniform_data(&engine, &circle_uniform_data), &mut engine);
     
     let mouse_material = MaterialBuilder::new()

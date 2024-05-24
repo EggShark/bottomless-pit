@@ -27,7 +27,7 @@ fn main() {
         _padding4: 0.0,
     };
 
-    let uniform_data = UniformData::new(&engine, &data);
+    let uniform_data = UniformData::new(&data);
 
     let mouse_shader = Shader::new("examples/sinewaves.wgsl", ShaderOptions::with_uniform_data(&engine, &uniform_data), &mut engine);
 

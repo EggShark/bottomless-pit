@@ -53,7 +53,7 @@ use crate::texture::{SamplerType, Texture};
 
 #[derive(Debug)]
 pub(crate) struct Resource {
-    path: PathBuf,
+    pub(crate) path: PathBuf,
     pub(crate) data: Vec<u8>,
     pub(crate) id: NonZeroU64,
     pub(crate) resource_type: ResourceType,
@@ -62,7 +62,7 @@ pub(crate) struct Resource {
 #[derive(Debug)]
 pub(crate) struct ResourceError {
     pub(crate) error: ReadError,
-    path: PathBuf,
+    _path: PathBuf,
     pub(crate) id: NonZeroU64,
     pub(crate) resource_type: ResourceType,
 }
@@ -83,28 +83,10 @@ impl Resource {
             }),
             Err(e) => Err(ResourceError {
                 error: e,
-                path,
+                _path: path,
                 id,
                 resource_type,
             }),
-        }
-    }
-}
-
-pub(crate) fn compare_resources(
-    left: &InProgressResource,
-    right: &Result<Resource, ResourceError>,
-) -> bool {
-    match right {
-        Ok(right) => {
-            left.id == right.id
-                && left.resource_type == right.resource_type
-                && left.path == right.path
-        }
-        Err(right) => {
-            left.id == right.id
-                && left.resource_type == right.resource_type
-                && left.path == right.path
         }
     }
 }
@@ -156,12 +138,10 @@ pub(crate) fn generate_id<T>() -> ResourceId<T> {
     ResourceId(NonZeroU64::new(id).unwrap(), PhantomData::<T>)
 }
 
-pub(crate) fn start_load<P: AsRef<Path>>(
+pub(crate) fn start_load(
     engine: &Engine,
-    path: P,
     ip_resource: InProgressResource,
 ) {
-    let path = path.as_ref().to_owned();
     let id = ip_resource.id;
     let resource_type = ip_resource.resource_type;
     let event_loop_proxy = engine.get_proxy();
@@ -169,8 +149,8 @@ pub(crate) fn start_load<P: AsRef<Path>>(
     {
         use wasm_bindgen_futures::spawn_local;
         spawn_local(async move {
-            let result = io::read(&path).await;
-            let resource = Resource::from_result(result, path, id, resource_type);
+            let result = io::read(&ip_resource.path).await;
+            let resource = Resource::from_result(result, ip_resource.path, id, resource_type);
             event_loop_proxy
                 .send_event(BpEvent::ResourceLoaded(resource))
                 .unwrap();
@@ -181,8 +161,8 @@ pub(crate) fn start_load<P: AsRef<Path>>(
     {
         let pool = engine.thread_pool();
         pool.spawn_ok(async move {
-            let result = io::read(&path).await;
-            let resource = Resource::from_result(result, path, id, resource_type);
+            let result = io::read(&ip_resource.path).await;
+            let resource = Resource::from_result(result, ip_resource.path, id, resource_type);
             event_loop_proxy
                 .send_event(BpEvent::ResourceLoaded(resource))
                 .unwrap();
