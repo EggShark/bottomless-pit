@@ -1,6 +1,8 @@
 //! The colour struct module
+
+use encase::ShaderType;
 /// A struct containing RGBA Colours (spelled properly) with some predefind colour consts
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, ShaderType)]
 pub struct Colour {
     r: f32,
     g: f32,

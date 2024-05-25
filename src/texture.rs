@@ -279,6 +279,10 @@ impl UniformTexture {
         self.view = new_view;
     }
 
+    pub fn get_size(&self) -> Vec2<u32> {
+        self.size
+    }
+
     pub(crate) fn make_render_view<'a>(&'a mut self) -> &'a wgpu::TextureView {
         self.view = self.inner_texture.create_view(&wgpu::TextureViewDescriptor {
             label: Some("Uniform Texture View"),

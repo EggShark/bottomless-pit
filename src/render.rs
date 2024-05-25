@@ -134,12 +134,15 @@ impl<'a> RenderHandle<'a> {
     }
 
     pub fn begin_texture_pass<'o, 'p>(&'o mut self, texture: &'o mut UniformTexture) -> Renderer<'o, 'p> {
+        let size = texture.get_size();
+        
         let mut pass = match &mut self.encoder {
             Some(encoder) => {
-                Self::create_pass(encoder, texture.make_render_view(), self.default_clear_colour)
+                Self::create_pass(encoder, texture.make_render_view(), wgpu::Color::WHITE)
             }
             None => unreachable!(),
         };
+
 
         let pipeline = &self
         .resources
@@ -152,7 +155,7 @@ impl<'a> RenderHandle<'a> {
 
         Renderer {
             pass,
-            size: self.defualt_view_size,
+            size,
             defualt_id: self.defualt_id,
             resources: &self.resources,
             camera_bindgroup: &self.camera_bindgroup,
@@ -229,5 +232,9 @@ pub struct Renderer<'o, 'p> where 'o: 'p {
 impl<'p, 'o> Renderer<'p, 'o> {
     pub fn reset_camera(&mut self) {
         self.pass.set_bind_group(1, self.camera_bindgroup, &[]);
+    }
+
+    pub fn get_size(&self) -> Vec2<u32> {
+        self.size
     }
 }
