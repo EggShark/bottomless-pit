@@ -3,8 +3,8 @@ use std::cmp::Ordering;
 
 use bottomless_pit::engine_handle::Engine;
 use bottomless_pit::material::{Material, MaterialBuilder};
-use bottomless_pit::render::{Renderer, RenderHandle};
-use bottomless_pit::shader::{Shader, ShaderOptions, UniformData};
+use bottomless_pit::render::RenderHandle;
+use bottomless_pit::shader::{Shader, ShaderOptions, UniformData, UniformError};
 use bottomless_pit::{*, engine_handle::EngineBuilder};
 use bottomless_pit::texture::UniformTexture;
 use encase::ShaderType;
@@ -52,7 +52,6 @@ fn main() {
     let s = TextureExample {
         material,
         ocluder_material,
-        light_data,
         light,
         uniform_texture,
         rectangles,
@@ -65,7 +64,6 @@ fn main() {
 struct TextureExample {
     material: Material,
     ocluder_material: Material,
-    light_data: UniformData,
     light: Light,
     uniform_texture: UniformTexture,
     rectangles: Vec<Rectangle>,
@@ -94,15 +92,30 @@ impl Game for TextureExample {
 
         self.light.pos_x = mouse_pos.x / window_size.x as f32;
         self.light.pos_y = mouse_pos.y / window_size.y as f32;
-        self.material.update_uniform_data(&self.light, &engine_handle);
+        self.material.update_uniform_data(&self.light, &engine_handle).unwrap();
     }
 
     fn on_resize(&mut self, new_size: Vec2<u32>, engine_handle: &mut Engine) {
-        // self.light.aspect_ratio = new_size.x as f32 / new_size.y as f32;
-        // self.material.update_uniform_data(&self.light, &engine_handle);
+        self.light.aspect_ratio = new_size.x as f32 / new_size.y as f32;
+        match self.material.update_uniform_data(&self.light, &engine_handle) {
+            Ok(_) => {},
+            Err(e) => {
+                match e {
+                    UniformError::NotLoadedYet => {},
+                    _ => panic!("{}", e),
+                }
+            } 
+        } 
 
-        // self.uniform_texture.resize(new_size, &engine_handle);
-        // self.material.update_uniform_texture(&self.uniform_texture, engine_handle);
+        match self.material.update_uniform_texture(&mut self.uniform_texture, new_size, engine_handle) {
+            Ok(_) => {},
+            Err(e) => {
+                match e {
+                    UniformError::NotLoadedYet => {},
+                    _ => panic!("{}", e),
+                }
+            }
+        }
     }
 }
 

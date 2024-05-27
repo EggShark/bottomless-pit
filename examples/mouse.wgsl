@@ -11,9 +11,6 @@ struct MousePos {
     _junk: vec2<f32>,
 }
 
-@group(1) @binding(0)
-var<uniform> camera: EngineUniforms;
-
 @group(2) @binding(0)
 var<uniform> mouse: MousePos;
 

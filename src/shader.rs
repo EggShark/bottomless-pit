@@ -1,6 +1,8 @@
 //! Contains everything you need to make some cool shaders including the Shader
 //! and UniformData types.
 
+use std::error::Error;
+use std::fmt::Display;
 use std::path::Path;
 use std::string::FromUtf8Error;
 
@@ -138,12 +140,12 @@ impl Shader {
         }
     }
 
-    pub(crate) fn update_uniform_data<T: ShaderType + WriteInto>(&self, data: &T, engine: &Engine) {
-        self.options.update_uniform_data(data, engine);
+    pub(crate) fn update_uniform_data<T: ShaderType + WriteInto>(&self, data: &T, engine: &Engine) -> Result<(), UniformError> {
+        self.options.update_uniform_data(data, engine)
     }
 
-    pub(crate) fn update_uniform_texture(&mut self, texture: &UniformTexture, wgpu: &WgpuClump) {
-        self.options.update_uniform_texture(texture, wgpu);
+    pub(crate) fn update_uniform_texture(&mut self, texture: &UniformTexture, wgpu: &WgpuClump) -> Result<(), UniformError> {
+        self.options.update_uniform_texture(texture, wgpu)
     }
 
     pub(crate) fn set_active<'o, 'p>(&'o self, renderer: &mut Renderer<'o, 'p>) {
@@ -313,26 +315,35 @@ impl ShaderOptions {
         }
     }
 
-    fn update_uniform_data<T: ShaderType + WriteInto>(&self, data: &T, engine: &Engine) {
-        if let Some(buffer) = &self.uniform_data {
-            let wgpu = engine.get_wgpu();
-            let mut uniform_buffer = encase::UniformBuffer::new(Vec::new());
-            uniform_buffer.write(&data).unwrap();
-            let byte_array = uniform_buffer.into_inner();
-
-            wgpu.queue.write_buffer(buffer, 0, &byte_array);
+    fn update_uniform_data<T: ShaderType + WriteInto>(&self, data: &T, engine: &Engine) -> Result<(), UniformError> {
+        match &self.uniform_data {
+            Some(buffer) => {
+                let wgpu = engine.get_wgpu();
+                let mut uniform_buffer = encase::UniformBuffer::new(Vec::new());
+                uniform_buffer.write(&data).unwrap();
+                let byte_array = uniform_buffer.into_inner();
+    
+                wgpu.queue.write_buffer(buffer, 0, &byte_array);
+                Ok(())
+            },
+            None => Err(UniformError::DoesntHaveUniformBuffer)
         }
     }
 
-    fn update_uniform_texture(&mut self, texture: &UniformTexture, wgpu: &WgpuClump) {
-        if let Some(view) = &mut self.uniform_texture {
-            view.0 = texture.make_view();
+    fn update_uniform_texture(&mut self, texture: &UniformTexture, wgpu: &WgpuClump) -> Result<(), UniformError> {
+        match &mut self.uniform_texture {
+            Some(view) => {
+                view.0 = texture.make_view();
 
-            self.bind_group = Some(wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Shader Options BindGroup"),
-                entries: &self.make_entries(),
-                layout: &self.make_layout(&wgpu.device).unwrap(),
-            }));
+                self.bind_group = Some(wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Shader Options BindGroup"),
+                    entries: &self.make_entries(),
+                    layout: &self.make_layout(&wgpu.device).unwrap(),
+                }));
+
+                Ok(())
+            },
+            None => Err(UniformError::DoesntHaveUniformTexture)
         }
     }
 
@@ -377,3 +388,22 @@ impl ShaderOptions {
         (self.uniform_data.is_some(), self.uniform_texture.is_some())
     }
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum UniformError {
+    NotLoadedYet,
+    DoesntHaveUniformBuffer,
+    DoesntHaveUniformTexture,
+}
+
+impl Display for UniformError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotLoadedYet => write!(f, "The shader has not loaded yet please try again later"),
+            Self::DoesntHaveUniformBuffer => write!(f, "The shader does not have a uniform buffer"),
+            Self::DoesntHaveUniformTexture => write!(f, "The shader does not have a unform texture"),
+        }
+    }
+}
+
+impl Error for UniformError {}

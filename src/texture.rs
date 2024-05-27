@@ -1,7 +1,7 @@
 //! Cointains the interface into the texture cache and by
 //! extension accsss the texture interface
 
-use crate::engine_handle::Engine;
+use crate::engine_handle::{Engine, WgpuClump};
 use crate::resource::{self, InProgressResource, ResourceId, ResourceType};
 use crate::vectors::Vec2;
 use crate::{layouts, ERROR_TEXTURE_DATA};
@@ -257,10 +257,7 @@ impl UniformTexture {
         }
     }
 
-    pub fn resize(&mut self, new_size: Vec2<u32>, engine: &Engine) {
-        let wgpu = engine.get_wgpu();
-        let format = engine.get_texture_format();
-
+    pub(crate) fn resize(&mut self, new_size: Vec2<u32>, wgpu: &WgpuClump, format: wgpu::TextureFormat) {
         let inner_texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Uniform Texture"),
             size: wgpu::Extent3d { width: new_size.x, height: new_size.y, depth_or_array_layers: 1 },

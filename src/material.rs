@@ -20,7 +20,7 @@ use crate::engine_handle::{Engine, WgpuClump};
 use crate::matrix_math::normalize_points;
 use crate::render::Renderer;
 use crate::resource::ResourceId;
-use crate::shader::{Shader, ShaderOptions};
+use crate::shader::{Shader, ShaderOptions, UniformError};
 use crate::texture::{Texture, UniformTexture};
 use crate::vectors::Vec2;
 use crate::vertex::{self, LineVertex, Vertex};
@@ -371,15 +371,31 @@ impl Material {
     }
 
     // TODO Make RESULT
-    pub fn update_uniform_data<T: ShaderType + WriteInto>(&self, data: &T, engine: &Engine) -> () {
-        let options = engine.resource_manager.get_pipeline(&self.pipeline_id).unwrap();
-        options.update_uniform_data(data, engine);
+    pub fn update_uniform_data<T: ShaderType + WriteInto>(&self, data: &T, engine: &Engine) -> Result<(), UniformError> {
+        let options = match engine.resource_manager.get_pipeline(&self.pipeline_id) {
+            Some(shader) => shader,
+            None => return Err(UniformError::NotLoadedYet),
+        };
+
+        options.update_uniform_data(data, engine)?;
+
+        Ok(())
     }
 
     // TODO MAKE RESULT
-    pub fn update_uniform_texture(&mut self, texture: &UniformTexture, engine: &mut Engine) -> () {
-        let options = engine.resource_manager.get_mut_shader(&self.pipeline_id).unwrap();
-        options.update_uniform_texture(texture, &engine.wgpu_clump);
+    pub fn update_uniform_texture(&mut self, texture: &mut UniformTexture, size: Vec2<u32>, engine: &mut Engine) -> Result<(), UniformError> {
+        let texture_format = engine.get_texture_format();
+        
+        let options = match engine.resource_manager.get_mut_shader(&self.pipeline_id) {
+            Some(shader) => shader,
+            None => return Err(UniformError::NotLoadedYet),
+        };
+
+        texture.resize(size, &engine.wgpu_clump, texture_format);
+
+        options.update_uniform_texture(texture, &engine.wgpu_clump)?;
+
+        Ok(())
     }
 
     /// Returns the number of verticies in the buffer
