@@ -230,12 +230,23 @@ pub struct UniformTexture {
     inner_texture: wgpu::Texture,
     view: wgpu::TextureView,
     size: Vec2<u32>,
+    sampler: wgpu::Sampler,
 }
 
 impl UniformTexture {
     pub fn new(engine: &Engine, size: Vec2<u32>) -> Self {
         let wgpu = engine.get_wgpu();
         let format = engine.get_texture_format();
+        let sampler = wgpu.device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("Uniform Texture Sampler"),
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
 
         let inner_texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Uniform Texture"),
@@ -254,6 +265,42 @@ impl UniformTexture {
             inner_texture,
             view,
             size,
+            sampler,
+        }
+    }
+
+    pub fn new_with_sampler(engine: &Engine, size: Vec2<u32>, mag_sampler: SamplerType, min_sampler: SamplerType) -> Self {
+        let wgpu = engine.get_wgpu();
+        let format = engine.get_texture_format();
+        let sampler = wgpu.device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("Uniform Texture Sampler"),
+            address_mode_u: wgpu::AddressMode::Repeat,
+            address_mode_v: wgpu::AddressMode::Repeat,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: mag_sampler.into(),
+            min_filter: min_sampler.into(),
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let inner_texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Uniform Texture"),
+            size: wgpu::Extent3d { width: size.x, height: size.y, depth_or_array_layers: 1 },
+            dimension: wgpu::TextureDimension::D2,
+            mip_level_count: 1,
+            sample_count: 1,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+
+        let view = inner_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        Self {
+            inner_texture,
+            view,
+            size,
+            sampler
         }
     }
 
@@ -278,6 +325,10 @@ impl UniformTexture {
 
     pub fn get_size(&self) -> Vec2<u32> {
         self.size
+    }
+
+    pub(crate) fn get_sampler(&self) -> &wgpu::Sampler {
+        &self.sampler
     }
 
     pub(crate) fn make_render_view<'a>(&'a mut self) -> &'a wgpu::TextureView {

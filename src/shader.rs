@@ -251,7 +251,7 @@ impl ShaderOptions {
                     },
                     wgpu::BindGroupEntry {
                         binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&sampler),
+                        resource: wgpu::BindingResource::Sampler(texture.get_sampler()),
                     }
                 ],
             })));
@@ -337,7 +337,7 @@ impl ShaderOptions {
 
                 self.bind_group = Some(wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("Shader Options BindGroup"),
-                    entries: &self.make_entries(),
+                    entries: &self.make_entries(Some(texture.get_sampler())),
                     layout: &self.make_layout(&wgpu.device).unwrap(),
                 }));
 
@@ -347,7 +347,7 @@ impl ShaderOptions {
         }
     }
 
-    fn make_entries(&self) -> Vec<wgpu::BindGroupEntry> {
+    fn make_entries<'a>(&'a self, other_sampler: Option<&'a wgpu::Sampler>) -> Vec<wgpu::BindGroupEntry> {
         let mut entries = Vec::with_capacity(3);
 
         if let Some(buffer) = &self.uniform_data {
@@ -364,7 +364,7 @@ impl ShaderOptions {
             });
             entries.push(wgpu::BindGroupEntry {
                 binding: 2,
-                resource: wgpu::BindingResource::Sampler(&sampler),
+                resource: wgpu::BindingResource::Sampler(other_sampler.unwrap_or(&sampler)),
             });
         }
 
