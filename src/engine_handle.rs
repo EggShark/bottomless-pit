@@ -20,7 +20,6 @@ use winit::event::*;
 use winit::event_loop::{EventLoop, EventLoopBuilder, EventLoopProxy, EventLoopWindowTarget};
 use winit::window::{BadIcon, Window};
 
-use crate::colour::Colour;
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::{make_pipeline, render};
 use crate::resource::{
@@ -50,7 +49,6 @@ pub struct Engine {
     spin_sleeper: SpinSleeper,
     current_frametime: Instant,
     texture_sampler: wgpu::Sampler,
-    clear_colour: Colour,
     config: wgpu::SurfaceConfiguration,
     camera_bind_group: wgpu::BindGroup,
     camera_buffer: wgpu::Buffer,
@@ -348,7 +346,6 @@ impl Engine {
             current_frametime: Instant::now(),
             spin_sleeper: SpinSleeper::default(),
             texture_sampler,
-            clear_colour: builder.clear_colour,
             config,
             camera_bind_group,
             camera_buffer,
@@ -701,10 +698,6 @@ impl Engine {
         self.surface.get_current_texture()
     }
 
-    pub(crate) fn wgpu_colour(&self) -> wgpu::Color {
-        self.clear_colour.into()
-    }
-
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn thread_pool(&self) -> &ThreadPool {
         &self.thread_pool
@@ -924,7 +917,6 @@ pub struct EngineBuilder {
     full_screen: bool,
     target_fps: Option<u16>,
     close_key: Option<Key>,
-    clear_colour: Colour,
     window_icon: Option<winit::window::Icon>,
     window_title: String,
     resizable: bool,
@@ -939,7 +931,6 @@ impl EngineBuilder {
     ///     full_screen: false,
     ///     target_fps: 30,
     ///     close_key: None,
-    ///     clear_colour: Colour::BLACK,
     ///     window_icon: None,
     ///     window_title: "Bottonless-Pit Game".into(),
     ///     resizable: true,
@@ -951,7 +942,6 @@ impl EngineBuilder {
             full_screen: false,
             target_fps: None,
             close_key: None,
-            clear_colour: Colour::BLACK,
             window_icon: None,
             window_title: "Bottomless-Pit Game".into(),
             resizable: true,
@@ -966,7 +956,6 @@ impl EngineBuilder {
             full_screen: self.full_screen,
             target_fps: self.target_fps,
             close_key: self.close_key,
-            clear_colour: self.clear_colour,
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
@@ -981,7 +970,6 @@ impl EngineBuilder {
             full_screen: true,
             target_fps: self.target_fps,
             close_key: self.close_key,
-            clear_colour: self.clear_colour,
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
@@ -999,7 +987,6 @@ impl EngineBuilder {
             full_screen: self.full_screen,
             target_fps: Some(fps),
             close_key: self.close_key,
-            clear_colour: self.clear_colour,
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
@@ -1017,7 +1004,6 @@ impl EngineBuilder {
             full_screen: self.full_screen,
             target_fps: self.target_fps,
             close_key: self.close_key,
-            clear_colour: self.clear_colour,
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
@@ -1032,22 +1018,6 @@ impl EngineBuilder {
             full_screen: self.full_screen,
             target_fps: self.target_fps,
             close_key: Some(key),
-            clear_colour: self.clear_colour,
-            window_icon: self.window_icon,
-            window_title: self.window_title,
-            resizable: self.resizable,
-            vsync: self.vsync,
-        }
-    }
-
-    /// Sets the colour that the background will be
-    pub fn set_clear_colour(self, colour: Colour) -> Self {
-        Self {
-            resolution: self.resolution,
-            full_screen: self.full_screen,
-            target_fps: self.target_fps,
-            close_key: self.close_key,
-            clear_colour: colour,
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: self.resizable,
@@ -1062,7 +1032,6 @@ impl EngineBuilder {
             full_screen: self.full_screen,
             target_fps: self.target_fps,
             close_key: self.close_key,
-            clear_colour: self.clear_colour,
             window_icon: self.window_icon,
             window_title: title.into(),
             resizable: self.resizable,
@@ -1077,7 +1046,6 @@ impl EngineBuilder {
             full_screen: self.full_screen,
             target_fps: self.target_fps,
             close_key: self.close_key,
-            clear_colour: self.clear_colour,
             window_icon: Some(icon),
             window_title: self.window_title,
             resizable: self.resizable,
@@ -1092,7 +1060,6 @@ impl EngineBuilder {
             full_screen: self.full_screen,
             target_fps: self.target_fps,
             close_key: self.close_key,
-            clear_colour: self.clear_colour,
             window_icon: self.window_icon,
             window_title: self.window_title,
             resizable: false,

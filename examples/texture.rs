@@ -42,7 +42,7 @@ impl Game for TextureExample {
         &'o mut self,
         mut render: RenderHandle<'o>,
     ) {
-        let mut render_handle = render.begin_pass();
+        let mut render_handle = render.begin_pass(Colour::BLACK);
 
         self.current.add_rectangle(
             vec2! { 0.0 },

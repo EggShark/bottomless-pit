@@ -15,7 +15,6 @@ fn main() {
     let mut engine = EngineBuilder::new()
         .set_window_title("Lightmap")
         .with_resolution((800, 800))
-        .set_clear_colour(Colour::BLACK)
         .build()
         .unwrap();
     
@@ -77,7 +76,7 @@ impl Game for TextureExample {
         
         self.create_shadow_map(&mut render_handle);
 
-        let mut p2 = render_handle.begin_pass();
+        let mut p2 = render_handle.begin_pass(Colour::BLACK);
         let size = p2.get_size();
         let size = Vec2{x: size.x as f32, y: size.y as f32};
 
@@ -121,7 +120,7 @@ impl Game for TextureExample {
 
 impl TextureExample {
     fn create_shadow_map<'o>(&mut self, render_handle: &mut RenderHandle<'o>) {
-        let mut p1 = render_handle.begin_texture_pass(&mut self.uniform_texture);
+        let mut p1 = render_handle.begin_texture_pass(&mut self.uniform_texture, Colour::WHITE);
 
         let light_pos = self.mouse_pos;
 

@@ -27,7 +27,7 @@ impl Game for LineExample {
         &'o mut self,
         mut render: RenderHandle<'o>,
     ) {
-        let mut render_handle = render.begin_pass();
+        let mut render_handle = render.begin_pass(Colour::BLACK);
         
         self.material.add_line(
             vec2! { 0.0, 0.0 },

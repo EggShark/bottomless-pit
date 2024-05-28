@@ -42,7 +42,7 @@ impl Game for CameraExample {
         &'o mut self,
         mut render: RenderHandle<'o>,
     ) {
-        let mut render_handle = render.begin_pass();
+        let mut render_handle = render.begin_pass(Colour::BLACK);
 
         self.material.add_rectangle(Vec2 { x: 0.0, y: 0.0 }, Vec2{x: 300.0, y: 300.0}, Colour::WHITE, &render_handle);
 

@@ -8,7 +8,6 @@ use bottomless_pit::vec2;
 
 fn main() {
     let mut engine = EngineBuilder::new()
-        .set_clear_colour(Colour::BLACK)
         .build()
         .unwrap();
 
@@ -29,7 +28,7 @@ impl Game for TextExample {
         &'o mut self,
         mut render: RenderHandle<'o>,
     ) {
-        let mut render_handle = render.begin_pass();
+        let mut render_handle = render.begin_pass(Colour::BLACK);
         self.text_mat
             .add_instance(vec2! { 0.0 }, Colour::WHITE, &render_handle);
 

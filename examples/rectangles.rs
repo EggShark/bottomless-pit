@@ -10,7 +10,6 @@ use bottomless_pit::Game;
 
 fn main() {
     let mut engine = EngineBuilder::new()
-        .set_clear_colour(Colour::BLACK)
         .build()
         .unwrap();
 
@@ -43,7 +42,7 @@ impl Game for Position {
         &'o mut self,
         mut render: RenderHandle<'o>,
     ) {
-        let mut render_handle = render.begin_pass();
+        let mut render_handle = render.begin_pass(Colour::BLACK);
 
         let defualt_size = vec2! { 50.0 };
         self.regular_material.add_rectangle(

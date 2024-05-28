@@ -1,5 +1,6 @@
 //! Contains the Renderer struct which also contains all the
 //! functions and logic to draw things to the screen
+use crate::colour::Colour;
 use crate::engine_handle::{Engine, WgpuClump};
 use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
@@ -100,16 +101,15 @@ pub struct RenderHandle<'a> {
     defualt_view: wgpu::TextureView,
     defualt_view_size: Vec2<u32>,
     camera_bindgroup: &'a wgpu::BindGroup,
-    default_clear_colour: wgpu::Color,
     wgpu: &'a WgpuClump,
 }
 
 impl<'a> RenderHandle<'a> {
-    pub fn begin_pass<'o, 'p>(&'o mut self) -> Renderer<'o, 'p> {
+    pub fn begin_pass<'o, 'p>(&'o mut self, clear_colour: Colour) -> Renderer<'o, 'p> {
 
         let mut pass = match &mut self.encoder {
             Some(encoder) => {
-                Self::create_pass(encoder, &self.defualt_view, self.default_clear_colour)
+                Self::create_pass(encoder, &self.defualt_view, clear_colour.into())
             }
             None => unreachable!(),
         };
@@ -133,12 +133,12 @@ impl<'a> RenderHandle<'a> {
         }
     }
 
-    pub fn begin_texture_pass<'o, 'p>(&'o mut self, texture: &'o mut UniformTexture) -> Renderer<'o, 'p> {
+    pub fn begin_texture_pass<'o, 'p>(&'o mut self, texture: &'o mut UniformTexture, clear_colour: Colour) -> Renderer<'o, 'p> {
         let size = texture.get_size();
         
         let mut pass = match &mut self.encoder {
             Some(encoder) => {
-                Self::create_pass(encoder, texture.make_render_view(), wgpu::Color::WHITE)
+                Self::create_pass(encoder, texture.make_render_view(), clear_colour.into())
             }
             None => unreachable!(),
         };
@@ -205,7 +205,6 @@ impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
             defualt_id: value.defualt_pipe_id(),
             defualt_view,
             defualt_view_size,
-            default_clear_colour: value.wgpu_colour(),
             camera_bindgroup: value.camera_bindgroup(),
             wgpu: value.get_wgpu(),
         }

@@ -9,7 +9,6 @@ use bottomless_pit::vec2;
 fn main() {
     let mut engine = EngineBuilder::new()
         .with_resolution((400, 400))
-        .set_clear_colour(Colour::BLACK)
         .build()
         .unwrap();
 
@@ -29,7 +28,7 @@ impl Game for DebugTriangle {
         &'o mut self,
         mut render: RenderHandle<'o>,
     ) {
-        let mut render_handle = render.begin_pass();
+        let mut render_handle = render.begin_pass(Colour::BLACK);
 
         self.material.add_triangle_with_coloured_verticies(
             [

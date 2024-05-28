@@ -13,7 +13,6 @@ use encase::ShaderType;
 
 fn main() {
     let mut engine = EngineBuilder::new()
-        .set_clear_colour(Colour::WHITE)
         .build()
         .unwrap();
 
@@ -74,7 +73,7 @@ impl Game for ShaderExample {
         &'o mut self,
         mut render: RenderHandle<'o>,
     ) {
-        let mut render_handle = render.begin_pass();
+        let mut render_handle = render.begin_pass(Colour::BLACK);
 
         self.mouse_material.add_rectangle(
             vec2! { 0.0 },

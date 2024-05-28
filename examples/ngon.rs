@@ -16,7 +16,6 @@ fn main() {
     let mut engine = EngineBuilder::new()
         .with_resolution((500, 500))
         .remove_vsync()
-        .set_clear_colour(Colour::BLACK)
         .build()
         .unwrap();
 
@@ -61,7 +60,7 @@ impl Game for Position {
         &'o mut self,
         mut render: RenderHandle<'o>,
     ) {
-        let mut render_handle = render.begin_pass();
+        let mut render_handle = render.begin_pass(Colour::BLACK);
 
         self.regular_material.add_regular_n_gon(
             120,
