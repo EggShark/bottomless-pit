@@ -31,7 +31,7 @@
 //! }
 //!
 //! impl Game for CoolGame {
-//!     fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
+//!     fn render<'o>(&'o mut self, mut render_handle: RenderHandle<'o>) {
 //!         // render what ever you want
 //!     }
 //!     fn update(&mut self, engine_handle: &mut Engine) {
