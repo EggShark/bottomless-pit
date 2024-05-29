@@ -5,6 +5,11 @@
 //!         if engine_handle.is_key_down(Key::W) {
 //!             // do something
 //!         }
+//! 
+//!         if engine.check_modifiers(ModifierKeys::Ctrl) && engine.is_key_pressed(Key::S) {
+//!             // wow ctrl + s better save
+//!         }
+//! 
 //!         if engine_handle.is_mouse_key_down(MouseKey::Left) {
 //!             // do more things
 //!         }
@@ -442,6 +447,10 @@ impl From<KeyCode> for Key {
     }
 }
 
+/// Keys such as Shift Ctrl and Alt that can be used to "modify inputs"
+/// think about shortcuts like Ctrl + S to save on most text editors.
+/// Note that these do not diffrentiate between sides so LeftShift will
+/// be considered the same as RightShift for modifiers. To get specific keys use [Key](Key::LeftAlt)
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ModifierKeys {
     Shift,

@@ -591,6 +591,9 @@ impl TextMaterial {
         self.index_count / 2
     }
 
+    /// This function needs to be run any time you update the text. This updates the internal
+    /// texture used to render the text. If this is not run after each change then it wont
+    /// display the changes.
     pub fn prepare(&mut self, engine: &mut Engine) {
         let font_info = FontInformation::new(engine);
         let texture_view = self.texture.create_view(&wgpu::TextureViewDescriptor::default());

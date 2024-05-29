@@ -159,7 +159,7 @@ impl Shader {
 
 /// `UniformData` contains the byte data of any struct that implements
 /// [ShaderType](https://docs.rs/encase/latest/encase/trait.ShaderType.html) which
-/// can be derived. This data needs to be added to a Material upon creation.
+/// can be derived. This data needs to be added to [ShaderOptions].
 #[derive(Debug)]
 pub struct UniformData {
     initial_data: Vec<u8>,
@@ -178,6 +178,8 @@ impl UniformData {
     }
 }
 
+/// `ShaderOptions` controlls the layout of your shader and wether or not you want
+/// extra uniforms like a texture or a uniform buffer
 #[derive(Debug)]
 pub struct ShaderOptions {
     uniform_data: Option<wgpu::Buffer>,
@@ -186,13 +188,22 @@ pub struct ShaderOptions {
 }
 
 impl ShaderOptions {
-    //TODO add support for custom texture samplers
     pub const EMPTY: Self = Self {
         uniform_data: None,
         uniform_texture: None,
         bind_group: None,
     };
 
+    /// This will create a shader with a layout of:
+    /// ```wgsl
+    /// struct MousePos {
+    ///     stuff: vec2<f32>,
+    ///     _junk: vec2<f32>,
+    /// }
+    ///
+    /// @group(2) @binding(0)
+    /// var<uniform> mouse: MousePos;
+    /// ```
     pub fn with_uniform_data(engine: &Engine, data: &UniformData) -> Self {
         let device = &engine.get_wgpu().device;
 
@@ -222,6 +233,13 @@ impl ShaderOptions {
         }
     }
 
+    /// This will create a shader with a layout of:
+    /// ```wgsl
+    /// @group(2) @binding(0)
+    /// var light_map: texture_2d<f32>;
+    /// @group(2) @binding(1)
+    /// var light_map_sampler: sampler;
+    /// ```
     pub fn with_uniform_texture(texture: &UniformTexture, engine: &Engine) -> Self {
         let device = &engine.get_wgpu().device;
 
@@ -263,6 +281,15 @@ impl ShaderOptions {
         }
     }
 
+    /// This will create a shader with a layout of:
+    /// ```wgsl
+    /// @group(2) binding(0)
+    /// var<uniform> value: SomeStruct;
+    /// @group(2) @binding(1)
+    /// var light_map: texture_2d<f32>;
+    /// @group(2) @binding(2)
+    /// var light_map_sampler: sampler;
+    /// ```
     pub fn with_all(engine: &Engine, data: &UniformData, texture: &UniformTexture) -> Self {
         let device = &engine.get_wgpu().device;
 
@@ -352,18 +379,18 @@ impl ShaderOptions {
 
         if let Some(buffer) = &self.uniform_data {
             entries.push(wgpu::BindGroupEntry {
-                binding: 0,
+                binding: entries.len() as u32,
                 resource: wgpu::BindingResource::Buffer(buffer.as_entire_buffer_binding()),
             });
         }
 
         if let Some((view, sampler)) = &self.uniform_texture {
             entries.push(wgpu::BindGroupEntry {
-                binding: 1,
+                binding: entries.len() as u32,
                 resource: wgpu::BindingResource::TextureView(&view),
             });
             entries.push(wgpu::BindGroupEntry {
-                binding: 2,
+                binding: entries.len() as u32,
                 resource: wgpu::BindingResource::Sampler(other_sampler.unwrap_or(&sampler)),
             });
         }

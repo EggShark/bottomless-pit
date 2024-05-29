@@ -103,10 +103,10 @@ impl Game for TextureExample {
                     UniformError::NotLoadedYet => {},
                     _ => panic!("{}", e),
                 }
-            } 
+            }
         } 
 
-        match self.material.update_uniform_texture(&mut self.uniform_texture, new_size, engine_handle) {
+        match self.material.resize_uniform_texture(&mut self.uniform_texture, new_size, engine_handle) {
             Ok(_) => {},
             Err(e) => {
                 match e {

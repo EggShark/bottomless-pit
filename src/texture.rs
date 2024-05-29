@@ -226,6 +226,9 @@ impl From<ImageError> for TextureError {
     }
 }
 
+/// A UniformTexture is a special type of texture that you can renderer to
+/// and also render itself to the screen. Uniform Textures is usefull for things like lightmaps or
+/// graphics techniques that reuqire multiple rendering passes.
 pub struct UniformTexture {
     inner_texture: wgpu::Texture,
     view: wgpu::TextureView,
@@ -234,6 +237,9 @@ pub struct UniformTexture {
 }
 
 impl UniformTexture {
+    /// creates a `UniformTexture` of a specified size
+    /// this can be reszied at anytime with 
+    /// [Material::resize_uniform_texture](crate::material::Material::resize_uniform_texture)
     pub fn new(engine: &Engine, size: Vec2<u32>) -> Self {
         let wgpu = engine.get_wgpu();
         let format = engine.get_texture_format();
@@ -269,6 +275,9 @@ impl UniformTexture {
         }
     }
 
+    /// This creates a UniformTexture with samplers which allows you to select what sampling type to use for both the `mag_sampler`,
+    /// when the texture is being drawn larger than the orignal resolution and `min_sampler`, when the texture is being drawn
+    /// smaller than the original resolution.
     pub fn new_with_sampler(engine: &Engine, size: Vec2<u32>, mag_sampler: SamplerType, min_sampler: SamplerType) -> Self {
         let wgpu = engine.get_wgpu();
         let format = engine.get_texture_format();
@@ -323,6 +332,7 @@ impl UniformTexture {
         self.view = new_view;
     }
 
+    /// Gets the current size of the texture
     pub fn get_size(&self) -> Vec2<u32> {
         self.size
     }

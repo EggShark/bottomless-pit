@@ -20,13 +20,13 @@ use crate::engine_handle::{Engine, WgpuClump};
 use crate::matrix_math::normalize_points;
 use crate::render::Renderer;
 use crate::resource::ResourceId;
-use crate::shader::{Shader, ShaderOptions, UniformError};
+use crate::shader::{Shader, UniformError};
 use crate::texture::{Texture, UniformTexture};
 use crate::vectors::Vec2;
 use crate::vertex::{self, LineVertex, Vertex};
 
 /// A material represents a unique combination of a Texture
-/// and RenderPipeline, while also containing all nessicary buffers
+/// and Shader, while also containing all nessicary buffers
 #[derive(Debug)]
 pub struct Material {
     pipeline_id: ResourceId<Shader>,
@@ -370,7 +370,9 @@ impl Material {
         self.index_count += indicies.len() as u64 * self.index_size;
     }
 
-    // TODO Make RESULT
+    /// Attempts to update the uniform data held within in the shader.
+    /// This will fail in the event that the shader has not loaded yet or
+    /// if the shader used to create the material never had any UniformData,
     pub fn update_uniform_data<T: ShaderType + WriteInto>(&self, data: &T, engine: &Engine) -> Result<(), UniformError> {
         let options = match engine.resource_manager.get_pipeline(&self.pipeline_id) {
             Some(shader) => shader,
@@ -382,8 +384,10 @@ impl Material {
         Ok(())
     }
 
-    // TODO MAKE RESULT
-    pub fn update_uniform_texture(&mut self, texture: &mut UniformTexture, size: Vec2<u32>, engine: &mut Engine) -> Result<(), UniformError> {
+    /// This will attempt to resize the texture stored within the shader.
+    /// This will fail in the event that the shader has not loaded yet or
+    /// if the shader used to create the material never had an UniformTexture.
+    pub fn resize_uniform_texture(&mut self, texture: &mut UniformTexture, size: Vec2<u32>, engine: &mut Engine) -> Result<(), UniformError> {
         let texture_format = engine.get_texture_format();
         
         let options = match engine.resource_manager.get_mut_shader(&self.pipeline_id) {
@@ -408,9 +412,10 @@ impl Material {
         self.index_count / self.index_size
     }
 
-    // Returns the size of the texture in pixels
-    pub fn get_texture_size(&self) -> Vec2<f32> {
-        todo!();
+    /// Returns the size of the texture in pixels.
+    /// Returns None when the texture is not loaded yet
+    pub fn get_texture_size(&self, engine: &Engine) -> Option<Vec2<f32>> {
+        engine.resource_manager.get_texture(&self.texture_id).and_then(|t| Some(t.size))
     }
 
     fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {
@@ -559,22 +564,20 @@ impl Material {
 }
 
 /// A builder struct used to create Materials
-pub struct MaterialBuilder<'a> {
+pub struct MaterialBuilder {
     // using options to denote a change from the default
     // in the case of a texture the defualt is just the White_Pixel
     texture_change: Option<ResourceId<Texture>>,
     shader_change: Option<ResourceId<Shader>>,
-    shader_options: Option<&'a ShaderOptions>,
 }
 
-impl<'a> MaterialBuilder<'a> {
+impl MaterialBuilder {
     /// Creates a new MaterialBuilder, that contains no texture, custom shaders, or
     /// uniforms
     pub fn new() -> Self {
         Self {
             texture_change: None,
             shader_change: None,
-            shader_options: None,
         }
     }
 
@@ -583,16 +586,6 @@ impl<'a> MaterialBuilder<'a> {
         Self {
             texture_change: Some(texture),
             shader_change: self.shader_change,
-            shader_options: self.shader_options,
-        }
-    }
-
-    /// Sets the initial Uniform data for the shader
-    pub fn set_shader_options(self, data: &'a ShaderOptions) -> Self {
-        Self {
-            texture_change: self.texture_change,
-            shader_change: self.shader_change,
-            shader_options: Some(data),
         }
     }
 
@@ -601,7 +594,6 @@ impl<'a> MaterialBuilder<'a> {
         Self {
             texture_change: self.texture_change,
             shader_change: Some(shader),
-            shader_options: self.shader_options,
         }
     }
 
@@ -611,7 +603,7 @@ impl<'a> MaterialBuilder<'a> {
     }
 }
 
-impl<'a> Default for MaterialBuilder<'a> {
+impl Default for MaterialBuilder {
     fn default() -> Self {
         Self::new()
     }

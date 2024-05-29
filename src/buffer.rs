@@ -1,27 +1,36 @@
+//! The buffer struct indended for things like input buffers
+
 use std::ops::{Index, IndexMut};
 use std::slice::Iter;
 
+/// A buffer than can contain any type and at a specific length
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Buffer<T, const N: usize> {
     inner: [T; N]
 }
 
 impl<T, const N: usize> Buffer<T, N> {
+    /// Creates a buffer with the starting data provided
     pub fn new(inital_data: [T; N]) -> Self {
         Self {
             inner: inital_data,
         }
     }
 
+    /// This adds a new entry into the buffer and deletes
+    /// the oldest entry in the buffer this operation in O(n),
     pub fn insert_data(&mut self, data: T) {
         self.inner.rotate_right(1);
         self[0] = data;
     }
 
+    /// Gives an iterator with the contents of the buffer for functional
+    /// operations
     pub fn iter(&self) -> Iter<'_, T> {
         self.inner.iter()
     }
 
+    /// Returns the length of the buffer
     pub fn len(&self) -> usize {
         N
     }

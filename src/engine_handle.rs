@@ -555,6 +555,7 @@ impl Engine {
         Instant::now().duration_since(self.last_frame).as_secs_f32()
     }
 
+    /// Returns a moving average of the last two frame times
     pub fn get_stable_fps(&self) -> f32 {
         1.0 / self.ma_frame_time
     }
