@@ -26,7 +26,7 @@ use crate::resource::{
     InProgressResource, Resource, ResourceError, ResourceId, ResourceManager,
     ResourceType,
 };
-use crate::shader::{Shader, ShaderOptions};
+use crate::shader::{Shader, UntypedShaderOptions};
 use crate::text::{Font, TextRenderer};
 use crate::texture::{SamplerType, Texture};
 use crate::vectors::Vec2;
@@ -861,7 +861,7 @@ impl Engine {
         }
     }
 
-    fn add_finished_shader(&mut self, data: Vec<u8>, id: NonZeroU64, options: ShaderOptions, path: &Path) {
+    fn add_finished_shader(&mut self, data: Vec<u8>, id: NonZeroU64, options: UntypedShaderOptions, path: &Path) {
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
         let shader = Shader::from_resource_data(&data, options, self);
         match shader {

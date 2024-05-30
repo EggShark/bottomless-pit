@@ -47,7 +47,7 @@ use std::sync::atomic::AtomicU64;
 
 use crate::engine_handle::{BpEvent, Engine};
 use crate::io::{self, ReadError};
-use crate::shader::{Shader, ShaderOptions};
+use crate::shader::{Shader, UntypedShaderOptions};
 use crate::text::Font;
 use crate::texture::{SamplerType, Texture};
 
@@ -111,7 +111,7 @@ impl InProgressResource {
 #[derive(Debug)]
 pub(crate) enum ResourceType {
     Image(SamplerType, SamplerType),
-    Shader(ShaderOptions),
+    Shader(UntypedShaderOptions),
     Bytes,
     Font,
 }

@@ -3,6 +3,7 @@
 
 use std::error::Error;
 use std::fmt::Display;
+use std::marker::PhantomData;
 use std::path::Path;
 use std::string::FromUtf8Error;
 
@@ -24,21 +25,21 @@ use crate::{layouts, render};
 #[derive(Debug)]
 pub struct Shader {
     pub(crate) pipeline: wgpu::RenderPipeline,
-    options: ShaderOptions,
+    options: UntypedShaderOptions,
 }
 
 impl Shader {
     /// Attempts to create a shader from a file. This will halt the engine due to resource loading please see
     /// the [resource module](crate::resource) for more information.
-    pub fn new<P: AsRef<Path>>(
+    pub fn new<P: AsRef<Path>, T>(
         path: P,
-        options: ShaderOptions,
+        options: ShaderOptions<T>,
         engine: &mut Engine,
     ) -> ResourceId<Shader> {
         let typed_id = resource::generate_id::<Shader>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(options));
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(options.into()));
 
         resource::start_load(engine, ip_resource);
         engine.add_in_progress_resource();
@@ -48,8 +49,8 @@ impl Shader {
 
     /// Attempts to create a shader from a byte array, this will not halt the engine. See the
     /// [resource module](crate::resource) for more information on this halting behavior.
-    pub fn from_btyes(engine: &mut Engine, options: ShaderOptions, bytes: &[u8]) -> ResourceId<Shader> {
-        let shader = Self::from_resource_data(bytes, options, engine).unwrap_or_else(|e| {
+    pub fn from_btyes<T>(engine: &mut Engine, options: ShaderOptions<T>, bytes: &[u8]) -> ResourceId<Shader> {
+        let shader = Self::from_resource_data(bytes, options.into(), engine).unwrap_or_else(|e| {
             log::warn!("{}, occured loading defualt replacement", e);
             Self::defualt(engine.get_wgpu(), engine.get_texture_format())
         });
@@ -62,7 +63,7 @@ impl Shader {
 
     pub(crate) fn from_resource_data(
         data: &[u8],
-        options: ShaderOptions,
+        options: UntypedShaderOptions,
         engine: &Engine,
     ) -> Result<Self, FromUtf8Error> {
         let wgpu = engine.get_wgpu();
@@ -114,7 +115,7 @@ impl Shader {
     pub(crate) fn from_pipeline(pipeline: wgpu::RenderPipeline) -> Self {
         Self {
             pipeline,
-            options: ShaderOptions::EMPTY,
+            options: ShaderOptions::<()>::EMPTY.into(),
         }
     }
 
@@ -136,7 +137,7 @@ impl Shader {
 
         Self {
             pipeline,
-            options: ShaderOptions::EMPTY,
+            options: ShaderOptions::<()>::EMPTY.into(),
         }
     }
 
@@ -161,12 +162,13 @@ impl Shader {
 /// [ShaderType](https://docs.rs/encase/latest/encase/trait.ShaderType.html) which
 /// can be derived. This data needs to be added to [ShaderOptions].
 #[derive(Debug)]
-pub struct UniformData {
+pub struct UniformData<T> {
     initial_data: Vec<u8>,
+    _marker: PhantomData<T>
 }
 
-impl UniformData {
-    pub fn new<T: ShaderType + WriteInto>(data: &T) -> Self {
+impl<T: ShaderType + WriteInto> UniformData<T> {
+    pub fn new(data: &T) -> Self {
         let mut buffer = encase::UniformBuffer::new(Vec::new());
         buffer.write(&data).unwrap();
         let byte_array = buffer.into_inner();
@@ -174,6 +176,7 @@ impl UniformData {
 
         Self {
             initial_data: byte_array,
+            _marker: PhantomData,
         }
     }
 }
@@ -181,17 +184,19 @@ impl UniformData {
 /// `ShaderOptions` controlls the layout of your shader and wether or not you want
 /// extra uniforms like a texture or a uniform buffer
 #[derive(Debug)]
-pub struct ShaderOptions {
+pub struct ShaderOptions<T> {
     uniform_data: Option<wgpu::Buffer>,
     uniform_texture: Option<(wgpu::TextureView, wgpu::Sampler)>,
     bind_group: Option<wgpu::BindGroup>,
+    _marker: PhantomData<T>,
 }
 
-impl ShaderOptions {
+impl<T> ShaderOptions<T> {
     pub const EMPTY: Self = Self {
         uniform_data: None,
         uniform_texture: None,
         bind_group: None,
+        _marker: PhantomData,
     };
 
     /// This will create a shader with a layout of:
@@ -204,7 +209,7 @@ impl ShaderOptions {
     /// @group(2) @binding(0)
     /// var<uniform> mouse: MousePos;
     /// ```
-    pub fn with_uniform_data(engine: &Engine, data: &UniformData) -> Self {
+    pub fn with_uniform_data(engine: &Engine, data: &UniformData<T>) -> Self {
         let device = &engine.get_wgpu().device;
 
         let starting_buffer = device
@@ -214,7 +219,7 @@ impl ShaderOptions {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
 
-        let bind_group = Self::make_layout_internal(device, Some(&starting_buffer), None)
+        let bind_group = make_layout_internal(device, Some(&starting_buffer), None)
             .and_then(|layout| Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Shader Options BindGroup"),
                 layout: &layout,
@@ -230,6 +235,7 @@ impl ShaderOptions {
             uniform_data: Some(starting_buffer),
             uniform_texture: None,
             bind_group,
+            _marker: PhantomData,
         }
     }
 
@@ -258,7 +264,7 @@ impl ShaderOptions {
 
         let starting_view = texture.make_view();
 
-        let bind_group = Self::make_layout_internal(device, None, Some((&starting_view, &sampler)))
+        let bind_group = make_layout_internal(device, None, Some((&starting_view, &sampler)))
             .and_then(|layout| Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Shader Options BindGroup"),
                 layout: &layout,
@@ -278,6 +284,7 @@ impl ShaderOptions {
             uniform_data: None,
             uniform_texture: Some((starting_view, sampler)),
             bind_group,
+            _marker: PhantomData,
         }
     }
 
@@ -290,7 +297,7 @@ impl ShaderOptions {
     /// @group(2) @binding(2)
     /// var light_map_sampler: sampler;
     /// ```
-    pub fn with_all(engine: &Engine, data: &UniformData, texture: &UniformTexture) -> Self {
+    pub fn with_all(engine: &Engine, data: &UniformData<T>, texture: &UniformTexture) -> Self {
         let device = &engine.get_wgpu().device;
 
         let starting_buffer = device
@@ -315,7 +322,7 @@ impl ShaderOptions {
             ..Default::default()
         });
 
-        let bind_group = Self::make_layout_internal(device, Some(&starting_buffer), Some((&starting_view, &sampler)))
+        let bind_group = make_layout_internal(device, Some(&starting_buffer), Some((&starting_view, &sampler)))
             .and_then(|layout| Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Shader Options BindGroup"),
                 layout: &layout,
@@ -339,10 +346,24 @@ impl ShaderOptions {
             uniform_data: Some(starting_buffer),
             uniform_texture: Some((starting_view, sampler)),
             bind_group,
+            _marker: PhantomData,
         }
     }
+}
 
-    fn update_uniform_data<T: ShaderType + WriteInto>(&self, data: &T, engine: &Engine) -> Result<(), UniformError> {
+#[derive(Debug)]
+pub(crate) struct UntypedShaderOptions {
+    uniform_data: Option<wgpu::Buffer>,
+    uniform_texture: Option<(wgpu::TextureView, wgpu::Sampler)>,
+    bind_group: Option<wgpu::BindGroup>,
+}
+
+impl UntypedShaderOptions {
+    pub(crate) fn make_layout(&self, device: &wgpu::Device) -> Option<wgpu::BindGroupLayout> {
+        make_layout_internal(device, self.uniform_data.as_ref(), self.uniform_texture.as_ref().map(|(a, b)| (a, b)))
+    }
+
+    fn update_uniform_data<H: ShaderType + WriteInto>(&self, data: &H, engine: &Engine) -> Result<(), UniformError> {
         match &self.uniform_data {
             Some(buffer) => {
                 let wgpu = engine.get_wgpu();
@@ -364,7 +385,7 @@ impl ShaderOptions {
 
                 self.bind_group = Some(wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("Shader Options BindGroup"),
-                    entries: &self.make_entries(Some(texture.get_sampler())),
+                    entries: &make_entries(self.uniform_data.as_ref(), self.uniform_texture.as_ref().map(|(a, b)| (a, b)), Some(texture.get_sampler())),
                     layout: &self.make_layout(&wgpu.device).unwrap(),
                 }));
 
@@ -374,45 +395,18 @@ impl ShaderOptions {
         }
     }
 
-    fn make_entries<'a>(&'a self, other_sampler: Option<&'a wgpu::Sampler>) -> Vec<wgpu::BindGroupEntry> {
-        let mut entries = Vec::with_capacity(3);
-
-        if let Some(buffer) = &self.uniform_data {
-            entries.push(wgpu::BindGroupEntry {
-                binding: entries.len() as u32,
-                resource: wgpu::BindingResource::Buffer(buffer.as_entire_buffer_binding()),
-            });
-        }
-
-        if let Some((view, sampler)) = &self.uniform_texture {
-            entries.push(wgpu::BindGroupEntry {
-                binding: entries.len() as u32,
-                resource: wgpu::BindingResource::TextureView(&view),
-            });
-            entries.push(wgpu::BindGroupEntry {
-                binding: entries.len() as u32,
-                resource: wgpu::BindingResource::Sampler(other_sampler.unwrap_or(&sampler)),
-            });
-        }
-
-        entries
-    }
-
-    pub(crate) fn make_layout(&self, device: &wgpu::Device) -> Option<wgpu::BindGroupLayout> {
-        Self::make_layout_internal(device, self.uniform_data.as_ref(), self.uniform_texture.as_ref().map(|(a, b)| (a, b)))
-    }
-
-    fn make_layout_internal(device: &wgpu::Device, uniform_data: Option<&wgpu::Buffer>, uniform_texture: Option<(&wgpu::TextureView, &wgpu::Sampler)>) -> Option<wgpu::BindGroupLayout> {
-        match (uniform_data, uniform_texture) {
-            (Some(_), Some(_)) => Some(layouts::create_texture_uniform_layout(device)),
-            (Some(_), None) => Some(layouts::create_uniform_layout(device)),
-            (None, Some(_)) => Some(layouts::create_texture_layout(device)),
-            (None, None) => None,
-        }
-    }
-
     pub(crate) fn check_has(&self) -> (bool, bool) {
         (self.uniform_data.is_some(), self.uniform_texture.is_some())
+    }
+}
+
+impl<T> From<ShaderOptions<T>> for UntypedShaderOptions {
+    fn from(value: ShaderOptions<T>) -> Self {
+        Self {
+            uniform_data: value.uniform_data,
+            uniform_texture: value.uniform_texture,
+            bind_group: value.bind_group,
+        }
     }
 }
 
@@ -434,3 +428,40 @@ impl Display for UniformError {
 }
 
 impl Error for UniformError {}
+
+fn make_layout_internal(device: &wgpu::Device, uniform_data: Option<&wgpu::Buffer>, uniform_texture: Option<(&wgpu::TextureView, &wgpu::Sampler)>) -> Option<wgpu::BindGroupLayout> {
+    match (uniform_data, uniform_texture) {
+        (Some(_), Some(_)) => Some(layouts::create_texture_uniform_layout(device)),
+        (Some(_), None) => Some(layouts::create_uniform_layout(device)),
+        (None, Some(_)) => Some(layouts::create_texture_layout(device)),
+        (None, None) => None,
+    }
+}
+
+fn make_entries<'a>(
+    uniform_data: Option<&'a wgpu::Buffer>,
+    uniform_texture: Option<(&'a wgpu::TextureView, &'a wgpu::Sampler)>,
+    other_sampler: Option<&'a wgpu::Sampler>
+) -> Vec<wgpu::BindGroupEntry<'a>> {
+    let mut entries = Vec::with_capacity(3);
+
+    if let Some(buffer) = uniform_data {
+        entries.push(wgpu::BindGroupEntry {
+            binding: entries.len() as u32,
+            resource: wgpu::BindingResource::Buffer(buffer.as_entire_buffer_binding()),
+        });
+    }
+
+    if let Some((view, sampler)) = uniform_texture {
+        entries.push(wgpu::BindGroupEntry {
+            binding: entries.len() as u32,
+            resource: wgpu::BindingResource::TextureView(&view),
+        });
+        entries.push(wgpu::BindGroupEntry {
+            binding: entries.len() as u32,
+            resource: wgpu::BindingResource::Sampler(other_sampler.unwrap_or(&sampler)),
+        });
+    }
+
+    entries
+}
