@@ -11,6 +11,7 @@
 //!     }
 //! }
 use std::f32::consts::PI;
+use std::marker::PhantomData;
 
 use encase::private::WriteInto;
 use encase::ShaderType;
@@ -20,7 +21,7 @@ use crate::engine_handle::{Engine, WgpuClump};
 use crate::matrix_math::normalize_points;
 use crate::render::Renderer;
 use crate::resource::ResourceId;
-use crate::shader::{Shader, UniformError};
+use crate::shader::{Shader, UniformData, UniformError};
 use crate::texture::{Texture, UniformTexture};
 use crate::vectors::Vec2;
 use crate::vertex::{self, LineVertex, Vertex};
@@ -28,7 +29,7 @@ use crate::vertex::{self, LineVertex, Vertex};
 /// A material represents a unique combination of a Texture
 /// and Shader, while also containing all nessicary buffers
 #[derive(Debug)]
-pub struct Material {
+pub struct Material<T> {
     pipeline_id: ResourceId<Shader>,
     vertex_buffer: wgpu::Buffer,
     /// counts the bytes of vertex not the actual number
@@ -39,11 +40,12 @@ pub struct Material {
     pub(crate) index_count: u64,
     pub(crate) index_size: u64,
     texture_id: ResourceId<Texture>,
+    _marker: PhantomData<T>,
 }
 
-impl Material {
+impl<T> Material<T> {
     /// Takes a MaterialBuilder and turns it into a Material
-    fn from_builder(builder: MaterialBuilder, engine: &mut Engine) -> Self {
+    fn from_builder(builder: MaterialBuilder<T>, engine: &mut Engine) -> Self {
         let pipeline_id = match builder.shader_change {
             Some(rs) => rs,
             None => engine.defualt_pipe_id(),
@@ -69,6 +71,7 @@ impl Material {
             index_count: 0,
             index_size,
             texture_id,
+            _marker: PhantomData,
         }
     }
 
@@ -370,20 +373,6 @@ impl Material {
         self.index_count += indicies.len() as u64 * self.index_size;
     }
 
-    /// Attempts to update the uniform data held within in the shader.
-    /// This will fail in the event that the shader has not loaded yet or
-    /// if the shader used to create the material never had any UniformData,
-    pub fn update_uniform_data<T: ShaderType + WriteInto>(&self, data: &T, engine: &Engine) -> Result<(), UniformError> {
-        let options = match engine.resource_manager.get_pipeline(&self.pipeline_id) {
-            Some(shader) => shader,
-            None => return Err(UniformError::NotLoadedYet),
-        };
-
-        options.update_uniform_data(data, engine)?;
-
-        Ok(())
-    }
-
     /// This will attempt to resize the texture stored within the shader.
     /// This will fail in the event that the shader has not loaded yet or
     /// if the shader used to create the material never had an UniformTexture.
@@ -563,21 +552,39 @@ impl Material {
     }
 }
 
+impl<T: ShaderType + WriteInto> Material<T> {
+    /// Attempts to update the uniform data held within in the shader.
+    /// This will fail in the event that the shader has not loaded yet or
+    /// if the shader used to create the material never had any UniformData,
+    pub fn update_uniform_data(&self, data: &T, engine: &Engine) -> Result<(), UniformError> {
+        let options = match engine.resource_manager.get_pipeline(&self.pipeline_id) {
+            Some(shader) => shader,
+            None => return Err(UniformError::NotLoadedYet),
+        };
+
+        options.update_uniform_data(data, engine)?;
+
+        Ok(())
+    }
+}
+
 /// A builder struct used to create Materials
-pub struct MaterialBuilder {
+pub struct MaterialBuilder<T> {
     // using options to denote a change from the default
     // in the case of a texture the defualt is just the White_Pixel
     texture_change: Option<ResourceId<Texture>>,
     shader_change: Option<ResourceId<Shader>>,
+    _marker: PhantomData<T>
 }
 
-impl MaterialBuilder {
+impl<T> MaterialBuilder<T> {
     /// Creates a new MaterialBuilder, that contains no texture, custom shaders, or
     /// uniforms
     pub fn new() -> Self {
         Self {
             texture_change: None,
             shader_change: None,
+            _marker: PhantomData
         }
     }
 
@@ -586,6 +593,7 @@ impl MaterialBuilder {
         Self {
             texture_change: Some(texture),
             shader_change: self.shader_change,
+            _marker: PhantomData
         }
     }
 
@@ -594,16 +602,26 @@ impl MaterialBuilder {
         Self {
             texture_change: self.texture_change,
             shader_change: Some(shader),
+            _marker: PhantomData
+        }
+    }
+
+    /// This is used to set the type of data used for the materials Uniform ensuring type saftey across the GPU
+    pub fn add_uniform_data<H: ShaderType + WriteInto>(self, _data: &UniformData<H>) -> MaterialBuilder<H> {
+        MaterialBuilder {
+            texture_change: self.texture_change,
+            shader_change: self.shader_change,
+            _marker: PhantomData,
         }
     }
 
     /// Turns the builder into a Material
-    pub fn build(self, engine_handle: &mut Engine) -> Material {
+    pub fn build(self, engine_handle: &mut Engine) -> Material<T> {
         Material::from_builder(self, engine_handle)
     }
 }
 
-impl Default for MaterialBuilder {
+impl<T> Default for MaterialBuilder<T> {
     fn default() -> Self {
         Self::new()
     }

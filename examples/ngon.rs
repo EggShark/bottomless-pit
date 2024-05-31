@@ -36,7 +36,7 @@ fn main() {
 
     let pos = Position {
         regular_material,
-        time: 0.0,
+        time: data,
     };
 
     engine.run(pos);
@@ -51,8 +51,8 @@ struct Time {
 }
 
 struct Position {
-    regular_material: Material,
-    time: f32,
+    regular_material: Material<Time>,
+    time: Time,
 }
 
 impl Game for Position {
@@ -75,7 +75,7 @@ impl Game for Position {
 
     fn update(&mut self, engine_handle: &mut Engine) {
         let dt = engine_handle.get_frame_delta_time();
-        self.time = (self.time + dt) % (32.0 * PI);
+        self.time.time = (self.time.time + dt) % (32.0 * PI);
         self.regular_material
             .update_uniform_data(&self.time, &engine_handle).unwrap();
     }

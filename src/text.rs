@@ -226,7 +226,7 @@ impl TextMaterial {
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
 
         let (vertex_buffer, index_buffer) =
-            Material::create_buffers(&engine.wgpu_clump.device, vertex_size, 16, 2, 32);
+            Material::<()>::create_buffers(&engine.wgpu_clump.device, vertex_size, 16, 2, 32);
 
         let bind_group = engine
             .wgpu_clump

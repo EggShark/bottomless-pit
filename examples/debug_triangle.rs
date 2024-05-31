@@ -20,7 +20,7 @@ fn main() {
 }
 
 struct DebugTriangle {
-    material: Material,
+    material: Material<()>,
 }
 
 impl Game for DebugTriangle {

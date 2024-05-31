@@ -46,13 +46,13 @@ fn main() {
         mouse_material,
         circle_material,
         defualt_material,
-        theta: 0.0,
+        theta: data,
     };
 
     engine.run(game);
 }
 
-#[derive(ShaderType)]
+#[derive(ShaderType, Clone, Copy)]
 struct MousePos {
     x: f32,
     y: f32,
@@ -61,11 +61,11 @@ struct MousePos {
 }
 
 struct ShaderExample {
-    mouse_material: Material,
-    circle_material: Material,
-    defualt_material: Material,
+    mouse_material: Material<MousePos>,
+    circle_material: Material<MousePos>,
+    defualt_material: Material<()>,
     data: MousePos,
-    theta: f32,
+    theta: MousePos,
 }
 
 impl Game for ShaderExample {
@@ -102,7 +102,7 @@ impl Game for ShaderExample {
     fn update(&mut self, engine_handle: &mut Engine) {
         let dt = engine_handle.get_frame_delta_time();
 
-        self.theta = (self.theta + dt) % (2.0 * PI);
+        self.theta.x = (self.theta.x + dt) % (2.0 * PI);
 
         let size = engine_handle.get_window_size();
         let mouse_pos = engine_handle.get_mouse_position();

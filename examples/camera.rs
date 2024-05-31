@@ -32,7 +32,7 @@ fn main() {
 }
 
 struct CameraExample {
-    material: Material,
+    material: Material<()>,
     text: TextMaterial,
     camera: Camera,
 }
