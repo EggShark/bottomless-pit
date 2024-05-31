@@ -2,7 +2,7 @@
 //! for anything to be rendered
 //! ```rust,no_run
 //! // Simple code to draw a 100x100 red rectangle to the screen
-//! let defualt_material = MaterialBuilder::new().build();
+//! let defualt_material: Material<()> = MaterialBuilder::new().build();
 //!
 //! impl Game for Struct {
 //!     fn render<'pass, 'others>(&mut Self, mut renderer: RenderInformation<'pass, 'others>) where 'others: 'pass {
@@ -27,7 +27,9 @@ use crate::vectors::Vec2;
 use crate::vertex::{self, LineVertex, Vertex};
 
 /// A material represents a unique combination of a Texture
-/// and Shader, while also containing all nessicary buffers
+/// and Shader, while also containing all nessicary buffers.
+/// If you don't have any uniform data attached to the shader
+/// utilized by the material use the unit `()` type.
 #[derive(Debug)]
 pub struct Material<T> {
     pipeline_id: ResourceId<Shader>,
