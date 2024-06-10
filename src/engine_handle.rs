@@ -3,9 +3,9 @@
 //! builder lets you customize the engine at the start, and the
 //! Engine gives you access to all the crucial logic functions
 
-use glyphon::{Attrs, Metrics, Shaping};
 #[cfg(not(target_arch = "wasm32"))]
 use futures::executor::ThreadPool;
+use glyphon::{Attrs, Metrics, Shaping};
 
 use image::{GenericImageView, ImageError};
 use spin_sleep::SpinSleeper;
@@ -23,16 +23,15 @@ use winit::window::{BadIcon, Window};
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::{make_pipeline, render};
 use crate::resource::{
-    InProgressResource, Resource, ResourceError, ResourceId, ResourceManager,
-    ResourceType,
+    InProgressResource, Resource, ResourceError, ResourceId, ResourceManager, ResourceType,
 };
 use crate::shader::{Shader, UntypedShaderOptions};
 use crate::text::{Font, TextRenderer};
 use crate::texture::{SamplerType, Texture};
 use crate::vectors::Vec2;
 use crate::vertex::LineVertex;
-use crate::{resource, WHITE_PIXEL};
 use crate::{layouts, Game};
+use crate::{resource, WHITE_PIXEL};
 
 /// The thing that makes the computer go
 pub struct Engine {
@@ -40,7 +39,7 @@ pub struct Engine {
     window: Arc<Window>,
     surface: wgpu::Surface<'static>,
     event_loop: Option<EventLoop<BpEvent>>,
-    event_loop_proxy: Arc<EventLoopProxy<BpEvent>>,
+    proxy: EventLoopProxy<BpEvent>,
     cursor_visibility: bool,
     should_close: bool,
     close_key: Option<Key>,
@@ -82,7 +81,8 @@ impl Engine {
         let target_fps = builder.target_fps;
 
         let event_loop: EventLoop<BpEvent> = EventLoopBuilder::with_user_event().build().unwrap();
-        let event_loop_proxy = Arc::new(event_loop.create_proxy());
+        let proxy = event_loop.create_proxy();
+
         let window_builder = winit::window::WindowBuilder::new()
             .with_title(&builder.window_title)
             .with_inner_size(winit::dpi::PhysicalSize::new(
@@ -194,10 +194,22 @@ impl Engine {
         });
 
         let camera_matrix = [
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            builder.resolution.0 as f32, builder.resolution.1 as f32, 0.0, 0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            builder.resolution.0 as f32,
+            builder.resolution.1 as f32,
+            0.0,
+            0.0,
         ];
         let camera_buffer =
             wgpu_clump
@@ -337,7 +349,7 @@ impl Engine {
             window,
             surface,
             event_loop: Some(event_loop),
-            event_loop_proxy,
+            proxy,
             cursor_visibility,
             should_close: false,
             close_key: builder.close_key,
@@ -675,8 +687,8 @@ impl Engine {
         self.config.format
     }
 
-    pub(crate) fn get_proxy(&self) -> Arc<EventLoopProxy<BpEvent>> {
-        self.event_loop_proxy.clone()
+    pub(crate) fn get_proxy(&self) -> EventLoopProxy<BpEvent> {
+        self.proxy.clone()
     }
 
     pub(crate) fn get_resources(&self) -> &ResourceManager {
@@ -735,7 +747,7 @@ impl Engine {
                                     game.update(&mut self);
                                     self.update(control_flow);
                                     self.current_frametime = Instant::now();
-            
+
                                     match render(&mut game, &mut self) {
                                         Ok(_) => {}
                                         // reconfigure surface if lost
@@ -761,7 +773,8 @@ impl Engine {
 
     fn update<T>(&mut self, elwt: &EventLoopWindowTarget<T>) {
         self.last_frame = Instant::now();
-        let dt = self.last_frame
+        let dt = self
+            .last_frame
             .duration_since(self.current_frametime)
             .as_secs_f32();
 
@@ -803,10 +816,11 @@ impl Engine {
             self.surface
                 .configure(&self.wgpu_clump.device, &self.config);
             self.size = new_size;
-            self
-                .wgpu_clump
-                .queue
-                .write_buffer(&self.camera_buffer, 48, bytemuck::cast_slice(&[new_size.x as f32, new_size.y as f32]));
+            self.wgpu_clump.queue.write_buffer(
+                &self.camera_buffer,
+                48,
+                bytemuck::cast_slice(&[new_size.x as f32, new_size.y as f32]),
+            );
         }
     }
 
@@ -823,8 +837,12 @@ impl Engine {
         match resource {
             Ok(data) => match data.resource_type {
                 ResourceType::Bytes => self.add_finished_bytes(data.data, data.id, &data.path),
-                ResourceType::Image(mag, min) => self.add_finished_image(data.data, data.id, mag, min, &data.path),
-                ResourceType::Shader(options) => self.add_finished_shader(data.data, data.id, options, &data.path),
+                ResourceType::Image(mag, min) => {
+                    self.add_finished_image(data.data, data.id, mag, min, &data.path)
+                }
+                ResourceType::Shader(options) => {
+                    self.add_finished_shader(data.data, data.id, options, &data.path)
+                }
                 ResourceType::Font => self.add_finished_font(data),
             },
             Err(e) => {
@@ -843,32 +861,45 @@ impl Engine {
         }
     }
 
-    fn add_finished_bytes(&mut self, data: Vec<u8>, id: NonZeroU64, path: &Path,) {
+    fn add_finished_bytes(&mut self, data: Vec<u8>, id: NonZeroU64, path: &Path) {
         let typed_id: ResourceId<Vec<u8>> = ResourceId::from_number(id);
         self.resource_manager.insert_bytes(typed_id, data);
         log::info!("byte resource at: {:?} loaded succesfully", path);
     }
 
-    fn add_finished_image(&mut self, data: Vec<u8>, id: NonZeroU64, mag: SamplerType, min: SamplerType, path: &Path) {
+    fn add_finished_image(
+        &mut self,
+        data: Vec<u8>,
+        id: NonZeroU64,
+        mag: SamplerType,
+        min: SamplerType,
+        path: &Path,
+    ) {
         let typed_id: ResourceId<Texture> = ResourceId::from_number(id);
         let texture = Texture::from_resource_data(self, None, data, mag, min);
         match texture {
             Ok(texture) => {
                 self.resource_manager.insert_texture(typed_id, texture);
                 log::info!("texture resource at: {:?} loaded succesfully", path);
-            },
+            }
             Err(e) => log::error!("{:?}, loading defualt replacement", e),
         }
     }
 
-    fn add_finished_shader(&mut self, data: Vec<u8>, id: NonZeroU64, options: UntypedShaderOptions, path: &Path) {
+    fn add_finished_shader(
+        &mut self,
+        data: Vec<u8>,
+        id: NonZeroU64,
+        options: UntypedShaderOptions,
+        path: &Path,
+    ) {
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
         let shader = Shader::from_resource_data(&data, options, self);
         match shader {
             Ok(shader) => {
                 self.resource_manager.insert_pipeline(typed_id, shader);
                 log::info!("shader resource at: {:?} loaded succesfully", path);
-            },
+            }
             Err(e) => {
                 log::error!("{:?}. loading defualt replacement", e);
                 self.add_defualt_shader(id);
