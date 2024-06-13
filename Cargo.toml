@@ -17,7 +17,7 @@ bytemuck = {version = "1.12.3", features = ["derive"]}
 env_logger = "0.10.0"
 log = "0.4.17"
 pollster = "0.2.5"
-winit = "0.29"
+winit = "0.30"
 glyph_brush = "0.7"
 spin_sleep = "1.1.1"
 encase = "0.6.1"

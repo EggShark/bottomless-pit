@@ -1,6 +1,8 @@
 //! Generic implmentation of 2D Vectors
 use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
 
+use winit::dpi::Size;
+
 /// A generic representation of 2D data
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct Vec2<T> {
@@ -101,6 +103,15 @@ impl From<Vec2<u32>> for glyphon::Resolution {
         Self {
             width: value.x,
             height: value.y,
+        }
+    }
+}
+
+impl From<Size> for Vec2<u32> {
+    fn from(value: Size) -> Self {
+        match value {
+            Size::Physical(s) => vec2!(s.width, s.height),
+            Size::Logical(s) => vec2!(s.width as u32, s.height as u32),
         }
     }
 }

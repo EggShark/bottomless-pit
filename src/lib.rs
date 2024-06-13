@@ -43,6 +43,7 @@
 pub mod buffer;
 pub mod camera;
 pub mod colour;
+mod context;
 pub mod engine_handle;
 pub mod input;
 mod io;
