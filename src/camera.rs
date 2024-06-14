@@ -21,7 +21,8 @@
 use glam::Mat3;
 use wgpu::util::DeviceExt;
 
-use crate::engine_handle::{Engine, WgpuClump};
+use crate::context::WgpuClump;
+use crate::engine_handle::Engine;
 use crate::layouts;
 use crate::render::Renderer;
 use crate::vectors::Vec2;

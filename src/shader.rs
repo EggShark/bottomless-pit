@@ -12,7 +12,8 @@ use encase::ShaderType;
 use wgpu::include_wgsl;
 use wgpu::util::DeviceExt;
 
-use crate::engine_handle::{Engine, WgpuClump};
+use crate::context::WgpuClump;
+use crate::engine_handle::Engine;
 use crate::render::Renderer;
 use crate::resource::{self, InProgressResource, ResourceId, ResourceType};
 use crate::texture::UniformTexture;

@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use futures::executor::ThreadPool;
+
 pub(crate) async fn read<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, ReadError> {
     #[cfg(target_arch = "wasm32")]
     {
@@ -50,5 +52,32 @@ pub(crate) enum ReadError {
 impl From<std::io::Error> for ReadError {
     fn from(value: std::io::Error) -> Self {
         Self::IoError(value)
+    }
+}
+
+pub(crate) struct Loader {
+    items_loading: usize,
+    #[cfg(not(target_arch="wasm32"))]
+    pool: ThreadPool,
+    #[cfg(target_arch = "wasm32")]
+    blocked: bool,
+}
+
+impl Loader {
+    // just fs read that stuff man
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn blocking_load() {
+
+    }
+
+    // request but flip flag :3
+    #[cfg(target_arch = "wasm32")]
+    pub fn blocking_load() {
+
+    }
+
+    // threadpool / aysnc
+    pub fn background_load() {
+
     }
 }

@@ -43,7 +43,8 @@ use glyphon::{
 };
 
 use crate::colour::Colour;
-use crate::engine_handle::{Engine, WgpuClump};
+use crate::engine_handle::Engine;
+use crate::context::WgpuClump;
 use crate::layouts;
 use crate::material::{self, Material};
 use crate::matrix_math::normalize_points;

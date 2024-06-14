@@ -1,7 +1,8 @@
 //! Cointains the interface into the texture cache and by
 //! extension accsss the texture interface
 
-use crate::engine_handle::{Engine, WgpuClump};
+use crate::context::WgpuClump;
+use crate::engine_handle::Engine;
 use crate::resource::{self, InProgressResource, ResourceId, ResourceType};
 use crate::vectors::Vec2;
 use crate::{layouts, ERROR_TEXTURE_DATA};

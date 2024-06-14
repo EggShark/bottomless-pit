@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use crate::resource::ResourceManager;
 use crate::{resource, WHITE_PIXEL};
 use crate::layouts;
 use crate::render::make_pipeline;
@@ -25,7 +26,7 @@ pub(crate) struct GraphicsContext {
 }
 
 impl GraphicsContext {
-    pub fn from_active_loop(event_loop: &ActiveEventLoop, window_options: WindowOptions) {
+    pub fn from_active_loop(event_loop: &ActiveEventLoop, window_options: WindowOptions, resource_manager: &mut ResourceManager) {
         // should never fail as we will always set it
         let size: Vec2<u32> = window_options.attributes.inner_size.unwrap().into();
 
@@ -268,7 +269,11 @@ impl GraphicsContext {
         let line_shader = Shader::from_pipeline(line_pipeline);
         let generic_shader = Shader::defualt(&wgpu_clump, texture_format);
 
+        resource_manager.insert_pipeline(line_id, line_shader);
+        resource_manager.insert_pipeline(generic_id, generic_shader);
 
+        let white_pixel_id = resource::generate_id::<Texture>();
+        resource_manager.insert_texture(white_pixel_id, white_pixel);
     }
 }
 

@@ -100,12 +100,6 @@ impl Engine {
 
         let window = Arc::new(event_loop.create_window(window_builder)?);
 
-        resource_manager.insert_pipeline(line_id, line_shader);
-        resource_manager.insert_pipeline(generic_id, generic_shader);
-
-        let white_pixel_id = resource::generate_id::<Texture>();
-        resource_manager.insert_texture(white_pixel_id, white_pixel);
-
         Ok(Self {
             input_handle,
             window,
@@ -980,12 +974,6 @@ impl std::fmt::Display for IconError {
 }
 
 impl std::error::Error for IconError {}
-
-// just made to avoid data clumps
-pub(crate) struct WgpuClump {
-    pub(crate) device: wgpu::Device,
-    pub(crate) queue: wgpu::Queue,
-}
 
 #[derive(Debug)]
 pub(crate) enum BpEvent {

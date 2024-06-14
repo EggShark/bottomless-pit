@@ -1,7 +1,8 @@
 //! Contains the Renderer struct which also contains all the
 //! functions and logic to draw things to the screen
 use crate::colour::Colour;
-use crate::engine_handle::{Engine, WgpuClump};
+use crate::context::WgpuClump;
+use crate::engine_handle::Engine;
 use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
 use crate::texture::UniformTexture;
