@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use crate::engine_handle::EngineBuilder;
 use crate::resource::ResourceManager;
 use crate::{resource, WHITE_PIXEL};
 use crate::layouts;
@@ -26,7 +27,7 @@ pub(crate) struct GraphicsContext {
 }
 
 impl GraphicsContext {
-    pub fn from_active_loop(event_loop: &ActiveEventLoop, window_options: WindowOptions, resource_manager: &mut ResourceManager) {
+    pub fn from_active_loop(event_loop: &ActiveEventLoop, window_options: WindowOptions, resource_manager: &mut ResourceManager) -> Self {
         // should never fail as we will always set it
         let size: Vec2<u32> = window_options.attributes.inner_size.unwrap().into();
 
@@ -274,12 +275,46 @@ impl GraphicsContext {
 
         let white_pixel_id = resource::generate_id::<Texture>();
         resource_manager.insert_texture(white_pixel_id, white_pixel);
+
+        Self {
+            wgpu_clump,
+            window,
+            texture_sampler,
+            config,
+            camera_bind_group,
+            camera_buffer,
+            text_renderer,
+        }
     }
 }
 
-struct WindowOptions {
+pub(crate) struct WindowOptions {
     attributes: WindowAttributes,
     presentation: wgpu::PresentMode,
+}
+
+impl From<EngineBuilder> for WindowOptions {
+    fn from(value: EngineBuilder) -> Self {
+        let attributes = Window::default_attributes()
+            .with_title(&value.window_title)
+            .with_inner_size(winit::dpi::PhysicalSize::new(
+                value.resolution.0,
+                value.resolution.1,
+            ))
+            .with_resizable(value.resizable)
+            .with_window_icon(value.window_icon);
+
+        let attributes = if value.full_screen {
+            attributes.with_fullscreen(Some(winit::window::Fullscreen::Borderless(None)))
+        } else {
+            attributes
+        };
+
+        Self {
+            attributes,
+            presentation: value.vsync,
+        }
+    }
 }
 
 pub(crate) struct WgpuClump {

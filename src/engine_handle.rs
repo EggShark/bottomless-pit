@@ -9,6 +9,7 @@ use glyphon::{Attrs, Metrics, Shaping};
 
 use image::{GenericImageView, ImageError};
 use spin_sleep::SpinSleeper;
+use winit::application::ApplicationHandler;
 use std::num::NonZeroU64;
 use std::path::Path;
 use std::sync::Arc;
@@ -20,6 +21,7 @@ use winit::event::*;
 use winit::event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy};
 use winit::window::{BadIcon, Window};
 
+use crate::context::{GraphicsContext, WindowOptions};
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::{make_pipeline, render};
 use crate::resource::{
@@ -36,9 +38,8 @@ use crate::{resource, WHITE_PIXEL};
 /// The thing that makes the computer go
 pub struct Engine {
     input_handle: InputHandle,
-    window: Arc<Window>,
-    surface: wgpu::Surface<'static>,
     event_loop: Option<EventLoop<BpEvent>>,
+    window_options: Option<WindowOptions>,
     proxy: EventLoopProxy<BpEvent>,
     cursor_visibility: bool,
     should_close: bool,
@@ -47,18 +48,10 @@ pub struct Engine {
     last_frame: Instant,
     spin_sleeper: SpinSleeper,
     current_frametime: Instant,
-    texture_sampler: wgpu::Sampler,
-    config: wgpu::SurfaceConfiguration,
-    camera_bind_group: wgpu::BindGroup,
-    camera_buffer: wgpu::Buffer,
-    pub(crate) wgpu_clump: WgpuClump,
     size: Vec2<u32>,
     in_progress_resources: u32,
-    defualt_texture_id: ResourceId<Texture>,
-    default_pipeline_id: ResourceId<Shader>,
-    line_pipeline_id: ResourceId<Shader>,
+    context: Option<GraphicsContext>,
     pub(crate) resource_manager: ResourceManager,
-    pub(crate) text_renderer: TextRenderer,
     #[cfg(not(target_arch = "wasm32"))]
     thread_pool: ThreadPool,
     ma_frame_time: f32,
@@ -83,48 +76,26 @@ impl Engine {
         let event_loop: EventLoop<BpEvent> = EventLoop::with_user_event().build().unwrap();
         let proxy = event_loop.create_proxy();
 
-        let window_builder = Window::default_attributes()
-            .with_title(&builder.window_title)
-            .with_inner_size(winit::dpi::PhysicalSize::new(
-                builder.resolution.0,
-                builder.resolution.1,
-            ))
-            .with_resizable(builder.resizable)
-            .with_window_icon(builder.window_icon);
+        let resource_manager = ResourceManager::new();
 
-        let window_builder = if builder.full_screen {
-            window_builder.with_fullscreen(Some(winit::window::Fullscreen::Borderless(None)))
-        } else {
-            window_builder
-        };
-
-        let window = Arc::new(event_loop.create_window(window_builder)?);
+        let close_key = builder.close_key;
 
         Ok(Self {
             input_handle,
-            window,
-            surface,
             event_loop: Some(event_loop),
+            window_options: Some(builder.into()),
             proxy,
             cursor_visibility,
             should_close: false,
-            close_key: builder.close_key,
+            close_key,
             target_fps,
             last_frame: Instant::now(),
             current_frametime: Instant::now(),
             spin_sleeper: SpinSleeper::default(),
-            texture_sampler,
-            config,
-            camera_bind_group,
-            camera_buffer,
-            wgpu_clump,
             size,
             in_progress_resources: 0,
-            defualt_texture_id: white_pixel_id,
-            default_pipeline_id: generic_id,
-            line_pipeline_id: line_id,
+            context: None,
             resource_manager,
-            text_renderer,
             #[cfg(not(target_arch = "wasm32"))]
             thread_pool: ThreadPool::new().expect("Failed To Make Pool"),
             ma_frame_time: 0.0,
@@ -698,18 +669,47 @@ impl Engine {
     }
 }
 
+impl ApplicationHandler<BpEvent> for Engine {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        if self.context.is_none() {
+            self.context = Some(GraphicsContext::from_active_loop(
+                event_loop,
+                self.window_options.take().unwrap(),
+                &mut self.resource_manager
+            ))
+        }
+    }
+
+    fn window_event(
+            &mut self,
+            event_loop: &ActiveEventLoop,
+            window_id: winit::window::WindowId,
+            event: WindowEvent,
+        ) {
+        
+    }
+
+    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: BpEvent) {
+        
+    }
+
+    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        
+    }
+}
+
 
 /// A builder class that helps create an application
 /// with specific details
 pub struct EngineBuilder {
-    resolution: (u32, u32),
-    full_screen: bool,
+    pub(crate) resolution: (u32, u32),
+    pub(crate) full_screen: bool,
     target_fps: Option<u16>,
     close_key: Option<Key>,
-    window_icon: Option<winit::window::Icon>,
-    window_title: String,
-    resizable: bool,
-    vsync: wgpu::PresentMode,
+    pub(crate) window_icon: Option<winit::window::Icon>,
+    pub(crate) window_title: String,
+    pub(crate) resizable: bool,
+    pub(crate) vsync: wgpu::PresentMode,
 }
 
 impl EngineBuilder {
