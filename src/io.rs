@@ -1,3 +1,7 @@
+use crate::resource::ResourceId;
+use crate::shader::Shader;
+use crate::texture::Texture;
+
 use std::path::Path;
 
 use futures::executor::ThreadPool;
@@ -80,4 +84,10 @@ impl Loader {
     pub fn background_load() {
 
     }
+}
+
+pub(crate) struct DefualtResources {
+    pub(crate) defualt_texture_id: ResourceId<Texture>,
+    pub(crate) default_pipeline_id: ResourceId<Shader>,
+    pub(crate) line_pipeline_id: ResourceId<Shader>,
 }

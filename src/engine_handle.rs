@@ -52,6 +52,7 @@ pub struct Engine {
     in_progress_resources: u32,
     context: Option<GraphicsContext>,
     pub(crate) resource_manager: ResourceManager,
+    defualt_resources: DefualtResources,
     #[cfg(not(target_arch = "wasm32"))]
     thread_pool: ThreadPool,
     ma_frame_time: f32,
@@ -80,6 +81,16 @@ impl Engine {
 
         let close_key = builder.close_key;
 
+        let line_id = resource::generate_id::<Shader>();
+        let generic_id = resource::generate_id::<Shader>();
+        let white_pixel_id = resource::generate_id::<Texture>();
+
+        let defualt_resources = DefualtResources {
+            default_pipeline_id: generic_id,
+            defualt_texture_id: white_pixel_id,
+            line_pipeline_id: line_id,
+        };
+
         Ok(Self {
             input_handle,
             event_loop: Some(event_loop),
@@ -96,6 +107,7 @@ impl Engine {
             in_progress_resources: 0,
             context: None,
             resource_manager,
+            defualt_resources,
             #[cfg(not(target_arch = "wasm32"))]
             thread_pool: ThreadPool::new().expect("Failed To Make Pool"),
             ma_frame_time: 0.0,
@@ -164,33 +176,39 @@ impl Engine {
 
     /// Checks if the window has focus
     pub fn window_has_focus(&self) -> bool {
-        self.window.has_focus()
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window.has_focus()
     }
 
     /// Checks if the window is maximized not fullscreened
     pub fn is_window_maximized(&self) -> bool {
-        self.window.is_maximized()
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window.is_maximized()
     }
 
     /// Checks to see if the window is minimized
     pub fn is_window_minimized(&self) -> bool {
-        self.window.is_minimized().unwrap_or(false)
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window.is_minimized().unwrap_or(false)
     }
 
     /// Checks to see if the window is fullscreen not maximized
     pub fn is_window_fullscreen(&self) -> bool {
         // based on limited docs knowledge this should work
-        self.window.fullscreen().is_some()
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window.fullscreen().is_some()
     }
 
     /// Will maximize the window
     pub fn maximize_window(&self) {
-        self.window.set_maximized(true);
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window.set_maximized(true);
     }
 
     /// Will minimize the window
     pub fn minimize_window(&self) {
-        self.window.set_minimized(true);
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window.set_minimized(true);
     }
 
     /// Will close the window and stop the program
@@ -204,30 +222,37 @@ impl Engine {
         let (width, height) = image.dimensions();
         let image_bytes = image.into_raw();
         let icon = winit::window::Icon::from_rgba(image_bytes, width, height)?;
-        self.window.set_window_icon(Some(icon));
+
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+
+        context.window.set_window_icon(Some(icon));
         Ok(())
     }
 
     /// Sets the window title
     pub fn set_window_title(&self, title: &str) {
-        self.window.set_title(title);
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window.set_title(title);
     }
 
     /// Changes the Position of the window in PhysicalPixles
     pub fn set_window_position(&self, x: f32, y: f32) {
-        self.window
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window
             .set_outer_position(winit::dpi::PhysicalPosition::new(x, y));
     }
 
     /// Sets the physical minimum size of the window
     pub fn set_window_min_size(&self, width: f32, height: f32) {
-        self.window
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window
             .set_min_inner_size(Some(winit::dpi::PhysicalSize::new(width, height)));
     }
 
     /// Gets the physical postion of the window
     pub fn get_window_position(&self) -> Option<Vec2<i32>> {
-        match self.window.outer_position() {
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        match context.window.outer_position() {
             Ok(v) => Some((v.x, v.y).into()),
             Err(_) => None,
         }
@@ -240,53 +265,60 @@ impl Engine {
 
     /// Gets the scale factor to help handle diffrence between phyiscial and logical pixels
     pub fn get_window_scale_factor(&self) -> f64 {
-        self.window.scale_factor()
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window.scale_factor()
     }
 
     /// Toggels fullscreen mode may fail on certain Operating Systems
     /// check the [winit docs](https://docs.rs/winit/latest/winit/window/struct.Window.html#method.set_fullscreen) for more information
     pub fn toggle_fullscreen(&self) {
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         if self.is_window_fullscreen() {
-            self.window
+            context.window
                 .set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
         } else {
-            self.window.set_fullscreen(None);
+            context.window.set_fullscreen(None);
         }
     }
 
     /// Hides the cursor
     pub fn hide_cursor(&mut self) {
-        self.window.set_cursor_visible(false);
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window.set_cursor_visible(false);
         self.cursor_visibility = false;
     }
 
     /// Shows the cursor if its hidden
     pub fn show_cursor(&mut self) {
-        self.window.set_cursor_visible(true);
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        context.window.set_cursor_visible(true);
         self.cursor_visibility = true;
     }
 
     /// nessicary for creating shaders and wanting to include the camera in the layouts
     /// this is required if you would like to use the camera in the shader
     pub fn camera_layout(&self) -> wgpu::BindGroupLayout {
-        layouts::create_camera_layout(&self.wgpu_clump.device)
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        layouts::create_camera_layout(&context.wgpu.device)
     }
 
-    pub(crate) fn camera_bindgroup(&self) -> &wgpu::BindGroup {
-        &self.camera_bind_group
-    }
+    // pub(crate) fn camera_bindgroup(&self) -> &wgpu::BindGroup {
+    //     &self.camera_bind_group
+    // }
 
     /// nessicary for creating shaders and wanting to include textures in the layouts
     /// this is required if you would like to use textures in your shader
     pub fn texture_layout(&self) -> wgpu::BindGroupLayout {
-        layouts::create_texture_layout(&self.wgpu_clump.device)
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        layouts::create_texture_layout(&context.wgpu.device)
     }
 
     /// nessicary for creating shaders and wanting to use your own unifroms
     /// this should be pretty generic as it is exposed to both the vertex
     /// and fragment stage
     pub fn uniform_layout(&self) -> wgpu::BindGroupLayout {
-        layouts::create_uniform_layout(&self.wgpu_clump.device)
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        layouts::create_uniform_layout(&context.wgpu.device)
     }
 
     /// Gets the time since the previous frame or change in time between now and last frame
@@ -315,18 +347,20 @@ impl Engine {
     /// AutoNoVsync for more information check
     /// [PresentMode::AutoNoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html).
     pub fn remove_vsync(&mut self) {
-        self.config.present_mode = wgpu::PresentMode::AutoNoVsync;
-        self.surface
-            .configure(&self.wgpu_clump.device, &self.config);
+        let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
+        context.config.present_mode = wgpu::PresentMode::AutoNoVsync;
+        context.surface
+            .configure(&context.wgpu.device, &context.config);
     }
 
     /// Will turn off vysnc if the platform suports it, using
     /// AutoVsync for more information check
     /// [PresentMode::AutoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html).
     pub fn add_vsync(&mut self) {
-        self.config.present_mode = wgpu::PresentMode::AutoVsync;
-        self.surface
-            .configure(&self.wgpu_clump.device, &self.config);
+        let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
+        context.config.present_mode = wgpu::PresentMode::AutoVsync;
+        context.surface
+            .configure(&context.wgpu.device, &context.config);
     }
 
     /// Sets a target fps cap. The thread will spin sleep using the
@@ -340,8 +374,10 @@ impl Engine {
     /// Measures string based on the default font. To measure a string with a custom font
     /// use [TextMaterial::get_measurements()](../text/struct.TextMaterial.html#method.get_measurements)
     pub fn measure_string(&mut self, text: &str, font_size: f32, line_height: f32) -> Vec2<f32> {
+        let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
+
         let mut buffer = glyphon::Buffer::new(
-            &mut self.text_renderer.font_system,
+            &mut context.text_renderer.font_system,
             Metrics::new(font_size, line_height),
         );
         let size = self.get_window_size();
@@ -350,12 +386,12 @@ impl Engine {
         let physical_height = (size.y as f64 * scale_factor) as f32;
 
         buffer.set_size(
-            &mut self.text_renderer.font_system,
+            &mut context.text_renderer.font_system,
             physical_height,
             physical_width,
         );
         buffer.set_text(
-            &mut self.text_renderer.font_system,
+            &mut context.text_renderer.font_system,
             text,
             Attrs::new(),
             Shaping::Basic,
@@ -402,18 +438,6 @@ impl Engine {
         self.in_progress_resources += 1;
     }
 
-    pub(crate) fn get_wgpu(&self) -> &WgpuClump {
-        &self.wgpu_clump
-    }
-
-    pub(crate) fn get_texture_sampler(&self) -> &wgpu::Sampler {
-        &self.texture_sampler
-    }
-
-    pub(crate) fn get_texture_format(&self) -> wgpu::TextureFormat {
-        self.config.format
-    }
-
     pub(crate) fn get_proxy(&self) -> EventLoopProxy<BpEvent> {
         self.proxy.clone()
     }
@@ -423,19 +447,23 @@ impl Engine {
     }
 
     pub(crate) fn defualt_material_bg_id(&self) -> ResourceId<Texture> {
-        self.defualt_texture_id
+        self.defualt_resources.defualt_texture_id
     }
 
     pub(crate) fn defualt_pipe_id(&self) -> ResourceId<Shader> {
-        self.default_pipeline_id
+        self.defualt_resources.default_pipeline_id
     }
 
     pub(crate) fn line_pipe_id(&self) -> ResourceId<Shader> {
-        self.line_pipeline_id
+        self.defualt_resources.line_pipeline_id
     }
 
-    pub(crate) fn get_current_texture(&self) -> Result<wgpu::SurfaceTexture, wgpu::SurfaceError> {
-        self.surface.get_current_texture()
+    pub(crate) fn get_context(&self) -> Option<&GraphicsContext> {
+        self.context.as_ref()
+    }
+
+    pub(crate) fn get_mut_context(&mut self) -> Option<&mut GraphicsContext> {
+        self.context.as_mut()
     }
 
     #[cfg(not(target_arch = "wasm32"))]
@@ -449,53 +477,7 @@ impl Engine {
         T: Game,
     {
         let event_loop = self.event_loop.take().unwrap(); //should never panic
-        let _ = event_loop.run(move |event, active_loop| {
-            match event {
-                Event::AboutToWait => {
-                    //RedrawRequested will only trigger once, unless we manually request it
-                    self.window.request_redraw();
-                }
-                Event::WindowEvent {
-                    ref event,
-                    window_id,
-                } if window_id == self.window.id() => {
-                    if !self.input(event) {
-                        match event {
-                            WindowEvent::CloseRequested => active_loop.exit(),
-                            WindowEvent::Resized(physical_size) => {
-                                let s = *physical_size;
-                                self.resize(s.into());
-                                game.on_resize(s.into(), &mut self);
-                            }
-                            WindowEvent::RedrawRequested => {
-                                if self.is_loading() {
-                                    self.update(active_loop);
-                                } else {
-                                    game.update(&mut self);
-                                    self.update(active_loop);
-                                    self.current_frametime = Instant::now();
-
-                                    match render(&mut game, &mut self) {
-                                        Ok(_) => {}
-                                        // reconfigure surface if lost
-                                        Err(wgpu::SurfaceError::Lost) => self.resize(self.size),
-                                        Err(wgpu::SurfaceError::OutOfMemory) => {
-                                            active_loop.exit();
-                                        }
-                                        Err(e) => eprintln!("{:?}", e),
-                                    }
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-                Event::UserEvent(event) => {
-                    self.handle_user_event(event);
-                }
-                _ => {}
-            }
-        });
+        event_loop.run_app(&mut self).unwrap();
     }
 
     fn update(&mut self, elwt: &ActiveEventLoop) {
@@ -537,14 +519,16 @@ impl Engine {
     }
 
     fn resize(&mut self, new_size: Vec2<u32>) {
+        let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
+
         if new_size.x > 0 && new_size.y > 0 {
-            self.config.width = new_size.x;
-            self.config.height = new_size.y;
-            self.surface
-                .configure(&self.wgpu_clump.device, &self.config);
+            context.config.width = new_size.x;
+            context.config.height = new_size.y;
+            context.surface
+                .configure(&context.wgpu.device, &context.config);
             self.size = new_size;
-            self.wgpu_clump.queue.write_buffer(
-                &self.camera_buffer,
+            context.wgpu.queue.write_buffer(
+                &context.camera_buffer,
                 48,
                 bytemuck::cast_slice(&[new_size.x as f32, new_size.y as f32]),
             );
@@ -636,7 +620,10 @@ impl Engine {
 
     fn add_finished_font(&mut self, resource: Resource) {
         let typed_id: ResourceId<Font> = ResourceId::from_number(resource.id);
-        let font = self.text_renderer.load_font_from_bytes(&resource.data);
+
+        let context = self.context.as_mut().unwrap();
+
+        let font = context.text_renderer.load_font_from_bytes(&resource.data);
         self.resource_manager.insert_font(typed_id, font);
         log::info!("Font resource at: {:?} loaded succesfully", resource.path);
     }
@@ -653,14 +640,18 @@ impl Engine {
     }
 
     fn add_defualt_shader(&mut self, id: NonZeroU64) {
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
-        let shader = Shader::defualt(&self.wgpu_clump, self.get_texture_format());
+        let shader = Shader::defualt(&context.wgpu, context.get_texture_format());
         self.resource_manager.insert_pipeline(typed_id, shader);
     }
 
     fn add_defualt_font(&mut self, id: NonZeroU64) {
+        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+
         let typed_id: ResourceId<Font> = ResourceId::from_number(id);
-        let font = Font::from_str(self.text_renderer.get_defualt_font_name());
+        let font = Font::from_str(context.text_renderer.get_defualt_font_name());
         self.resource_manager.insert_font(typed_id, font);
     }
 
@@ -675,7 +666,8 @@ impl ApplicationHandler<BpEvent> for Engine {
             self.context = Some(GraphicsContext::from_active_loop(
                 event_loop,
                 self.window_options.take().unwrap(),
-                &mut self.resource_manager
+                &mut self.resource_manager,
+                &self.defualt_resources,
             ))
         }
     }
@@ -974,6 +966,12 @@ impl std::fmt::Display for IconError {
 }
 
 impl std::error::Error for IconError {}
+
+pub(crate) struct DefualtResources {
+    pub(crate) defualt_texture_id: ResourceId<Texture>,
+    pub(crate) default_pipeline_id: ResourceId<Shader>,
+    pub(crate) line_pipeline_id: ResourceId<Shader>,
+}
 
 #[derive(Debug)]
 pub(crate) enum BpEvent {

@@ -187,12 +187,14 @@ impl<'a> RenderHandle<'a> {
 
 impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
     fn from(value: &'a mut Engine) -> Self {
-        let encoder = value.get_wgpu().device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        let context = value.get_mut_context().unwrap();
+
+        let encoder = context.wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("render encoder")
         });
 
-        let texture = value
-            .get_current_texture()
+        let texture = context
+            .get_surface_texture()
             .unwrap();
 
         let defualt_view_size = texture.texture.size();
@@ -206,8 +208,8 @@ impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
             defualt_id: value.defualt_pipe_id(),
             defualt_view,
             defualt_view_size,
-            camera_bindgroup: value.camera_bindgroup(),
-            wgpu: value.get_wgpu(),
+            camera_bindgroup: &context.camera_bind_group,
+            wgpu: &context.wgpu,
         }
     }
 }

@@ -29,8 +29,7 @@ use crate::vectors::Vec2;
 
 /// A simple 2D camera that can translate, rotate, and scale everything on the screen.
 pub struct Camera {
-    bind_group: wgpu::BindGroup,
-    buffer: wgpu::Buffer,
+    inner: Option<InternalCamera>,
     /// The center of the camera becomes the center of the screen
     pub center: Vec2<f32>,
     /// needs to be in degrees
@@ -49,38 +48,8 @@ impl Camera {
     /// }
     /// ```
     pub fn new(engine: &Engine) -> Self {
-        let wgpu = engine.get_wgpu();
-        let size = engine.get_window_size();
-
-        let starting = [
-            1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            size.x as f32, size.y as f32, 0.0, 0.0,
-        ];
-
-        let buffer = wgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(&starting),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST
-        });
-
-        let camera_bind_group_layout = layouts::create_camera_layout(&wgpu.device);
-
-        let bind_group = wgpu
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &camera_bind_group_layout,
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: buffer.as_entire_binding(),
-                }],
-                label: Some("camera_bind_group"),
-            });
-
         Self {
-            bind_group,
-            buffer,
+            inner: None,
             center: Vec2{x: 0.0, y: 0.0},
             rotation: 0.0,
             scale: Vec2{x: 1.0, y: 1.0},
@@ -115,7 +84,7 @@ impl Camera {
         mat.transform_point2(point.into()).into()
     }
 
-    fn write_matrix(&self, wgpu: &WgpuClump, screen_size: Vec2<u32>) {
+    fn write_matrix(&mut self, wgpu: &WgpuClump, screen_size: Vec2<u32>) {
         let screen_size = Vec2{x: screen_size.x as f32, y: screen_size.y as f32};
 
         let scale_x = self.scale.x;
@@ -142,15 +111,52 @@ impl Camera {
             screen_size.x, screen_size.y, 0.0, 0.0,
         ];
 
+        if self.inner.is_none() {
+            self.inner = Some(InternalCamera::new(wgpu, &matrix));
+        }
+
         wgpu
             .queue
-            .write_buffer(&self.buffer, 0, bytemuck::cast_slice(&matrix));
+            .write_buffer(&self.inner.as_ref().unwrap().buffer, 0, bytemuck::cast_slice(&matrix));
     }
 
     /// Sets this camera to the active camera transforming all objects with this camera.
-    pub fn set_active<'others, 'pass>(&'others self, renderer: &mut Renderer<'pass, 'others>) {
+    pub fn set_active<'others, 'pass>(&'others mut self, renderer: &mut Renderer<'pass, 'others>) {
         self.write_matrix(renderer.wgpu, renderer.size);
 
-        renderer.pass.set_bind_group(1, &self.bind_group, &[]);
+        renderer.pass.set_bind_group(1, &self.inner.as_ref().unwrap().bind_group, &[]);
+    }
+}
+
+struct InternalCamera {
+    bind_group: wgpu::BindGroup,
+    buffer: wgpu::Buffer,
+}
+
+impl InternalCamera {
+    fn new(wgpu: &WgpuClump, matrix: &[f32; 16]) -> Self {
+        let buffer = wgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(matrix),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST
+        });
+
+        let camera_bind_group_layout = layouts::create_camera_layout(&wgpu.device);
+
+        let bind_group = wgpu
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                layout: &camera_bind_group_layout,
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buffer.as_entire_binding(),
+                }],
+                label: Some("camera_bind_group"),
+        });
+
+        Self {
+            bind_group,
+            buffer,
+        }
     }
 }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
-use crate::engine_handle::EngineBuilder;
-use crate::resource::ResourceManager;
+use crate::engine_handle::{DefualtResources, EngineBuilder};
+use crate::resource::{ResourceManager, ResourceId};
 use crate::{resource, WHITE_PIXEL};
 use crate::layouts;
 use crate::render::make_pipeline;
@@ -17,17 +17,23 @@ use wgpu::util::DeviceExt;
 
 
 pub(crate) struct GraphicsContext {
-    wgpu_clump: WgpuClump,
-    window: Arc<Window>,
-    texture_sampler: wgpu::Sampler,
-    config: wgpu::SurfaceConfiguration,
-    camera_bind_group: wgpu::BindGroup,
-    camera_buffer: wgpu::Buffer,
-    text_renderer: TextRenderer,
+    pub(crate) wgpu: WgpuClump,
+    pub(crate) window: Arc<Window>,
+    pub(crate) surface: wgpu::Surface<'static>,
+    pub(crate) texture_sampler: wgpu::Sampler,
+    pub(crate) config: wgpu::SurfaceConfiguration,
+    pub(crate) camera_bind_group: wgpu::BindGroup,
+    pub(crate) camera_buffer: wgpu::Buffer,
+    pub(crate) text_renderer: TextRenderer,
 }
 
 impl GraphicsContext {
-    pub fn from_active_loop(event_loop: &ActiveEventLoop, window_options: WindowOptions, resource_manager: &mut ResourceManager) -> Self {
+    pub fn from_active_loop(
+        event_loop: &ActiveEventLoop,
+        window_options: WindowOptions,
+        resource_manager: &mut ResourceManager,
+        resources: &DefualtResources,
+    ) -> Self {
         // should never fail as we will always set it
         let size: Vec2<u32> = window_options.attributes.inner_size.unwrap().into();
 
@@ -265,20 +271,18 @@ impl GraphicsContext {
 
         let text_renderer = TextRenderer::new(&wgpu_clump);
 
-        let line_id = resource::generate_id::<Shader>();
-        let generic_id = resource::generate_id::<Shader>();
         let line_shader = Shader::from_pipeline(line_pipeline);
         let generic_shader = Shader::defualt(&wgpu_clump, texture_format);
 
-        resource_manager.insert_pipeline(line_id, line_shader);
-        resource_manager.insert_pipeline(generic_id, generic_shader);
+        resource_manager.insert_pipeline(resources.line_pipeline_id, line_shader);
+        resource_manager.insert_pipeline(resources.default_pipeline_id, generic_shader);
 
-        let white_pixel_id = resource::generate_id::<Texture>();
-        resource_manager.insert_texture(white_pixel_id, white_pixel);
+        resource_manager.insert_texture(resources.defualt_texture_id, white_pixel);
 
         Self {
-            wgpu_clump,
+            wgpu: wgpu_clump,
             window,
+            surface,
             texture_sampler,
             config,
             camera_bind_group,
@@ -286,6 +290,14 @@ impl GraphicsContext {
             text_renderer,
         }
     }
+
+    pub(crate) fn get_texture_format(&self) -> wgpu::TextureFormat {
+        self.config.format
+    }
+
+    pub(crate) fn get_surface_texture(&self) -> Result<wgpu::SurfaceTexture, wgpu::SurfaceError> {
+        self.surface.get_current_texture()
+    } 
 }
 
 pub(crate) struct WindowOptions {

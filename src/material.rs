@@ -34,14 +34,13 @@ use crate::vertex::{self, LineVertex, Vertex};
 #[derive(Debug)]
 pub struct Material<T> {
     pipeline_id: ResourceId<Shader>,
-    vertex_buffer: wgpu::Buffer,
     /// counts the bytes of vertex not the actual number
     pub(crate) vertex_size: u64,
     pub(crate) vertex_count: u64,
-    index_buffer: wgpu::Buffer,
     /// counts the bytes of the index not the actual number
     pub(crate) index_count: u64,
     pub(crate) index_size: u64,
+    inner: Option<InnerBuffer>,
     texture_id: ResourceId<Texture>,
     _marker: PhantomData<T>,
 }
@@ -58,21 +57,16 @@ impl<T> Material<T> {
             .texture_change
             .unwrap_or(engine.defualt_material_bg_id());
 
-        let wgpu = engine.get_wgpu();
-
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
         let index_size = std::mem::size_of::<u16>() as u64;
-        let (vertex_buffer, index_buffer) =
-            Self::create_buffers(&wgpu.device, vertex_size, 50, index_size, 50);
 
         Self {
             pipeline_id,
-            vertex_buffer,
             vertex_count: 0,
             vertex_size,
-            index_buffer,
             index_count: 0,
             index_size,
+            inner: None,
             texture_id,
             _marker: PhantomData,
         }
@@ -300,6 +294,16 @@ impl<T> Material<T> {
             return;
         }
 
+        if self.inner.is_none() {
+            let (vert, ind) =
+                Self::create_buffers(&render.wgpu.device, self.vertex_size, 50, self.index_size, 50);
+
+            self.inner = Some(InnerBuffer {
+                vertex_buffer: vert,
+                index_buffer: ind,
+            });
+        }
+
         let wgpu = render.wgpu;
 
         let vertices = (0..number_of_sides)
@@ -341,20 +345,22 @@ impl<T> Material<T> {
             ]);
         }
 
-        let max_verts = self.vertex_buffer.size();
+        let buffers = self.inner.as_mut().unwrap();
+
+        let max_verts = buffers.vertex_buffer.size();
         if self.vertex_count + (vertices.len() as u64 * self.vertex_size) > max_verts {
             grow_buffer(
-                &mut self.vertex_buffer,
+                &mut buffers.vertex_buffer,
                 wgpu,
                 self.vertex_count + (vertices.len() as u64 * self.vertex_size),
                 wgpu::BufferUsages::VERTEX,
             );
         }
 
-        let max_indicies = self.index_buffer.size();
+        let max_indicies = buffers.index_buffer.size();
         if self.index_count + (indicies.len() as u64 * self.index_size) > max_indicies {
             grow_buffer(
-                &mut self.index_buffer,
+                &mut buffers.index_buffer,
                 wgpu,
                 self.index_count + (indicies.len() as u64 * self.index_size),
                 wgpu::BufferUsages::INDEX,
@@ -362,12 +368,12 @@ impl<T> Material<T> {
         }
 
         wgpu.queue.write_buffer(
-            &self.vertex_buffer,
+            &buffers.vertex_buffer,
             self.vertex_count,
             bytemuck::cast_slice(&vertices),
         );
         wgpu.queue.write_buffer(
-            &self.index_buffer,
+            &buffers.index_buffer,
             self.index_count,
             bytemuck::cast_slice(&indicies),
         );
@@ -380,16 +386,24 @@ impl<T> Material<T> {
     /// This will fail in the event that the shader has not loaded yet or
     /// if the shader used to create the material never had an UniformTexture.
     pub fn resize_uniform_texture(&mut self, texture: &mut UniformTexture, size: Vec2<u32>, engine: &mut Engine) -> Result<(), UniformError> {
-        let texture_format = engine.get_texture_format();
+        let context = match engine.get_context() {
+            Some(c) => c,
+            None => return Ok(()),
+            // the context hasnt been created yet this also means there
+            // is no reason for you to resize unless ur being silly for no
+            // reason
+        };
+        
+        let texture_format = context.get_texture_format();
         
         let options = match engine.resource_manager.get_mut_shader(&self.pipeline_id) {
             Some(shader) => shader,
-            None => return Err(UniformError::NotLoadedYet),
+            None => Err(UniformError::NotLoadedYet)?,
         };
 
-        texture.resize(size, &engine.wgpu_clump, texture_format);
+        texture.resize(size, &context.wgpu, texture_format);
 
-        options.update_uniform_texture(texture, &engine.wgpu_clump)?;
+        options.update_uniform_texture(texture, &context.wgpu)?;
 
         Ok(())
     }
@@ -411,9 +425,19 @@ impl<T> Material<T> {
     }
 
     fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {
-        let max_verts = self.vertex_buffer.size();
+        if self.inner.is_none() {
+            let (vert, ind) = Self::create_buffers(&wgpu.device, self.vertex_size, 50, self.index_size, 50);
+            self.inner = Some(InnerBuffer {
+                vertex_buffer: vert,
+                index_buffer: ind,
+            });
+        }
+
+        let buffers = self.inner.as_mut().unwrap();
+
+        let max_verts = buffers.vertex_buffer.size();
         if self.vertex_count + (4 * self.vertex_size) > max_verts {
-            grow_buffer(&mut self.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
+            grow_buffer(&mut buffers.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
         }
 
         let num_verts = self.get_vertex_number() as u16;
@@ -426,18 +450,18 @@ impl<T> Material<T> {
             2 + num_verts,
         ];
 
-        let max_indicies = self.index_buffer.size();
+        let max_indicies = buffers.index_buffer.size();
         if self.index_count + (6 * self.index_size) > max_indicies {
-            grow_buffer(&mut self.index_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
+            grow_buffer(&mut buffers.index_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
         }
 
         wgpu.queue.write_buffer(
-            &self.vertex_buffer,
+            &buffers.vertex_buffer,
             self.vertex_count,
             bytemuck::cast_slice(&verts),
         );
         wgpu.queue.write_buffer(
-            &self.index_buffer,
+            &buffers.index_buffer,
             self.index_count,
             bytemuck::cast_slice(&indicies),
         );
@@ -447,9 +471,19 @@ impl<T> Material<T> {
     }
 
     fn push_triangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 3]) {
-        let max_verts = self.vertex_buffer.size();
+        if self.inner.is_none() {
+            let (vert, ind) = Self::create_buffers(&wgpu.device, self.vertex_size, 50, self.index_size, 50);
+            self.inner = Some(InnerBuffer {
+                vertex_buffer: vert,
+                index_buffer: ind,
+            });
+        }
+
+        let buffers = self.inner.as_mut().unwrap();
+
+        let max_verts = buffers.vertex_buffer.size();
         if self.vertex_count + (3 * self.vertex_size) > max_verts {
-            grow_buffer(&mut self.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
+            grow_buffer(&mut buffers.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
         }
 
         let num_verts = self.get_vertex_number() as u16;
@@ -464,18 +498,18 @@ impl<T> Material<T> {
             2 + num_verts,
         ];
 
-        let max_indicies = self.index_buffer.size();
+        let max_indicies = buffers.index_buffer.size();
         if self.index_count + (6 * self.index_size) > max_indicies {
-            grow_buffer(&mut self.index_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
+            grow_buffer(&mut buffers.index_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
         }
 
         wgpu.queue.write_buffer(
-            &self.vertex_buffer,
+            &buffers.vertex_buffer,
             self.vertex_count,
             bytemuck::cast_slice(&verts),
         );
         wgpu.queue.write_buffer(
-            &self.index_buffer,
+            &buffers.index_buffer,
             self.index_count,
             bytemuck::cast_slice(&indicies),
         );
@@ -505,15 +539,19 @@ impl<T> Material<T> {
             .unwrap()
             .bind_group;
 
+        // should never panic as the vertex == 0 means that there has been
+        // some data put in which means this should be Some(T)
+        let buffers = self.inner.as_ref().unwrap();
+
         shader.set_active(information);
 
         information.pass.set_bind_group(0, texture, &[]);
 
         information
             .pass
-            .set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
+            .set_vertex_buffer(0, buffers.vertex_buffer.slice(0..self.vertex_count));
         information.pass.set_index_buffer(
-            self.index_buffer.slice(0..self.index_count),
+            buffers.index_buffer.slice(0..self.index_count),
             wgpu::IndexFormat::Uint16,
         );
 
@@ -635,7 +673,7 @@ impl<T> Default for MaterialBuilder<T> {
 /// instance of this material should ever be made per programm.
 pub struct LineMaterial {
     pipe_id: ResourceId<Shader>,
-    vertex_buffer: wgpu::Buffer,
+    vertex_buffer: Option<wgpu::Buffer>,
     vertex_count: u64,
     vertex_size: u64,
 }
@@ -643,21 +681,11 @@ pub struct LineMaterial {
 impl LineMaterial {
     /// Creates a new LineMaterial
     pub fn new(engine: &Engine) -> Self {
-        let wgpu = engine.get_wgpu();
         let vertex_size = std::mem::size_of::<LineVertex>() as u64;
-
-        let vertex_buffer = wgpu.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Line material vertex buffer"),
-            usage: wgpu::BufferUsages::VERTEX
-                | wgpu::BufferUsages::COPY_DST
-                | wgpu::BufferUsages::COPY_SRC,
-            size: vertex_size * 100,
-            mapped_at_creation: false,
-        });
 
         Self {
             pipe_id: engine.line_pipe_id(),
-            vertex_buffer,
+            vertex_buffer: None,
             vertex_count: 0,
             vertex_size,
         }
@@ -672,20 +700,33 @@ impl LineMaterial {
         renderer: &Renderer,
     ) {
         let wgpu = renderer.wgpu;
+        if self.vertex_buffer.is_none() {
+            self.vertex_buffer = Some(wgpu.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Line material vertex buffer"),
+                usage: wgpu::BufferUsages::VERTEX
+                    | wgpu::BufferUsages::COPY_DST
+                    | wgpu::BufferUsages::COPY_SRC,
+                size: self.vertex_size * 100,
+                mapped_at_creation: false,
+            }));
+        }
 
+        
         let verts = [
             LineVertex::new(start.to_raw(), colour.as_raw()),
             LineVertex::new(end.to_raw(), colour.as_raw()),
         ];
+            
+        let vertex_buffer = self.vertex_buffer.as_mut().unwrap();
 
-        let max_verts = self.vertex_buffer.size();
+        let max_verts = vertex_buffer.size();
         let vert_size = std::mem::size_of::<LineVertex>() as u64;
         if self.vertex_count + (2 * vert_size) > max_verts {
-            grow_buffer(&mut self.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
+            grow_buffer(vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
         }
 
         wgpu.queue.write_buffer(
-            &self.vertex_buffer,
+            &vertex_buffer,
             self.vertex_count,
             bytemuck::cast_slice(&verts),
         );
@@ -703,19 +744,32 @@ impl LineMaterial {
         let wgpu = renderer.wgpu;
         let size = renderer.size;
 
+        if self.vertex_buffer.is_none() {
+            self.vertex_buffer = Some(wgpu.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Line material vertex buffer"),
+                usage: wgpu::BufferUsages::VERTEX
+                    | wgpu::BufferUsages::COPY_DST
+                    | wgpu::BufferUsages::COPY_SRC,
+                size: self.vertex_size * 100,
+                mapped_at_creation: false,
+            }));
+        }
+
         let verts = [
             LineVertex::new(start.to_raw(), colour.as_raw()).screenspace_to_pixels(size),
             LineVertex::new(end.to_raw(), colour.as_raw()).screenspace_to_pixels(size),
         ];
 
-        let max_verts = self.vertex_buffer.size();
+        let vertex_buffer = self.vertex_buffer.as_mut().unwrap();
+
+        let max_verts = vertex_buffer.size();
         let vert_size = std::mem::size_of::<LineVertex>() as u64;
         if self.vertex_count + (2 * vert_size) > max_verts {
-            grow_buffer(&mut self.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
+            grow_buffer(vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
         }
 
         wgpu.queue.write_buffer(
-            &self.vertex_buffer,
+            vertex_buffer,
             self.vertex_count,
             bytemuck::cast_slice(&verts),
         );
@@ -738,13 +792,15 @@ impl LineMaterial {
             .unwrap()
             .pipeline;
 
+        let buffer = self.vertex_buffer.as_ref().unwrap();
+
         information.pass.set_pipeline(pipeline);
         information
             .pass
             .set_bind_group(0, information.camera_bindgroup, &[]);
         information
             .pass
-            .set_vertex_buffer(0, self.vertex_buffer.slice(0..self.vertex_count));
+            .set_vertex_buffer(0, buffer.slice(0..self.vertex_count));
 
         information
             .pass
@@ -785,4 +841,10 @@ pub(crate) fn grow_buffer(
     wgpu.queue.submit(std::iter::once(encoder.finish()));
 
     *buffer = new_buffer;
+}
+
+#[derive(Debug)]
+struct InnerBuffer {
+    vertex_buffer: wgpu::Buffer,
+    index_buffer: wgpu::Buffer,
 }
