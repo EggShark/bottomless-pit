@@ -46,7 +46,6 @@ pub mod colour;
 mod context;
 pub mod engine_handle;
 pub mod input;
-mod io;
 mod layouts;
 pub mod material;
 pub mod matrix_math;
