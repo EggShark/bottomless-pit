@@ -103,6 +103,7 @@ pub struct RenderHandle<'a> {
     defualt_view_size: Vec2<u32>,
     camera_bindgroup: &'a wgpu::BindGroup,
     wgpu: &'a WgpuClump,
+    format: wgpu::TextureFormat,
 }
 
 impl<'a> RenderHandle<'a> {
@@ -139,7 +140,7 @@ impl<'a> RenderHandle<'a> {
         
         let mut pass = match &mut self.encoder {
             Some(encoder) => {
-                Self::create_pass(encoder, texture.make_render_view(), clear_colour.into())
+                Self::create_pass(encoder, texture.make_render_view(self.wgpu, self.format), clear_colour.into())
             }
             None => unreachable!(),
         };
@@ -210,6 +211,7 @@ impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
             defualt_view_size,
             camera_bindgroup: &context.camera_bind_group,
             wgpu: &context.wgpu,
+            format: context.get_texture_format(),
         }
     }
 }
