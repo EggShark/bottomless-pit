@@ -1,10 +1,12 @@
 //! Contains the Renderer struct which also contains all the
 //! functions and logic to draw things to the screen
+
 use crate::colour::Colour;
 use crate::context::WgpuClump;
 use crate::engine_handle::Engine;
 use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
+use crate::text::TextRenderer;
 use crate::texture::UniformTexture;
 use crate::vectors::Vec2;
 use crate::{Game, vec2};
@@ -104,6 +106,8 @@ pub struct RenderHandle<'a> {
     camera_bindgroup: &'a wgpu::BindGroup,
     wgpu: &'a WgpuClump,
     format: wgpu::TextureFormat,
+    text_info: &'a mut TextRenderer,
+    sampler: &'a wgpu::Sampler,
 }
 
 impl<'a> RenderHandle<'a> {
@@ -131,7 +135,9 @@ impl<'a> RenderHandle<'a> {
             defualt_id: self.defualt_id,
             resources: &self.resources,
             camera_bindgroup: &self.camera_bindgroup,
-            wgpu: &self.wgpu
+            wgpu: &self.wgpu,
+            text_info: &mut self.text_info,
+            sampler: &self.sampler,
         }
     }
 
@@ -161,7 +167,9 @@ impl<'a> RenderHandle<'a> {
             defualt_id: self.defualt_id,
             resources: &self.resources,
             camera_bindgroup: &self.camera_bindgroup,
-            wgpu: &self.wgpu
+            wgpu: &self.wgpu,
+            text_info: &mut self.text_info,
+            sampler: &self.sampler,
         }
     }
 
@@ -212,6 +220,8 @@ impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
             camera_bindgroup: &context.camera_bind_group,
             wgpu: &context.wgpu,
             format: context.get_texture_format(),
+            text_info: &mut context.text_renderer,
+            sampler: &context.texture_sampler,
         }
     }
 }
@@ -231,6 +241,8 @@ pub struct Renderer<'o, 'p> where 'o: 'p {
     pub(crate) defualt_id: ResourceId<Shader>,
     pub(crate) camera_bindgroup: &'o wgpu::BindGroup,
     pub(crate) wgpu: &'o WgpuClump,
+    pub(crate) text_info: &'o mut TextRenderer,
+    pub(crate) sampler: &'o wgpu::Sampler,
 }
 
 impl<'p, 'o> Renderer<'p, 'o> {

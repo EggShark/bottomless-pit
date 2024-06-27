@@ -386,7 +386,7 @@ impl<T> Material<T> {
     /// This will fail in the event that the shader has not loaded yet or
     /// if the shader used to create the material never had an UniformTexture.
     pub fn resize_uniform_texture(&mut self, texture: &mut UniformTexture, size: Vec2<u32>, engine: &mut Engine) -> Result<(), UniformError> {
-        let context = match engine.get_context() {
+        let context = match engine.get_mut_context() {
             Some(c) => c,
             None => return Ok(()),
             // the context hasnt been created yet this also means there

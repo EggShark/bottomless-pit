@@ -124,7 +124,7 @@ impl Texture {
     }
 
     fn from_image(engine: &Engine, img: image::DynamicImage, label: Option<&str>, mag_filter: SamplerType, min_filter: SamplerType) -> Self {
-        let wgpu = engine.get_wgpu();
+        let wgpu = &engine.get_context().expect("need graphic context").wgpu;
         let diffuse_rgba = img.to_rgba8();
         let (width, height) = img.dimensions();
 
@@ -292,7 +292,7 @@ impl UniformTexture {
     }
 
     pub(crate) fn get_sampler(&self) -> &wgpu::Sampler {
-        &self.sampler
+        &self.inner_texture.unwrap().sampler
     }
 
     pub(crate) fn get_sampler_info(&self) -> (SamplerType, SamplerType) {
@@ -308,10 +308,7 @@ impl UniformTexture {
     }
 
     pub(crate) fn make_view(&self) -> wgpu::TextureView {
-        self.inner_texture.create_view(&wgpu::TextureViewDescriptor {
-            label: Some("Uniform Texture View"),
-            ..Default::default()
-        })
+        self.inner_texture.as_ref().unwrap().make_view()
     }
 }
 
