@@ -50,7 +50,7 @@ pub struct Engine {
     current_frametime: Instant,
     size: Vec2<u32>,
     in_progress_resources: u32,
-    context: Option<GraphicsContext>,
+    pub(crate) context: Option<GraphicsContext>,
     pub(crate) resource_manager: ResourceManager,
     defualt_resources: DefualtResources,
     #[cfg(not(target_arch = "wasm32"))]

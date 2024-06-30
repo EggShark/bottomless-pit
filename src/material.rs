@@ -386,7 +386,7 @@ impl<T> Material<T> {
     /// This will fail in the event that the shader has not loaded yet or
     /// if the shader used to create the material never had an UniformTexture.
     pub fn resize_uniform_texture(&mut self, texture: &mut UniformTexture, size: Vec2<u32>, engine: &mut Engine) -> Result<(), UniformError> {
-        let context = match engine.get_mut_context() {
+        let context = match &mut engine.context {
             Some(c) => c,
             None => return Ok(()),
             // the context hasnt been created yet this also means there
@@ -433,6 +433,7 @@ impl<T> Material<T> {
             });
         }
 
+        let num_verts = self.get_vertex_number() as u16;
         let buffers = self.inner.as_mut().unwrap();
 
         let max_verts = buffers.vertex_buffer.size();
@@ -440,7 +441,7 @@ impl<T> Material<T> {
             grow_buffer(&mut buffers.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
         }
 
-        let num_verts = self.get_vertex_number() as u16;
+        
         let indicies = [
             num_verts,
             1 + num_verts,
@@ -479,6 +480,7 @@ impl<T> Material<T> {
             });
         }
 
+        let num_verts = self.get_vertex_number() as u16;
         let buffers = self.inner.as_mut().unwrap();
 
         let max_verts = buffers.vertex_buffer.size();
@@ -486,7 +488,6 @@ impl<T> Material<T> {
             grow_buffer(&mut buffers.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
         }
 
-        let num_verts = self.get_vertex_number() as u16;
         // yes its wastefull to do this but this is the only way to not have
         // it mess up other drawings while also allowing triangles
         let indicies = [
