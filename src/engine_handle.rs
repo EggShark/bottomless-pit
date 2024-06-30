@@ -374,14 +374,16 @@ impl Engine {
     /// Measures string based on the default font. To measure a string with a custom font
     /// use [TextMaterial::get_measurements()](../text/struct.TextMaterial.html#method.get_measurements)
     pub fn measure_string(&mut self, text: &str, font_size: f32, line_height: f32) -> Vec2<f32> {
+        let size = self.get_window_size();
+        let scale_factor = self.get_window_scale_factor();
+        
         let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
 
         let mut buffer = glyphon::Buffer::new(
             &mut context.text_renderer.font_system,
             Metrics::new(font_size, line_height),
         );
-        let size = self.get_window_size();
-        let scale_factor = self.get_window_scale_factor();
+        
         let physical_width = (size.x as f64 * scale_factor) as f32;
         let physical_height = (size.y as f64 * scale_factor) as f32;
 

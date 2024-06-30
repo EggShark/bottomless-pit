@@ -162,7 +162,7 @@ impl TextMaterial {
         self.text = text.into();
         
         // again only fails if called outstide Game Trait and why would you set text
-        let context = match engine.get_mut_context() {
+        let context = match &mut engine.context {
             None => return,
             Some(c) => c,
         };
@@ -202,7 +202,7 @@ impl TextMaterial {
         self.text = text.into();
         
         // again only fails if called outstide Game Trait and why would you set text
-        let context = match engine.get_mut_context() {
+        let context = match &mut engine.context {
             None => return,
             Some(c) => c,
         };
@@ -248,7 +248,7 @@ impl TextMaterial {
     pub fn set_font_size(&mut self, new_size: f32, engine: &mut Engine) {
         self.font_size = new_size;
         // again only fails if called outstide Game Trait and why would you set text
-        let context = match engine.get_mut_context() {
+        let context = match &mut engine.context {
             None => return,
             Some(c) => c,
         };
@@ -276,7 +276,7 @@ impl TextMaterial {
     pub fn set_line_height(&mut self, new_height: f32, engine: &mut Engine) {
         self.line_height = new_height;
         // again only fails if called outstide Game Trait and why would you set text
-        let context = match engine.get_mut_context() {
+        let context = match &mut engine.context {
             None => return,
             Some(c) => c,
         };
@@ -347,7 +347,6 @@ impl TextMaterial {
     /// Queues a peice of text at the specified position. Its size will be the size of the entire
     /// text.
     pub fn add_instance(&mut self, position: Vec2<f32>, tint: Colour, render: &Renderer) {
-        self.add_inner(render.wgpu, render.text_info, render.resources, render.sampler);
         let inner = self.inner.as_ref().unwrap();
 
         let rect_size = Vec2 {
@@ -369,7 +368,6 @@ impl TextMaterial {
         degrees: f32,
         render: &Renderer,
     ) {
-        self.add_inner(render.wgpu, render.text_info, render.resources, render.sampler);
         let inner = self.inner.as_ref().unwrap();
 
         let rect_size = Vec2 {
@@ -398,7 +396,6 @@ impl TextMaterial {
         tint: Colour,
         render: &Renderer,
     ) {
-        self.add_inner(render.wgpu, render.text_info, render.resources, render.sampler);
         let inner = self.inner.as_ref().unwrap();
 
         let wgpu = render.wgpu;
@@ -441,7 +438,6 @@ impl TextMaterial {
         tint: Colour,
         render: &Renderer,
     ) {
-        self.add_inner(render.wgpu, render.text_info, render.resources, render.sampler);
         let inner = self.inner.as_ref().unwrap();
 
         let wgpu = render.wgpu;
@@ -483,7 +479,6 @@ impl TextMaterial {
         tint: Colour,
         render: &Renderer,
     ) {
-        self.add_inner(render.wgpu, render.text_info, render.resources, render.sampler);
         let inner = self.inner.as_ref().unwrap();
 
         let wgpu = render.wgpu;
@@ -526,6 +521,8 @@ impl TextMaterial {
     }
 
     fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {
+
+        let num_verts = self.get_vertex_number() as u16;
         let inner = self.inner.as_mut().unwrap();
 
 
@@ -537,7 +534,6 @@ impl TextMaterial {
             material::grow_buffer(&mut inner.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
         }
 
-        let num_verts = self.get_vertex_number() as u16;
         let indicies = [
             num_verts,
             1 + num_verts,
@@ -596,7 +592,7 @@ impl TextMaterial {
     /// texture used to render the text. If this is not run after each change then it wont
     /// display the changes.
     pub fn prepare(&mut self, engine: &mut Engine) {
-        let context = match engine.get_mut_context() {
+        let context = match &mut engine.context {
             Some(c) => c,
             None => return, // this will only happen if you prepare before IMPL GAME so why,,,,
         };

@@ -106,7 +106,6 @@ pub struct RenderHandle<'a> {
     camera_bindgroup: &'a wgpu::BindGroup,
     wgpu: &'a WgpuClump,
     format: wgpu::TextureFormat,
-    text_info: &'a mut TextRenderer,
     sampler: &'a wgpu::Sampler,
 }
 
@@ -136,7 +135,6 @@ impl<'a> RenderHandle<'a> {
             resources: &self.resources,
             camera_bindgroup: &self.camera_bindgroup,
             wgpu: &self.wgpu,
-            text_info: &mut self.text_info,
             sampler: &self.sampler,
         }
     }
@@ -168,7 +166,6 @@ impl<'a> RenderHandle<'a> {
             resources: &self.resources,
             camera_bindgroup: &self.camera_bindgroup,
             wgpu: &self.wgpu,
-            text_info: &mut self.text_info,
             sampler: &self.sampler,
         }
     }
@@ -196,7 +193,7 @@ impl<'a> RenderHandle<'a> {
 
 impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
     fn from(value: &'a mut Engine) -> Self {
-        let context = value.get_mut_context().unwrap();
+        let context = value.context.as_ref().unwrap();
 
         let encoder = context.wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("render encoder")
@@ -220,7 +217,6 @@ impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
             camera_bindgroup: &context.camera_bind_group,
             wgpu: &context.wgpu,
             format: context.get_texture_format(),
-            text_info: &mut context.text_renderer,
             sampler: &context.texture_sampler,
         }
     }
@@ -241,7 +237,6 @@ pub struct Renderer<'o, 'p> where 'o: 'p {
     pub(crate) defualt_id: ResourceId<Shader>,
     pub(crate) camera_bindgroup: &'o wgpu::BindGroup,
     pub(crate) wgpu: &'o WgpuClump,
-    pub(crate) text_info: &'o mut TextRenderer,
     pub(crate) sampler: &'o wgpu::Sampler,
 }
 

@@ -292,7 +292,7 @@ impl UniformTexture {
     }
 
     pub(crate) fn get_sampler(&self) -> &wgpu::Sampler {
-        &self.inner_texture.unwrap().sampler
+        &self.inner_texture.as_ref().unwrap().sampler
     }
 
     pub(crate) fn get_sampler_info(&self) -> (SamplerType, SamplerType) {
