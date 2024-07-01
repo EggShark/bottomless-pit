@@ -683,7 +683,7 @@ impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
         event: WindowEvent,
     ) {
         let (engine, game) = self;
-        if window_id == engine.context.as_ref().unwrap().window.id() {
+        if window_id == engine.context.as_ref().unwrap().window.id() && !engine.input(&event) {
             match event {
                 WindowEvent::CloseRequested => event_loop.exit(),
                 WindowEvent::Resized(physical_size) => {
@@ -715,7 +715,9 @@ impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
 
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: BpEvent) {
         let (engine, _) = self;
-        
+        match event {
+            BpEvent::ResourceLoaded(resource) => engine.handle_resource(resource),
+        }
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
