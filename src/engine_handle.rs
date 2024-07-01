@@ -479,7 +479,7 @@ impl Engine {
         T: Game,
     {
         let event_loop = self.event_loop.take().unwrap(); //should never panic
-        event_loop.run_app(&mut self).unwrap();
+        event_loop.run_app(&mut (self, game)).unwrap();
     }
 
     fn update(&mut self, elwt: &ActiveEventLoop) {
@@ -662,32 +662,65 @@ impl Engine {
     }
 }
 
-impl ApplicationHandler<BpEvent> for Engine {
+impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        if self.context.is_none() {
-            self.context = Some(GraphicsContext::from_active_loop(
+        let (engine, _) = self;
+
+        if engine.context.is_none() {
+            engine.context = Some(GraphicsContext::from_active_loop(
                 event_loop,
-                self.window_options.take().unwrap(),
-                &mut self.resource_manager,
-                &self.defualt_resources,
+                engine.window_options.take().unwrap(),
+                &mut engine.resource_manager,
+                &engine.defualt_resources,
             ))
         }
     }
 
     fn window_event(
-            &mut self,
-            event_loop: &ActiveEventLoop,
-            window_id: winit::window::WindowId,
-            event: WindowEvent,
-        ) {
-        
+        &mut self,
+        event_loop: &ActiveEventLoop,
+        window_id: winit::window::WindowId,
+        event: WindowEvent,
+    ) {
+        let (engine, game) = self;
+        if window_id == engine.context.as_ref().unwrap().window.id() {
+            match event {
+                WindowEvent::CloseRequested => event_loop.exit(),
+                WindowEvent::Resized(physical_size) => {
+                    engine.resize(physical_size.into())
+                }
+                WindowEvent::RedrawRequested => {
+                    if engine.is_loading() {
+                        engine.update(event_loop);
+                    } else {
+                        game.update(engine);
+                        engine.update(event_loop);
+                        engine.current_frametime = Instant::now();
+
+                        match render(game, engine) {
+                            Ok(_) => {}
+                            // reconfigure surface if lost
+                            Err(wgpu::SurfaceError::Lost) => engine.resize(engine.size),
+                            Err(wgpu::SurfaceError::OutOfMemory) => {
+                                event_loop.exit();
+                            }
+                            Err(e) => eprintln!("{:?}", e),
+                        }
+                    }
+                }
+                _ => {},
+            }
+        }
     }
 
     fn user_event(&mut self, event_loop: &ActiveEventLoop, event: BpEvent) {
+        let (engine, _) = self;
         
     }
 
     fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+        let (engine, _) = self;
+        engine.context.as_ref().unwrap().window.request_redraw();
         
     }
 }
