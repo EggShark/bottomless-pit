@@ -27,7 +27,7 @@ use crate::{layouts, render};
 #[derive(Debug)]
 pub struct Shader {
     pub(crate) pipeline: wgpu::RenderPipeline,
-    options: UntypedShaderOptions,
+    options: FinalShaderOptions,
 }
 
 impl Shader {
@@ -41,7 +41,7 @@ impl Shader {
         let typed_id = resource::generate_id::<Shader>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(UntypedShaderOptions::from_typed(options, engine.get_context().expect("need context here"))));
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(options.into()));
 
         resource::start_load(engine, ip_resource);
         engine.add_in_progress_resource();
@@ -51,7 +51,7 @@ impl Shader {
 
     pub(crate) fn from_resource_data(
         data: &[u8],
-        options: UntypedShaderOptions,
+        options: FinalShaderOptions,
         engine: &Engine,
     ) -> Result<Self, FromUtf8Error> {
         let context = engine.get_context().unwrap();
@@ -104,7 +104,7 @@ impl Shader {
     pub(crate) fn from_pipeline(pipeline: wgpu::RenderPipeline) -> Self {
         Self {
             pipeline,
-            options: UntypedShaderOptions::EMPTY,
+            options: FinalShaderOptions::EMPTY,
         }
     }
 
@@ -126,7 +126,7 @@ impl Shader {
 
         Self {
             pipeline,
-            options: UntypedShaderOptions::EMPTY,
+            options: FinalShaderOptions::EMPTY,
         }
     }
 
@@ -221,8 +221,6 @@ impl<T> ShaderOptions<T> {
     /// var light_map_sampler: sampler;
     /// ```
     pub fn with_uniform_texture(texture: &UniformTexture, engine: &Engine) -> Self {
-
-        let starting_view = texture.make_view();
         let (mag, min) = texture.get_sampler_info();
         let size = texture.get_size();
 
@@ -256,20 +254,41 @@ impl<T> ShaderOptions<T> {
 }
 
 #[derive(Debug)]
-pub(crate) struct UntypedShaderOptions {
+pub(crate) struct IntermediateOptions {
+    uniform_data: Option<Vec<u8>>,
+    uniform_texture: Option<(SamplerType, SamplerType, Vec2<u32>)>,
+}
+
+impl IntermediateOptions {
+    pub(crate) fn check_has(&self) -> (bool, bool) {
+        (self.uniform_data.is_some(), self.uniform_texture.is_some())
+    }
+}
+
+impl<T> From<ShaderOptions<T>> for IntermediateOptions {
+    fn from(value: ShaderOptions<T>) -> Self {
+        Self {
+            uniform_data: value.uniform_data,
+            uniform_texture: value.uniform_texture,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct FinalShaderOptions {
     uniform_data: Option<wgpu::Buffer>,
     uniform_texture: Option<(wgpu::TextureView, wgpu::Sampler)>,
     bind_group: Option<wgpu::BindGroup>,
 }
 
-impl UntypedShaderOptions {
+impl FinalShaderOptions {
     pub(crate) const EMPTY: Self = Self {
         uniform_data: None,
         uniform_texture: None,
         bind_group: None,
     };
 
-    pub(crate) fn from_typed<T>(options: ShaderOptions<T>, context: &GraphicsContext) -> Self {
+    pub(crate) fn from_intermediate(options: IntermediateOptions, context: &GraphicsContext) -> Self {
         let wgpu = &context.wgpu;
         let format = context.get_texture_format();
 

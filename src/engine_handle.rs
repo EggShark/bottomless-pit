@@ -27,7 +27,7 @@ use crate::render::{make_pipeline, render};
 use crate::resource::{
     InProgressResource, Resource, ResourceError, ResourceId, ResourceManager, ResourceType,
 };
-use crate::shader::{Shader, UntypedShaderOptions};
+use crate::shader::{FinalShaderOptions, IntermediateOptions, Shader};
 use crate::text::{Font, TextRenderer};
 use crate::texture::{SamplerType, Texture};
 use crate::vectors::Vec2;
@@ -603,11 +603,13 @@ impl Engine {
         &mut self,
         data: Vec<u8>,
         id: NonZeroU64,
-        options: UntypedShaderOptions,
+        options: IntermediateOptions,
         path: &Path,
     ) {
+        let final_option = FinalShaderOptions::from_intermediate(options, self.context.as_ref().unwrap());
+
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
-        let shader = Shader::from_resource_data(&data, options, self);
+        let shader = Shader::from_resource_data(&data, final_option, self);
         match shader {
             Ok(shader) => {
                 self.resource_manager.insert_pipeline(typed_id, shader);

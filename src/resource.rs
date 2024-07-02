@@ -46,7 +46,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU64;
 
 use crate::engine_handle::{BpEvent, Engine};
-use crate::shader::{Shader, UntypedShaderOptions};
+use crate::shader::{IntermediateOptions, Shader};
 use crate::text::Font;
 use crate::texture::{SamplerType, Texture};
 
@@ -193,7 +193,7 @@ impl InProgressResource {
 #[derive(Debug)]
 pub(crate) enum ResourceType {
     Image(SamplerType, SamplerType),
-    Shader(UntypedShaderOptions),
+    Shader(IntermediateOptions),
     Bytes,
     Font,
 }
