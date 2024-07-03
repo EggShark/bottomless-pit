@@ -20,7 +20,7 @@ use crate::colour::Colour;
 use crate::context::WgpuClump;
 use crate::engine_handle::Engine;
 use crate::matrix_math::normalize_points;
-use crate::render::Renderer;
+use crate::render::{RenderHandle, Renderer};
 use crate::resource::ResourceId;
 use crate::shader::{Shader, UniformData, UniformError};
 use crate::texture::{Texture, UniformTexture};
@@ -386,7 +386,7 @@ impl<T> Material<T> {
     /// This will fail in the event that the shader has not loaded yet or
     /// if the shader used to create the material never had an UniformTexture.
     pub fn resize_uniform_texture(&mut self, texture: &mut UniformTexture, size: Vec2<u32>, engine: &mut Engine) -> Result<(), UniformError> {
-        let context = match &mut engine.context {
+        let context = match &engine.context {
             Some(c) => c,
             None => return Ok(()),
             // the context hasnt been created yet this also means there
@@ -403,8 +403,29 @@ impl<T> Material<T> {
 
         texture.resize(size, &context.wgpu, texture_format);
 
-        options.update_uniform_texture(texture, &context.wgpu)?;
+        options.update_uniform_texture(texture, &context.wgpu, texture_format)?;
 
+        Ok(())
+    }
+
+    pub fn update_uniform_texture(&mut self, texture: &mut UniformTexture, engine: &mut Engine) -> Result<(), UniformError> {
+        let context = match &engine.context {
+            Some(c) => c,
+            None => return Ok(()),
+            // the context hasnt been created yet this also means there
+            // is no reason for you to resize unless ur being silly for no
+            // reason
+        };
+
+        let texture_format = context.get_texture_format();
+        
+        let options = match engine.resource_manager.get_mut_shader(&self.pipeline_id) {
+            Some(shader) => shader,
+            None => Err(UniformError::NotLoadedYet)?,
+        };
+
+        options.update_uniform_texture(texture, &context.wgpu, texture_format)?;
+        
         Ok(())
     }
 

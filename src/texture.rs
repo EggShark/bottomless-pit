@@ -307,8 +307,20 @@ impl UniformTexture {
         self.inner_texture.as_mut().unwrap().make_render_view()
     }
 
-    pub(crate) fn make_view(&self) -> wgpu::TextureView {
+    pub(crate) fn make_view(&mut self, wgpu: &WgpuClump, format: wgpu::TextureFormat) -> wgpu::TextureView {
+        if self.inner_texture.is_none() {
+            self.inner_texture = Some(InnerTexture::from_wgpu(self.size, self.mag_sampler, self.min_sampler, format, wgpu));
+        }
+
         self.inner_texture.as_ref().unwrap().make_view()
+    }
+
+    pub(crate) fn updated(&mut self) {
+        self.needs_update = false;
+    }
+
+    pub(crate) fn needs_update(&self) -> bool {
+        self.needs_update
     }
 }
 
@@ -363,7 +375,10 @@ impl InnerTexture {
             view_formats: &[],
         });
 
-        let new_view = self.make_view();
+        let new_view = inner_texture.create_view(&wgpu::TextureViewDescriptor {
+            label: Some("Uniform Texture View"),
+            ..Default::default()
+        });
 
         self.inner_texture = inner_texture;
         self.view = new_view;

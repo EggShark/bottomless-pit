@@ -9,7 +9,7 @@ use std::string::FromUtf8Error;
 
 use encase::private::WriteInto;
 use encase::ShaderType;
-use wgpu::include_wgsl;
+use wgpu::{include_wgsl, TextureFormat};
 use wgpu::util::DeviceExt;
 
 use crate::context::{GraphicsContext, WgpuClump};
@@ -134,8 +134,8 @@ impl Shader {
         self.options.update_uniform_data(data, engine)
     }
 
-    pub(crate) fn update_uniform_texture(&mut self, texture: &UniformTexture, wgpu: &WgpuClump) -> Result<(), UniformError> {
-        self.options.update_uniform_texture(texture, wgpu)
+    pub(crate) fn update_uniform_texture(&mut self, texture: &mut UniformTexture, wgpu: &WgpuClump, format: TextureFormat) -> Result<(), UniformError> {
+        self.options.update_uniform_texture(texture, wgpu, format)
     }
 
     pub(crate) fn set_active<'o, 'p>(&'o self, renderer: &mut Renderer<'o, 'p>) {
@@ -369,10 +369,15 @@ impl FinalShaderOptions {
         }
     }
 
-    fn update_uniform_texture(&mut self, texture: &UniformTexture, wgpu: &WgpuClump) -> Result<(), UniformError> {
+    fn update_uniform_texture(&mut self, texture: &mut UniformTexture, wgpu: &WgpuClump, format: wgpu::TextureFormat) -> Result<(), UniformError> {
+        if !texture.needs_update() {
+            Ok(())?;
+        }
+
+        texture.updated();
         match &mut self.uniform_texture {
             Some(view) => {
-                view.0 = texture.make_view();
+                view.0 = texture.make_view(wgpu, format);
 
                 self.bind_group = Some(wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("Shader Options BindGroup"),

@@ -99,12 +99,12 @@ pub struct RenderHandle<'a> {
     // ME WHEN BC HACKS :3
     encoder: Option<wgpu::CommandEncoder>,
     surface: Option<wgpu::SurfaceTexture>,
-    resources: &'a ResourceManager,
+    pub(crate) resources: &'a ResourceManager,
     defualt_id: ResourceId<Shader>,
     defualt_view: wgpu::TextureView,
     defualt_view_size: Vec2<u32>,
     camera_bindgroup: &'a wgpu::BindGroup,
-    wgpu: &'a WgpuClump,
+    pub(crate) wgpu: &'a WgpuClump,
     format: wgpu::TextureFormat,
     sampler: &'a wgpu::Sampler,
 }

@@ -92,6 +92,8 @@ impl Game for TextureExample {
         self.light.pos_x = mouse_pos.x / window_size.x as f32;
         self.light.pos_y = mouse_pos.y / window_size.y as f32;
         self.material.update_uniform_data(&self.light, &engine_handle).unwrap();
+
+        self.material.update_uniform_texture(&mut self.uniform_texture, engine_handle).unwrap_or_else(|_| {});
     }
 
     fn on_resize(&mut self, new_size: Vec2<u32>, engine_handle: &mut Engine) {

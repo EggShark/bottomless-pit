@@ -689,7 +689,8 @@ impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
             match event {
                 WindowEvent::CloseRequested => event_loop.exit(),
                 WindowEvent::Resized(physical_size) => {
-                    engine.resize(physical_size.into())
+                    engine.resize(physical_size.into());
+                    game.on_resize(physical_size.into(), engine);
                 }
                 WindowEvent::RedrawRequested => {
                     if engine.is_loading() {
