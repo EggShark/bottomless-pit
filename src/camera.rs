@@ -22,7 +22,6 @@ use glam::Mat3;
 use wgpu::util::DeviceExt;
 
 use crate::context::WgpuClump;
-use crate::engine_handle::Engine;
 use crate::layouts;
 use crate::render::Renderer;
 use crate::vectors::Vec2;
@@ -39,20 +38,13 @@ pub struct Camera {
 }
 
 impl Camera {
-    /// creates a new camera with these values:
-    /// ```rust
-    /// Camera {
-    ///     center: Vec2{x : 0.0, y: 0.0},
-    ///     rotation: 0.0,
-    ///     scale: Vec2{x: 1.0, y: 1.0},
-    /// }
-    /// ```
-    pub fn new(engine: &Engine) -> Self {
+    /// creates a new camera with center point, rotation and scale.
+    pub fn new(center: Vec2<f32>, rotation: f32, scale: Vec2<f32>) -> Self {
         Self {
             inner: None,
-            center: Vec2{x: 0.0, y: 0.0},
-            rotation: 0.0,
-            scale: Vec2{x: 1.0, y: 1.0},
+            center,
+            rotation,
+            scale,
         }
     }
 
@@ -125,6 +117,25 @@ impl Camera {
         self.write_matrix(renderer.wgpu, renderer.size);
 
         renderer.pass.set_bind_group(1, &self.inner.as_ref().unwrap().bind_group, &[]);
+    }
+}
+
+impl Default for Camera {
+    /// creates a new camera with these values:
+    /// ```rust
+    /// Camera {
+    ///     center: Vec2{x : 0.0, y: 0.0},
+    ///     rotation: 0.0,
+    ///     scale: Vec2{x: 1.0, y: 1.0},
+    /// }
+    /// ```
+    fn default() -> Self {
+        Self {
+            inner: None,
+            center: Vec2{x: 0.0, y: 0.0},
+            rotation: 0.0,
+            scale: Vec2{x: 1.0, y: 1.0},
+        }
     }
 }
 

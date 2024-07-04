@@ -54,7 +54,7 @@ impl Shader {
         options: FinalShaderOptions,
         engine: &Engine,
     ) -> Result<Self, FromUtf8Error> {
-        let context = engine.get_context().unwrap();
+        let context = engine.context.as_ref().unwrap();
 
         let string = String::from_utf8(data.to_vec())?;
         let shader = context
@@ -199,7 +199,7 @@ impl<T> ShaderOptions<T> {
     /// @group(2) @binding(0)
     /// var<uniform> mouse: MousePos;
     /// ```
-    pub fn with_uniform_data(engine: &Engine, data: &UniformData<T>) -> Self {
+    pub fn with_uniform_data(data: &UniformData<T>) -> Self {
 
         // dont like doing this bc clone expensive but we need 
         // to make this before wgpu initlizes
@@ -220,7 +220,7 @@ impl<T> ShaderOptions<T> {
     /// @group(2) @binding(1)
     /// var light_map_sampler: sampler;
     /// ```
-    pub fn with_uniform_texture(texture: &UniformTexture, engine: &Engine) -> Self {
+    pub fn with_uniform_texture(texture: &UniformTexture) -> Self {
         let (mag, min) = texture.get_sampler_info();
         let size = texture.get_size();
 
@@ -240,7 +240,7 @@ impl<T> ShaderOptions<T> {
     /// @group(2) @binding(2)
     /// var light_map_sampler: sampler;
     /// ```
-    pub fn with_all(engine: &Engine, data: &UniformData<T>, texture: &UniformTexture) -> Self {
+    pub fn with_all(data: &UniformData<T>, texture: &UniformTexture) -> Self {
         let starting_buffer = data.initial_data.clone();
         let (mag, min) = texture.get_sampler_info();
         let size = texture.get_size();
@@ -357,7 +357,7 @@ impl FinalShaderOptions {
     fn update_uniform_data<H: ShaderType + WriteInto>(&self, data: &H, engine: &Engine) -> Result<(), UniformError> {
         match &self.uniform_data {
             Some(buffer) => {
-                let wgpu = &engine.get_context().expect("NEED CONTEXT BEFORE UPDATING UNIFORM DATA").wgpu;
+                let wgpu = &engine.context.as_ref().expect("NEED CONTEXT BEFORE UPDATING UNIFORM DATA").wgpu;
                 let mut uniform_buffer = encase::UniformBuffer::new(Vec::new());
                 uniform_buffer.write(&data).unwrap();
                 let byte_array = uniform_buffer.into_inner();
@@ -375,6 +375,7 @@ impl FinalShaderOptions {
         }
 
         texture.updated();
+
         match &mut self.uniform_texture {
             Some(view) => {
                 view.0 = texture.make_view(wgpu, format);
@@ -389,10 +390,6 @@ impl FinalShaderOptions {
             },
             None => Err(UniformError::DoesntHaveUniformTexture)
         }
-    }
-
-    pub(crate) fn check_has(&self) -> (bool, bool) {
-        (self.uniform_data.is_some(), self.uniform_texture.is_some())
     }
 }
 

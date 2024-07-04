@@ -7,33 +7,30 @@
 use futures::executor::ThreadPool;
 use glyphon::{Attrs, Metrics, Shaping};
 
-use image::{GenericImageView, ImageError};
+use image::ImageError;
 use spin_sleep::SpinSleeper;
 use winit::application::ApplicationHandler;
 use std::num::NonZeroU64;
 use std::path::Path;
-use std::sync::Arc;
 use web_time::Instant;
-use wgpu::util::DeviceExt;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
 use winit::error::OsError;
 use winit::event::*;
 use winit::event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy};
-use winit::window::{BadIcon, Window};
+use winit::window::BadIcon;
 
 use crate::context::{GraphicsContext, WindowOptions};
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
-use crate::render::{make_pipeline, render};
+use crate::render::render;
 use crate::resource::{
     InProgressResource, Resource, ResourceError, ResourceId, ResourceManager, ResourceType,
 };
 use crate::shader::{FinalShaderOptions, IntermediateOptions, Shader};
-use crate::text::{Font, TextRenderer};
+use crate::text::Font;
 use crate::texture::{SamplerType, Texture};
 use crate::vectors::Vec2;
-use crate::vertex::LineVertex;
 use crate::{layouts, Game};
-use crate::{resource, WHITE_PIXEL};
+use crate::resource;
 
 /// The thing that makes the computer go
 pub struct Engine {
@@ -460,21 +457,13 @@ impl Engine {
         self.defualt_resources.line_pipeline_id
     }
 
-    pub(crate) fn get_context(&self) -> Option<&GraphicsContext> {
-        self.context.as_ref()
-    }
-
-    pub(crate) fn get_mut_context(&mut self) -> Option<&mut GraphicsContext> {
-        self.context.as_mut()
-    }
-
     #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn thread_pool(&self) -> &ThreadPool {
         &self.thread_pool
     }
 
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
-    pub fn run<T: 'static>(mut self, mut game: T)
+    pub fn run<T: 'static>(mut self, game: T)
     where
         T: Game,
     {
@@ -534,12 +523,6 @@ impl Engine {
                 48,
                 bytemuck::cast_slice(&[new_size.x as f32, new_size.y as f32]),
             );
-        }
-    }
-
-    fn handle_user_event(&mut self, event: BpEvent) {
-        match event {
-            BpEvent::ResourceLoaded(resource) => self.handle_resource(resource),
         }
     }
 
@@ -716,14 +699,14 @@ impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
         }
     }
 
-    fn user_event(&mut self, event_loop: &ActiveEventLoop, event: BpEvent) {
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: BpEvent) {
         let (engine, _) = self;
         match event {
             BpEvent::ResourceLoaded(resource) => engine.handle_resource(resource),
         }
     }
 
-    fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+    fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
         let (engine, _) = self;
         engine.context.as_ref().unwrap().window.request_redraw();
         

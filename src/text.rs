@@ -44,7 +44,7 @@ use glyphon::{
 
 use crate::colour::Colour;
 use crate::engine_handle::Engine;
-use crate::context::{GraphicsContext, WgpuClump};
+use crate::context::WgpuClump;
 use crate::{layouts, vec2};
 use crate::material::{self, Material};
 use crate::matrix_math::normalize_points;
@@ -141,7 +141,6 @@ impl TextMaterial {
         colour: Colour,
         font_size: f32,
         line_height: f32,
-        engine: &mut Engine,
     ) -> Self {
 
         Self {
@@ -842,19 +841,6 @@ impl Font {
         resource::start_load(engine, ip_resource);
 
         engine.add_in_progress_resource();
-        typed_id
-    }
-
-    /// Attempts to load in a Shader from a byte array. This will not halt the
-    /// engine, please check the [resource module](crate::resource) for more information.
-    pub fn from_bytes(data: &[u8], engine: &mut Engine) -> ResourceId<Font> {
-        todo!();
-
-        // let font = engine.text_renderer.load_font_from_bytes(data);
-        let typed_id = resource::generate_id::<Font>();
-
-        // engine.resource_manager.insert_font(typed_id, font);
-
         typed_id
     }
 

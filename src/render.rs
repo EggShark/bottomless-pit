@@ -6,7 +6,6 @@ use crate::context::WgpuClump;
 use crate::engine_handle::Engine;
 use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
-use crate::text::TextRenderer;
 use crate::texture::UniformTexture;
 use crate::vectors::Vec2;
 use crate::{Game, vec2};
@@ -106,7 +105,6 @@ pub struct RenderHandle<'a> {
     camera_bindgroup: &'a wgpu::BindGroup,
     pub(crate) wgpu: &'a WgpuClump,
     format: wgpu::TextureFormat,
-    sampler: &'a wgpu::Sampler,
 }
 
 impl<'a> RenderHandle<'a> {
@@ -135,7 +133,6 @@ impl<'a> RenderHandle<'a> {
             resources: &self.resources,
             camera_bindgroup: &self.camera_bindgroup,
             wgpu: &self.wgpu,
-            sampler: &self.sampler,
         }
     }
 
@@ -166,7 +163,6 @@ impl<'a> RenderHandle<'a> {
             resources: &self.resources,
             camera_bindgroup: &self.camera_bindgroup,
             wgpu: &self.wgpu,
-            sampler: &self.sampler,
         }
     }
 
@@ -217,7 +213,6 @@ impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
             camera_bindgroup: &context.camera_bind_group,
             wgpu: &context.wgpu,
             format: context.get_texture_format(),
-            sampler: &context.texture_sampler,
         }
     }
 }
@@ -237,7 +232,6 @@ pub struct Renderer<'o, 'p> where 'o: 'p {
     pub(crate) defualt_id: ResourceId<Shader>,
     pub(crate) camera_bindgroup: &'o wgpu::BindGroup,
     pub(crate) wgpu: &'o WgpuClump,
-    pub(crate) sampler: &'o wgpu::Sampler,
 }
 
 impl<'p, 'o> Renderer<'p, 'o> {

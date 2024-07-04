@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use crate::engine_handle::{DefualtResources, EngineBuilder};
-use crate::resource::{ResourceManager, ResourceId};
-use crate::{resource, WHITE_PIXEL};
+use crate::resource::ResourceManager;
+use crate::WHITE_PIXEL;
 use crate::layouts;
 use crate::render::make_pipeline;
 use crate::text::TextRenderer;

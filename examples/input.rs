@@ -7,11 +7,11 @@ use bottomless_pit::Game;
 use bottomless_pit::vec2;
 
 fn main() {
-    let mut engine = EngineBuilder::new()
+    let engine = EngineBuilder::new()
         .build()
         .unwrap();
 
-    let text_mat = TextMaterial::new("this is a test", Colour::RED, 20.0, 20.0 * 1.3, &mut engine);
+    let text_mat = TextMaterial::new("this is a test", Colour::RED, 20.0, 20.0 * 1.3);
 
     let text_example = TextExample { text_mat, text: String::new()};
 

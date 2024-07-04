@@ -18,9 +18,9 @@ fn main() {
         .add_texture(texture)
         .build(&mut engine);
     
-    let camera = Camera::new(&engine);
+    let camera = Camera::default();
 
-    let text = TextMaterial::new("Mouse pos: 0,0 \n Mouse pos: 0, 0", Colour::WHITE, 15.0, 20.0, &mut engine);
+    let text = TextMaterial::new("Mouse pos: 0,0 \n Mouse pos: 0, 0", Colour::WHITE, 15.0, 20.0);
 
     let game = CameraExample {
         material,

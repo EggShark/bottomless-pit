@@ -30,7 +30,7 @@ fn main() {
 
     let light_data = UniformData::new(&light);
 
-    let shader_options = ShaderOptions::with_all(&engine, &light_data, &uniform_texture);
+    let shader_options = ShaderOptions::with_all(&light_data, &uniform_texture);
     let light_shader = Shader::new("examples/light.wgsl", shader_options, &mut engine);
 
     let material = MaterialBuilder::new()

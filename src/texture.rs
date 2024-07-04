@@ -1,7 +1,7 @@
 //! Cointains the interface into the texture cache and by
 //! extension accsss the texture interface
 
-use crate::context::{GraphicsContext, WgpuClump};
+use crate::context::WgpuClump;
 use crate::engine_handle::Engine;
 use crate::resource::{self, InProgressResource, ResourceId, ResourceType};
 use crate::vectors::Vec2;
@@ -124,7 +124,7 @@ impl Texture {
     }
 
     fn from_image(engine: &Engine, img: image::DynamicImage, label: Option<&str>, mag_filter: SamplerType, min_filter: SamplerType) -> Self {
-        let wgpu = &engine.get_context().expect("need graphic context").wgpu;
+        let wgpu = &engine.context.as_ref().expect("need graphic context").wgpu;
         let diffuse_rgba = img.to_rgba8();
         let (width, height) = img.dimensions();
 
@@ -246,7 +246,8 @@ impl UniformTexture {
     /// [Material::resize_uniform_texture](crate::material::Material::resize_uniform_texture)
     pub fn new(engine: &Engine, size: Vec2<u32>) -> Self {
         let inner_texture = engine
-            .get_context()
+            .context
+            .as_ref()
             .and_then(|c| Some(InnerTexture::from_wgpu(size, SamplerType::LinearInterpolation, SamplerType::NearestNeighbor, c.get_texture_format(), &c.wgpu)));
 
         Self {
@@ -263,7 +264,8 @@ impl UniformTexture {
     /// smaller than the original resolution.
     pub fn new_with_sampler(engine: &Engine, size: Vec2<u32>, mag_sampler: SamplerType, min_sampler: SamplerType) -> Self {
         let inner_texture = engine
-            .get_context()
+            .context
+            .as_ref()
             .and_then(|c| Some(InnerTexture::from_wgpu(size, mag_sampler, min_sampler, c.get_texture_format(), &c.wgpu)));
 
         Self {

@@ -28,7 +28,7 @@ fn main() {
 
     let uniform_data = UniformData::new(&data);
 
-    let mouse_shader = Shader::new("examples/sinewaves.wgsl", ShaderOptions::with_uniform_data(&engine, &uniform_data), &mut engine);
+    let mouse_shader = Shader::new("examples/sinewaves.wgsl", ShaderOptions::with_uniform_data(&uniform_data), &mut engine);
 
     let regular_material = MaterialBuilder::new()
         .set_shader(mouse_shader)

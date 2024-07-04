@@ -14,7 +14,7 @@ fn main() {
         .unwrap();
 
     let comic = Font::new("examples/Comic.ttf", &mut engine);
-    let text_mat = TextMaterial::new("this is a test", Colour::RED, 0.5, 0.5 * 1.3, &mut engine);
+    let text_mat = TextMaterial::new("this is a test", Colour::RED, 0.5, 0.5 * 1.3);
 
     let text_example = TextExample { text_mat, comic, font_size: 0.5};
 

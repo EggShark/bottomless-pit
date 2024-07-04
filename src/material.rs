@@ -20,7 +20,7 @@ use crate::colour::Colour;
 use crate::context::WgpuClump;
 use crate::engine_handle::Engine;
 use crate::matrix_math::normalize_points;
-use crate::render::{RenderHandle, Renderer};
+use crate::render::Renderer;
 use crate::resource::ResourceId;
 use crate::shader::{Shader, UniformData, UniformError};
 use crate::texture::{Texture, UniformTexture};
