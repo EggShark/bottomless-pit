@@ -38,6 +38,25 @@ impl Texture {
         typed_id
     }
 
+    
+    pub fn new_blocking<P: AsRef<Path>>(engine: &mut Engine, path: P) -> ResourceId<Texture> {
+        let typed_id = resource::generate_id::<Texture>();
+        #[cfg(not(target_arch="wasm32"))]
+        {
+            if engine.context.is_none() {
+                // preload
+                
+            } else {
+                let data = engine.loader.blocking_load::<_, Texture>(path, &engine, engine.get_proxy());
+            }
+        }
+        #[cfg(target_arch="wasm32")]
+        {
+            
+        }
+        typed_id
+    }
+
     /// Attempts to both read a file at the specified path and turn it into an image. This will halt the engine
     /// untill loading is finished please see the [resource module](crate::resource) module for more information
     /// on how resource loading works. This also lets you choose how you would like the texture sampled when 
@@ -71,26 +90,6 @@ impl Texture {
 
         resource::start_load(engine, ip_resource);
         engine.add_in_progress_resource();
-
-        typed_id
-    }
-
-    /// Attempts to load an image from a byte array. This is done staticly as it does not halt the engine
-    /// for more information on resource loading see [resource module](crate::resource).
-    pub fn from_btyes(
-        engine: &mut Engine,
-        label: Option<&str>,
-        bytes: &[u8],
-    ) -> ResourceId<Texture> {
-        let img = image::load_from_memory(bytes)
-            .map(|img| Self::from_image(engine, img, label, SamplerType::LinearInterpolation, SamplerType::NearestNeighbor))
-            .unwrap_or_else(|e| {
-                log::warn!("{}, occured loading default", e);
-                Self::default(engine)
-            });
-
-        let typed_id = resource::generate_id::<Texture>();
-        engine.resource_manager.insert_texture(typed_id, img);
 
         typed_id
     }

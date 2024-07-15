@@ -44,6 +44,9 @@ use std::marker::PhantomData;
 use std::num::NonZeroU64;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
+
+use winit::event_loop::EventLoopProxy;
 
 use crate::engine_handle::{BpEvent, Engine};
 use crate::shader::{IntermediateOptions, Shader};
@@ -107,6 +110,8 @@ impl From<std::io::Error> for ReadError {
 
 pub(crate) struct Loader {
     items_loading: usize,
+    // for items that were laoded before engine.run()
+    preload_queue: Vec<InProgressResource>,
     #[cfg(not(target_arch="wasm32"))]
     pool: ThreadPool,
     #[cfg(target_arch = "wasm32")]
@@ -114,16 +119,41 @@ pub(crate) struct Loader {
 }
 
 impl Loader {
+    pub fn new() -> Self {
+        Self {
+            items_loading: 0,
+            preload_queue: Vec::new(),
+            #[cfg(not(target_arch="wasm32"))]
+            pool: ThreadPool::new().unwrap(),
+            #[cfg(target_arch = "wasm32")]
+            blocked: false,
+        }
+    }
+
     // just fs read that stuff man
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn blocking_load<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, std::io::Error>  {
+    pub fn blocking_load<P: AsRef<Path>, T: GetBackUp>(&self, path: P, engine: &Engine, _: EventLoopProxy<BpEvent>) -> ResourceId<T> {
+
         let data = std::fs::read(path);
-        todo!()
+
+        match data {
+            Ok(d) => todo!(),
+            Err(e) => return T::go(engine)
+        }
+        // now what ?
     }
 
     // request but flip flag :3
     #[cfg(target_arch = "wasm32")]
     pub fn blocking_load() {
+
+    }
+
+    fn preload(&mut self) {
+
+    }
+
+    pub fn execute_preload_queue(&mut self) {
 
     }
 
@@ -347,5 +377,21 @@ impl ResourceManager {
 
     pub fn get_mut_shader(&mut self, key: &ResourceId<Shader>) -> Option<&mut Shader> {
         self.pipeline_resource.get_mut(key)
+    }
+}
+
+pub(crate) trait GetBackUp {
+    fn go(engine: &Engine) -> ResourceId<Self> where Self: Sized;
+}
+
+impl GetBackUp for Texture {
+    fn go(engine: &Engine) -> ResourceId<Texture> {
+        engine.defualt_resources.defualt_texture_id
+    }
+}
+
+impl GetBackUp for Shader {
+    fn go(engine: &Engine) -> ResourceId<Self> where Self: Sized {
+        engine.defualt_resources.default_pipeline_id
     }
 }

@@ -23,7 +23,7 @@ use crate::context::{GraphicsContext, WindowOptions};
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::render;
 use crate::resource::{
-    InProgressResource, Resource, ResourceError, ResourceId, ResourceManager, ResourceType,
+    InProgressResource, Loader, Resource, ResourceError, ResourceId, ResourceManager, ResourceType
 };
 use crate::shader::{FinalShaderOptions, IntermediateOptions, Shader};
 use crate::text::Font;
@@ -49,7 +49,8 @@ pub struct Engine {
     in_progress_resources: u32,
     pub(crate) context: Option<GraphicsContext>,
     pub(crate) resource_manager: ResourceManager,
-    defualt_resources: DefualtResources,
+    pub(crate) loader: Loader,
+    pub(crate) defualt_resources: DefualtResources,
     #[cfg(not(target_arch = "wasm32"))]
     thread_pool: ThreadPool,
     ma_frame_time: f32,
@@ -104,6 +105,7 @@ impl Engine {
             in_progress_resources: 0,
             context: None,
             resource_manager,
+            loader: Loader::new(),
             defualt_resources,
             #[cfg(not(target_arch = "wasm32"))]
             thread_pool: ThreadPool::new().expect("Failed To Make Pool"),

@@ -55,7 +55,6 @@ impl Game for TextureExample {
 
     fn update(&mut self, engine_handle: &mut Engine) {
         let dt = engine_handle.get_frame_delta_time();
-        println!("{}", dt);
         if engine_handle.is_mouse_key_pressed(MouseKey::Left) {
             std::mem::swap(&mut self.other, &mut self.current);
         }
