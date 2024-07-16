@@ -645,7 +645,11 @@ impl Engine {
     }
 
     pub(crate) fn is_loading(&self) -> bool {
-        self.in_progress_resources > 0
+        #[cfg(not(target_arch="wasm32"))]
+        { false }
+
+        #[cfg(target_arch="wasm32")]
+        { self.loader.is_blocked() } 
     }
 }
 

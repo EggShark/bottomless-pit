@@ -55,6 +55,37 @@ use crate::texture::{SamplerType, Texture};
 
 use futures::executor::ThreadPool;
 
+#[cfg(target_arch = "wasm32")]
+fn web_read<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, ReadError> {
+    use js_sys::Uint8Array;
+    use wasm_bindgen::JsCast;
+    use wasm_bindgen_futures::JsFuture;
+
+    let path = path.as_ref().as_os_str().to_str().unwrap();
+
+    match web_sys::window() {
+        Some(window) => {
+            let response_value = JsFuture::from(window.fetch_with_str(path)).await.unwrap();
+
+            let response: web_sys::Response = response_value.dyn_into().unwrap();
+
+            if !response.ok() {
+                Err(ReadError::ResponseError(
+                    response.status(),
+                    response.status_text(),
+                ))?;
+            }
+
+            let data = JsFuture::from(response.array_buffer().unwrap())
+                .await
+                .unwrap();
+            let bytes = Uint8Array::new(&data).to_vec();
+            Ok(bytes)
+        }
+        None => Err(ReadError::WindowError),
+    }
+}
+
 pub(crate) async fn read<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, ReadError> {
     #[cfg(target_arch = "wasm32")]
     {
@@ -130,23 +161,42 @@ impl Loader {
         }
     }
 
+    pub fn get_loading_resources(&self) -> usize {
+        self.items_loading
+    }
+
+    #[cfg(target_arch="wasm32")]
+    pub fn is_blocked(&self) -> bool {
+        self.blocked
+    }
+
     // just fs read that stuff man
+    // becuase this is all happening on the main thread stuff will be read in before
+    // render() is called
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn blocking_load<P: AsRef<Path>, T: GetBackUp>(&self, path: P, engine: &Engine, _: EventLoopProxy<BpEvent>) -> ResourceId<T> {
+    pub fn blocking_load(&mut self, ip_resource: InProgressResource, proxy: EventLoopProxy<BpEvent>) {
+        let data: Result<Vec<u8>, ReadError> = match std::fs::read(&ip_resource.path) {
+            Ok(d) => Ok(d),
+            Err(e) => Err(e.into())
+        };
 
-        let data = std::fs::read(path);
-
-        match data {
-            Ok(d) => todo!(),
-            Err(e) => return T::go(engine)
-        }
-        // now what ?
+        let resource = Resource::from_result(data, ip_resource.path, ip_resource.id, ip_resource.resource_type);
+        self.items_loading += 1;
+        proxy.send_event(BpEvent::ResourceLoaded(resource)).unwrap();
     }
 
     // request but flip flag :3
     #[cfg(target_arch = "wasm32")]
-    pub fn blocking_load() {
-
+    pub fn blocking_load(&mut self, ip_resource: InProgressResource, proxy: EventLoopProxy<BpEvent>) {
+        self.items_loading += 1;
+        self.blocked = true;
+        spawn_local(async move {
+            let result = web_read(&ip_resource.path).await;
+            let resource = Resource::from_result(result, ip_resource.path, id, resource_type);
+            event_loop_proxy
+                .send_event(BpEvent::ResourceLoaded(resource))
+                .unwrap();
+        });
     }
 
     fn preload(&mut self) {
@@ -377,21 +427,5 @@ impl ResourceManager {
 
     pub fn get_mut_shader(&mut self, key: &ResourceId<Shader>) -> Option<&mut Shader> {
         self.pipeline_resource.get_mut(key)
-    }
-}
-
-pub(crate) trait GetBackUp {
-    fn go(engine: &Engine) -> ResourceId<Self> where Self: Sized;
-}
-
-impl GetBackUp for Texture {
-    fn go(engine: &Engine) -> ResourceId<Texture> {
-        engine.defualt_resources.defualt_texture_id
-    }
-}
-
-impl GetBackUp for Shader {
-    fn go(engine: &Engine) -> ResourceId<Self> where Self: Sized {
-        engine.defualt_resources.default_pipeline_id
     }
 }

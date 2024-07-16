@@ -41,19 +41,17 @@ impl Texture {
     
     pub fn new_blocking<P: AsRef<Path>>(engine: &mut Engine, path: P) -> ResourceId<Texture> {
         let typed_id = resource::generate_id::<Texture>();
-        #[cfg(not(target_arch="wasm32"))]
-        {
-            if engine.context.is_none() {
-                // preload
-                
-            } else {
-                let data = engine.loader.blocking_load::<_, Texture>(path, &engine, engine.get_proxy());
-            }
-        }
-        #[cfg(target_arch="wasm32")]
-        {
+        let id = typed_id.get_id();
+        let path = path.as_ref();
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor));
+
+        if engine.context.is_none() {
+            // preload
             
+        } else {
+            engine.loader.blocking_load(ip_resource, engine.get_proxy());
         }
+        
         typed_id
     }
 
