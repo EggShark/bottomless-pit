@@ -838,9 +838,8 @@ impl Font {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Font);
 
-        resource::start_load(engine, ip_resource);
+        engine.loader.blocking_load(ip_resource, engine.get_proxy());
 
-        engine.add_in_progress_resource();
         typed_id
     }
 

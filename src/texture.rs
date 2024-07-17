@@ -32,9 +32,8 @@ impl Texture {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor));
 
-        resource::start_load(engine, ip_resource);
+        engine.loader.blocking_load(ip_resource, engine.get_proxy());
 
-        engine.add_in_progress_resource();
         typed_id
     }
 
@@ -51,7 +50,7 @@ impl Texture {
         } else {
             engine.loader.blocking_load(ip_resource, engine.get_proxy());
         }
-        
+
         typed_id
     }
 
@@ -68,8 +67,7 @@ impl Texture {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image(sampler, sampler));
 
-        resource::start_load(engine, ip_resource);
-        engine.add_in_progress_resource();
+        engine.loader.blocking_load(ip_resource, engine.get_proxy());
 
         typed_id
     }
@@ -86,8 +84,7 @@ impl Texture {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image(mag_sampler, min_sampler));
 
-        resource::start_load(engine, ip_resource);
-        engine.add_in_progress_resource();
+        engine.loader.blocking_load(ip_resource, engine.get_proxy());
 
         typed_id
     }

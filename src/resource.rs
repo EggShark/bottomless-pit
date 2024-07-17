@@ -161,6 +161,10 @@ impl Loader {
         }
     }
 
+    pub fn remove_item_loading(&mut self) {
+        self.items_loading -= 1;
+    }
+
     pub fn get_loading_resources(&self) -> usize {
         self.items_loading
     }
@@ -199,16 +203,37 @@ impl Loader {
         });
     }
 
+    // threadpool / aysnc
+    pub fn background_load(&mut self, ip_resource: InProgressResource, proxy: EventLoopProxy<BpEvent>) {
+        #[cfg(not(target_arch="wasm32"))]
+        {
+            self.pool.spawn_ok(async move {
+                let result = read(&ip_resource.path).await;
+                let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type);
+                proxy
+                    .send_event(BpEvent::ResourceLoaded(resource))
+                    .unwrap();
+            });
+        }
+
+        #[cfg(target_arch="wasm32")]
+        {
+            use wasm_bindgen_futures::spawn_local;
+            spawn_local(async move {
+                let result = web_read(&ip_resource.path).await;
+                let resource = Resource::from_result(result, ip_resource.path, id, resource_type);
+                proxy
+                    .send_event(BpEvent::ResourceLoaded(resource))
+                    .unwrap();
+            });
+        }
+    }
+
     fn preload(&mut self) {
 
     }
 
     pub fn execute_preload_queue(&mut self) {
-
-    }
-
-    // threadpool / aysnc
-    pub fn background_load() {
 
     }
 }
@@ -298,38 +323,6 @@ pub(crate) fn generate_id<T>() -> ResourceId<T> {
     static NEXT_ID: AtomicU64 = AtomicU64::new(1);
     let id = NEXT_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     ResourceId(NonZeroU64::new(id).unwrap(), PhantomData::<T>)
-}
-
-pub(crate) fn start_load(
-    engine: &Engine,
-    ip_resource: InProgressResource,
-) {
-    let id = ip_resource.id;
-    let resource_type = ip_resource.resource_type;
-    let event_loop_proxy = engine.get_proxy();
-    #[cfg(target_arch = "wasm32")]
-    {
-        use wasm_bindgen_futures::spawn_local;
-        spawn_local(async move {
-            let result = io::read(&ip_resource.path).await;
-            let resource = Resource::from_result(result, ip_resource.path, id, resource_type);
-            event_loop_proxy
-                .send_event(BpEvent::ResourceLoaded(resource))
-                .unwrap();
-        });
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let pool = engine.thread_pool();
-        pool.spawn_ok(async move {
-            let result = read(&ip_resource.path).await;
-            let resource = Resource::from_result(result, ip_resource.path, id, resource_type);
-            event_loop_proxy
-                .send_event(BpEvent::ResourceLoaded(resource))
-                .unwrap();
-        });
-    }
 }
 
 /// An Id for a specific type of resource used interally in the engine

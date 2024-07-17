@@ -46,13 +46,10 @@ pub struct Engine {
     spin_sleeper: SpinSleeper,
     current_frametime: Instant,
     size: Vec2<u32>,
-    in_progress_resources: u32,
     pub(crate) context: Option<GraphicsContext>,
     pub(crate) resource_manager: ResourceManager,
     pub(crate) loader: Loader,
     pub(crate) defualt_resources: DefualtResources,
-    #[cfg(not(target_arch = "wasm32"))]
-    thread_pool: ThreadPool,
     ma_frame_time: f32,
 }
 
@@ -102,13 +99,10 @@ impl Engine {
             current_frametime: Instant::now(),
             spin_sleeper: SpinSleeper::default(),
             size,
-            in_progress_resources: 0,
             context: None,
             resource_manager,
             loader: Loader::new(),
             defualt_resources,
-            #[cfg(not(target_arch = "wasm32"))]
-            thread_pool: ThreadPool::new().expect("Failed To Make Pool"),
             ma_frame_time: 0.0,
         })
     }
@@ -420,9 +414,7 @@ impl Engine {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Bytes);
 
-        resource::start_load(self, ip_resource);
-
-        self.in_progress_resources += 1;
+        self.loader.blocking_load(ip_resource, self.proxy.clone());
         typed_id
     }
 
@@ -433,10 +425,6 @@ impl Engine {
     /// for more information.
     pub fn get_byte_resource(&self, id: ResourceId<Vec<u8>>) -> Option<&Vec<u8>> {
         self.resource_manager.get_byte_resource(&id)
-    }
-
-    pub(crate) fn add_in_progress_resource(&mut self) {
-        self.in_progress_resources += 1;
     }
 
     pub(crate) fn get_proxy(&self) -> EventLoopProxy<BpEvent> {
@@ -458,12 +446,7 @@ impl Engine {
     pub(crate) fn line_pipe_id(&self) -> ResourceId<Shader> {
         self.defualt_resources.line_pipeline_id
     }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    pub(crate) fn thread_pool(&self) -> &ThreadPool {
-        &self.thread_pool
-    }
-
+    
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
     pub fn run<T: 'static>(mut self, game: T)
     where
@@ -530,7 +513,7 @@ impl Engine {
 
     fn handle_resource(&mut self, resource: Result<Resource, ResourceError>) {
         // remove ip resource
-        self.in_progress_resources -= 1;
+        self.loader.remove_item_loading();
 
         match resource {
             Ok(data) => match data.resource_type {
@@ -645,11 +628,12 @@ impl Engine {
     }
 
     pub(crate) fn is_loading(&self) -> bool {
-        #[cfg(not(target_arch="wasm32"))]
-        { false }
+        self.loader.get_loading_resources() > 0
+        // #[cfg(not(target_arch="wasm32"))]
+        // { false }
 
-        #[cfg(target_arch="wasm32")]
-        { self.loader.is_blocked() } 
+        // #[cfg(target_arch="wasm32")]
+        // { self.loader.is_blocked() } 
     }
 }
 
