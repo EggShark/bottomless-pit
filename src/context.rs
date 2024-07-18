@@ -41,25 +41,30 @@ impl GraphicsContext {
 
         #[cfg(target_arch = "wasm32")]
         {
-            use winit::platform::web::WindowExtWebSys;
-            let web_window = web_sys::window().ok_or(BuildError::CantGetWebWindow)?;
-            let canvas = web_sys::Element::from(window.canvas().unwrap());
-            let document = web_window.document().ok_or(BuildError::CantGetDocument)?;
+            use crate::engine_handle::BuildError;
+            use env_logger::builder;
 
-            match document.get_element_by_id(&builder.window_title) {
+            use winit::platform::web::WindowExtWebSys;
+
+            let title = window.title();
+            let web_window = web_sys::window().ok_or(BuildError::CantGetWebWindow).unwrap();
+            let canvas = web_sys::Element::from(window.canvas().unwrap());
+            let document = web_window.document().ok_or(BuildError::CantGetDocument).unwrap();
+
+            match document.get_element_by_id(&title) {
                 Some(element) => {
                     let array = js_sys::Array::new();
                     array.push(&wasm_bindgen::JsValue::from(canvas));
-                    element.replace_with_with_node(&array)?;
+                    element.replace_with_with_node(&array).unwrap();
                 }
                 None => {
                     log::warn!(
                         "coudn't find desitantion <canvas> with id: {}, appending to body",
-                        builder.window_title
+                        &title
                     );
-                    canvas.set_id(&builder.window_title);
-                    let body = document.body().ok_or(BuildError::CantGetBody)?;
-                    body.append_child(&canvas)?;
+                    canvas.set_id(&title);
+                    let body = document.body().ok_or(BuildError::CantGetBody).unwrap();
+                    body.append_child(&canvas).unwrap();
                 }
             }
         }

@@ -118,7 +118,12 @@ impl<T> Material<T> {
     ) {
         let wgpu = render.wgpu;
 
-        let texture_size = render.resources.get_texture(&self.texture_id).unwrap().size;
+        let texture_size = render
+            .resources
+            .get_texture(&self.texture_id)
+            .map(|t| t.size)
+            .unwrap_or(Vec2{x: 1.0, y: 1.0});
+            // doesnt matter what i put here bc the texture isnt loaded regardless
 
         let uv_size = normalize_points(uv_size, texture_size);
         let uv_position = normalize_points(uv_position, texture_size);
@@ -550,17 +555,19 @@ impl<T> Material<T> {
             return;
         }
 
-        let shader = information
+        // returns early bc stuff inst loaded so we just ignore it ! :3
+        let Some(shader) = information
             .resources
-            .get_pipeline(&self.pipeline_id)
-            .unwrap();
+            .get_pipeline(&self.pipeline_id) else {
+                return;
+            };
 
-        let texture = &information
+        let Some(texture) = information
             .resources
             .get_texture(&self.texture_id)
-            .unwrap()
-            .bind_group;
-
+            .map(|t| &t.bind_group) else {
+                return;
+            };
         // should never panic as the vertex == 0 means that there has been
         // some data put in which means this should be Some(T)
         let buffers = self.inner.as_ref().unwrap();
@@ -808,11 +815,12 @@ impl LineMaterial {
             return;
         }
 
-        let pipeline = &information
-            .resources
-            .get_pipeline(&self.pipe_id)
-            .unwrap()
-            .pipeline;
+        let Some(pipeline) = information
+        .resources
+        .get_pipeline(&self.pipe_id)
+        .map(|p| &p.pipeline) else {
+            return;
+        };
 
         let buffer = self.vertex_buffer.as_ref().unwrap();
 

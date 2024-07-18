@@ -56,10 +56,12 @@ use crate::texture::{SamplerType, Texture};
 use futures::executor::ThreadPool;
 
 #[cfg(target_arch = "wasm32")]
-fn web_read<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, ReadError> {
+async fn web_read<P: AsRef<Path>>(path: P) -> Result<Vec<u8>, ReadError> {
+    use env_logger::builder;
     use js_sys::Uint8Array;
     use wasm_bindgen::JsCast;
     use wasm_bindgen_futures::JsFuture;
+    use crate::engine_handle::BuildError;
 
     let path = path.as_ref().as_os_str().to_str().unwrap();
 
@@ -141,6 +143,8 @@ impl From<std::io::Error> for ReadError {
 
 pub(crate) struct Loader {
     items_loading: usize,
+    blocked_loading: usize,
+    background_loading: usize,
     // for items that were laoded before engine.run()
     preload_queue: Vec<InProgressResource>,
     #[cfg(not(target_arch="wasm32"))]
@@ -153,6 +157,8 @@ impl Loader {
     pub fn new() -> Self {
         Self {
             items_loading: 0,
+            background_loading: 0,
+            blocked_loading: 0,
             preload_queue: Vec::new(),
             #[cfg(not(target_arch="wasm32"))]
             pool: ThreadPool::new().unwrap(),
@@ -192,12 +198,13 @@ impl Loader {
     // request but flip flag :3
     #[cfg(target_arch = "wasm32")]
     pub fn blocking_load(&mut self, ip_resource: InProgressResource, proxy: EventLoopProxy<BpEvent>) {
+        use wasm_bindgen_futures::spawn_local;
         self.items_loading += 1;
         self.blocked = true;
         spawn_local(async move {
             let result = web_read(&ip_resource.path).await;
-            let resource = Resource::from_result(result, ip_resource.path, id, resource_type);
-            event_loop_proxy
+            let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type);
+            proxy
                 .send_event(BpEvent::ResourceLoaded(resource))
                 .unwrap();
         });
@@ -205,6 +212,7 @@ impl Loader {
 
     // threadpool / aysnc
     pub fn background_load(&mut self, ip_resource: InProgressResource, proxy: EventLoopProxy<BpEvent>) {
+        self.items_loading += 1;
         #[cfg(not(target_arch="wasm32"))]
         {
             self.pool.spawn_ok(async move {
@@ -221,7 +229,7 @@ impl Loader {
             use wasm_bindgen_futures::spawn_local;
             spawn_local(async move {
                 let result = web_read(&ip_resource.path).await;
-                let resource = Resource::from_result(result, ip_resource.path, id, resource_type);
+                let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type);
                 proxy
                     .send_event(BpEvent::ResourceLoaded(resource))
                     .unwrap();
@@ -229,12 +237,17 @@ impl Loader {
         }
     }
 
-    fn preload(&mut self) {
-
+    pub fn preload(&mut self, ip_resource: InProgressResource) {
+        self.preload_queue.push(ip_resource);
     }
 
-    pub fn execute_preload_queue(&mut self) {
+    pub fn execute_preload_queue(&mut self, proxy: EventLoopProxy<BpEvent>) {
+        let mut e_vec = Vec::new();
+        std::mem::swap(&mut self.preload_queue, &mut e_vec);
 
+        for item in e_vec {
+            self.blocking_load(item, proxy.clone());
+        }
     }
 }
 

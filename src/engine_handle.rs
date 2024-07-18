@@ -3,8 +3,6 @@
 //! builder lets you customize the engine at the start, and the
 //! Engine gives you access to all the crucial logic functions
 
-#[cfg(not(target_arch = "wasm32"))]
-use futures::executor::ThreadPool;
 use glyphon::{Attrs, Metrics, Shaping};
 
 use image::ImageError;
@@ -446,7 +444,7 @@ impl Engine {
     pub(crate) fn line_pipe_id(&self) -> ResourceId<Shader> {
         self.defualt_resources.line_pipeline_id
     }
-    
+
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
     pub fn run<T: 'static>(mut self, game: T)
     where
@@ -628,12 +626,12 @@ impl Engine {
     }
 
     pub(crate) fn is_loading(&self) -> bool {
-        self.loader.get_loading_resources() > 0
-        // #[cfg(not(target_arch="wasm32"))]
-        // { false }
+        // self.loader.get_loading_resources() > 0
+        #[cfg(not(target_arch="wasm32"))]
+        { false }
 
-        // #[cfg(target_arch="wasm32")]
-        // { self.loader.is_blocked() } 
+        #[cfg(target_arch="wasm32")]
+        { self.loader.is_blocked() } 
     }
 }
 
@@ -649,6 +647,7 @@ impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
                 &engine.defualt_resources,
             ))
         }
+        engine.loader.execute_preload_queue(engine.get_proxy());
     }
 
     fn window_event(

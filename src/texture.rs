@@ -32,7 +32,11 @@ impl Texture {
         let path = path.as_ref();
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor));
 
-        engine.loader.blocking_load(ip_resource, engine.get_proxy());
+        if engine.context.is_none() {
+            engine.loader.preload(ip_resource);
+        } else {
+            engine.loader.blocking_load(ip_resource, engine.get_proxy());
+        }
 
         typed_id
     }
@@ -45,8 +49,7 @@ impl Texture {
         let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor));
 
         if engine.context.is_none() {
-            // preload
-            
+            engine.loader.preload(ip_resource);
         } else {
             engine.loader.blocking_load(ip_resource, engine.get_proxy());
         }
