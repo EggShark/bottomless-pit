@@ -41,7 +41,7 @@ impl Shader {
         let typed_id = resource::generate_id::<Shader>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(options.into()));
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(options.into()), resource::LoadingOperation::Blocking);
 
         engine.loader.blocking_load(ip_resource, engine.get_proxy());
 

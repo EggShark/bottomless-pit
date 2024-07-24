@@ -21,7 +21,7 @@ use crate::context::{GraphicsContext, WindowOptions};
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::render;
 use crate::resource::{
-    InProgressResource, Loader, Resource, ResourceError, ResourceId, ResourceManager, ResourceType
+    InProgressResource, Loader, LoadingOperation, Resource, ResourceError, ResourceId, ResourceManager, ResourceType
 };
 use crate::shader::{FinalShaderOptions, IntermediateOptions, Shader};
 use crate::text::Font;
@@ -410,7 +410,7 @@ impl Engine {
         let typed_id = resource::generate_id::<Vec<u8>>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Bytes);
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Bytes, LoadingOperation::Blocking);
 
         self.loader.blocking_load(ip_resource, self.proxy.clone());
         typed_id
@@ -511,18 +511,21 @@ impl Engine {
 
     fn handle_resource(&mut self, resource: Result<Resource, ResourceError>) {
         // remove ip resource
-        self.loader.remove_item_loading();
+
 
         match resource {
-            Ok(data) => match data.resource_type {
-                ResourceType::Bytes => self.add_finished_bytes(data.data, data.id, &data.path),
-                ResourceType::Image(mag, min) => {
-                    self.add_finished_image(data.data, data.id, mag, min, &data.path)
+            Ok(data) => {
+                    self.loader.remove_item_loading(data.loading_op);
+                    match data.resource_type {
+                    ResourceType::Bytes => self.add_finished_bytes(data.data, data.id, &data.path),
+                    ResourceType::Image(mag, min) => {
+                        self.add_finished_image(data.data, data.id, mag, min, &data.path)
+                    }
+                    ResourceType::Shader(options) => {
+                        self.add_finished_shader(data.data, data.id, options, &data.path)
+                    }
+                    ResourceType::Font => self.add_finished_font(data),
                 }
-                ResourceType::Shader(options) => {
-                    self.add_finished_shader(data.data, data.id, options, &data.path)
-                }
-                ResourceType::Font => self.add_finished_font(data),
             },
             Err(e) => {
                 log::error!(
@@ -530,6 +533,9 @@ impl Engine {
                     e,
                     e.error
                 );
+
+                self.loader.remove_item_loading(e.loading_op);
+
                 match e.resource_type {
                     ResourceType::Bytes => self.add_defualt_bytes(e.id),
                     ResourceType::Image(..) => self.add_defualt_image(e.id),

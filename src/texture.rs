@@ -3,7 +3,7 @@
 
 use crate::context::WgpuClump;
 use crate::engine_handle::Engine;
-use crate::resource::{self, InProgressResource, ResourceId, ResourceType};
+use crate::resource::{self, InProgressResource, LoadingOperation, ResourceId, ResourceType};
 use crate::vectors::Vec2;
 use crate::{layouts, ERROR_TEXTURE_DATA};
 use image::{GenericImageView, ImageError};
@@ -30,7 +30,7 @@ impl Texture {
         let typed_id = resource::generate_id::<Texture>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor));
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor), LoadingOperation::Blocking);
 
         if engine.context.is_none() {
             engine.loader.preload(ip_resource);
@@ -46,7 +46,7 @@ impl Texture {
         let typed_id = resource::generate_id::<Texture>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor));
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor), LoadingOperation::Blocking);
 
         if engine.context.is_none() {
             engine.loader.preload(ip_resource);
@@ -68,7 +68,7 @@ impl Texture {
         let typed_id = resource::generate_id::<Texture>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(sampler, sampler));
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(sampler, sampler), LoadingOperation::Blocking);
 
         engine.loader.blocking_load(ip_resource, engine.get_proxy());
 
@@ -85,7 +85,7 @@ impl Texture {
         let typed_id = resource::generate_id::<Texture>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(mag_sampler, min_sampler));
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(mag_sampler, min_sampler), LoadingOperation::Blocking);
 
         engine.loader.blocking_load(ip_resource, engine.get_proxy());
 

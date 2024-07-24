@@ -49,7 +49,7 @@ use crate::{layouts, vec2};
 use crate::material::{self, Material};
 use crate::matrix_math::normalize_points;
 use crate::render::Renderer;
-use crate::resource::{self, InProgressResource, ResourceId, ResourceManager, ResourceType};
+use crate::resource::{self, InProgressResource, LoadingOperation, ResourceId, ResourceManager, ResourceType};
 use crate::vectors::Vec2;
 use crate::vertex::{self, Vertex};
 
@@ -836,7 +836,7 @@ impl Font {
         let typed_id = resource::generate_id::<Font>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Font);
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Font, LoadingOperation::Blocking);
 
         engine.loader.blocking_load(ip_resource, engine.get_proxy());
 

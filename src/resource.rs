@@ -142,42 +142,39 @@ impl From<std::io::Error> for ReadError {
 }
 
 pub(crate) struct Loader {
-    items_loading: usize,
     blocked_loading: usize,
     background_loading: usize,
     // for items that were laoded before engine.run()
     preload_queue: Vec<InProgressResource>,
     #[cfg(not(target_arch="wasm32"))]
     pool: ThreadPool,
-    #[cfg(target_arch = "wasm32")]
-    blocked: bool,
 }
 
 impl Loader {
     pub fn new() -> Self {
         Self {
-            items_loading: 0,
             background_loading: 0,
             blocked_loading: 0,
             preload_queue: Vec::new(),
             #[cfg(not(target_arch="wasm32"))]
             pool: ThreadPool::new().unwrap(),
-            #[cfg(target_arch = "wasm32")]
-            blocked: false,
         }
     }
 
-    pub fn remove_item_loading(&mut self) {
-        self.items_loading -= 1;
+    pub fn remove_item_loading(&mut self, loading_op: LoadingOperation) {
+        match loading_op {
+            LoadingOperation::Background => self.background_loading -= 1,
+            LoadingOperation::Blocking => self.blocked_loading -= 1,
+        }
     }
 
     pub fn get_loading_resources(&self) -> usize {
-        self.items_loading
+        self.background_loading + self.blocked_loading
     }
 
     #[cfg(target_arch="wasm32")]
     pub fn is_blocked(&self) -> bool {
-        self.blocked
+        self.blocked_loading > 0
     }
 
     // just fs read that stuff man
@@ -190,8 +187,8 @@ impl Loader {
             Err(e) => Err(e.into())
         };
 
-        let resource = Resource::from_result(data, ip_resource.path, ip_resource.id, ip_resource.resource_type);
-        self.items_loading += 1;
+        let resource = Resource::from_result(data, ip_resource.path, ip_resource.id, ip_resource.resource_type, ip_resource.loading_op);
+        self.blocked_loading += 1;
         proxy.send_event(BpEvent::ResourceLoaded(resource)).unwrap();
     }
 
@@ -199,11 +196,10 @@ impl Loader {
     #[cfg(target_arch = "wasm32")]
     pub fn blocking_load(&mut self, ip_resource: InProgressResource, proxy: EventLoopProxy<BpEvent>) {
         use wasm_bindgen_futures::spawn_local;
-        self.items_loading += 1;
-        self.blocked = true;
+        self.blocked_loading += 1;
         spawn_local(async move {
             let result = web_read(&ip_resource.path).await;
-            let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type);
+            let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type, ip_resource.loading_op);
             proxy
                 .send_event(BpEvent::ResourceLoaded(resource))
                 .unwrap();
@@ -212,12 +208,12 @@ impl Loader {
 
     // threadpool / aysnc
     pub fn background_load(&mut self, ip_resource: InProgressResource, proxy: EventLoopProxy<BpEvent>) {
-        self.items_loading += 1;
+        self.background_loading += 1;
         #[cfg(not(target_arch="wasm32"))]
         {
             self.pool.spawn_ok(async move {
                 let result = read(&ip_resource.path).await;
-                let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type);
+                let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type, ip_resource.loading_op);
                 proxy
                     .send_event(BpEvent::ResourceLoaded(resource))
                     .unwrap();
@@ -229,7 +225,7 @@ impl Loader {
             use wasm_bindgen_futures::spawn_local;
             spawn_local(async move {
                 let result = web_read(&ip_resource.path).await;
-                let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type);
+                let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type, ip_resource.loading_op);
                 proxy
                     .send_event(BpEvent::ResourceLoaded(resource))
                     .unwrap();
@@ -257,6 +253,7 @@ pub(crate) struct Resource {
     pub(crate) data: Vec<u8>,
     pub(crate) id: NonZeroU64,
     pub(crate) resource_type: ResourceType,
+    pub(crate) loading_op: LoadingOperation,
 }
 
 #[derive(Debug)]
@@ -265,6 +262,7 @@ pub(crate) struct ResourceError {
     _path: PathBuf,
     pub(crate) id: NonZeroU64,
     pub(crate) resource_type: ResourceType,
+    pub(crate) loading_op: LoadingOperation,
 }
 
 impl Resource {
@@ -273,6 +271,7 @@ impl Resource {
         path: PathBuf,
         id: NonZeroU64,
         resource_type: ResourceType,
+        loading_op: LoadingOperation,
     ) -> Result<Self, ResourceError> {
         match result {
             Ok(data) => Ok(Self {
@@ -280,12 +279,14 @@ impl Resource {
                 data,
                 id,
                 resource_type,
+                loading_op,
             }),
             Err(e) => Err(ResourceError {
                 error: e,
                 _path: path,
                 id,
                 resource_type,
+                loading_op,
             }),
         }
     }
@@ -296,14 +297,16 @@ pub(crate) struct InProgressResource {
     path: PathBuf,
     id: NonZeroU64,
     resource_type: ResourceType,
+    loading_op: LoadingOperation,
 }
 
 impl InProgressResource {
-    pub fn new(path: &Path, id: NonZeroU64, resource_type: ResourceType) -> Self {
+    pub fn new(path: &Path, id: NonZeroU64, resource_type: ResourceType, loading_op: LoadingOperation) -> Self {
         Self {
             path: path.to_owned(),
             id,
             resource_type,
+            loading_op,
         }
     }
 }
@@ -330,6 +333,12 @@ impl PartialEq for ResourceType {
             _ => false,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum LoadingOperation {
+    Background,
+    Blocking,
 }
 
 pub(crate) fn generate_id<T>() -> ResourceId<T> {
