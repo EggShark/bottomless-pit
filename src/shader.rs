@@ -15,7 +15,7 @@ use wgpu::util::DeviceExt;
 use crate::context::{GraphicsContext, WgpuClump};
 use crate::engine_handle::Engine;
 use crate::render::Renderer;
-use crate::resource::{self, InProgressResource, ResourceId, ResourceType};
+use crate::resource::{self, InProgressResource, LoadingOp, ResourceId, ResourceType};
 use crate::texture::{SamplerType, UniformTexture};
 use crate::vertex::Vertex;
 use crate::vectors::Vec2;
@@ -37,11 +37,12 @@ impl Shader {
         path: P,
         options: ShaderOptions<T>,
         engine: &mut Engine,
+        loading_op: LoadingOp,
     ) -> ResourceId<Shader> {
         let typed_id = resource::generate_id::<Shader>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(options.into()), resource::LoadingOperation::Blocking);
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Shader(options.into()), loading_op);
 
         engine.loader.blocking_load(ip_resource, engine.get_proxy());
 

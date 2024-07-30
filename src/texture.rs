@@ -3,7 +3,7 @@
 
 use crate::context::WgpuClump;
 use crate::engine_handle::Engine;
-use crate::resource::{self, InProgressResource, LoadingOperation, ResourceId, ResourceType};
+use crate::resource::{self, InProgressResource, LoadingOp, ResourceId, ResourceType};
 use crate::vectors::Vec2;
 use crate::{layouts, ERROR_TEXTURE_DATA};
 use image::{GenericImageView, ImageError};
@@ -23,36 +23,16 @@ impl Texture {
     /// Attempts to both read a file at the specified path and turn it into an image. This will halt the engine
     /// untill loading is finished please see the [resource module](crate::resource) module for more information
     /// on how resource loading works.
-    pub fn new<P>(engine: &mut Engine, path: P) -> ResourceId<Texture>
+    pub fn new<P>(engine: &mut Engine, path: P, loading_op: LoadingOp) -> ResourceId<Texture>
     where
         P: AsRef<Path>,
     {
         let typed_id = resource::generate_id::<Texture>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor), LoadingOperation::Blocking);
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor), loading_op);
 
-        if engine.context.is_none() {
-            engine.loader.preload(ip_resource);
-        } else {
-            engine.loader.blocking_load(ip_resource, engine.get_proxy());
-        }
-
-        typed_id
-    }
-
-    
-    pub fn new_blocking<P: AsRef<Path>>(engine: &mut Engine, path: P) -> ResourceId<Texture> {
-        let typed_id = resource::generate_id::<Texture>();
-        let id = typed_id.get_id();
-        let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor), LoadingOperation::Blocking);
-
-        if engine.context.is_none() {
-            engine.loader.preload(ip_resource);
-        } else {
-            engine.loader.blocking_load(ip_resource, engine.get_proxy());
-        }
+        engine.loader.load(ip_resource, engine.get_proxy());
 
         typed_id
     }
@@ -61,14 +41,14 @@ impl Texture {
     /// untill loading is finished please see the [resource module](crate::resource) module for more information
     /// on how resource loading works. This also lets you choose how you would like the texture sampled when 
     /// it samples more than one or less than one pixel.
-    pub fn new_with_sampler<P>(engine: &mut Engine, path: P, sampler: SamplerType) -> ResourceId<Texture>
+    pub fn new_with_sampler<P>(engine: &mut Engine, path: P, sampler: SamplerType, loading_op: LoadingOp) -> ResourceId<Texture>
     where
         P: AsRef<Path>,
     {
         let typed_id = resource::generate_id::<Texture>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(sampler, sampler), LoadingOperation::Blocking);
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(sampler, sampler), loading_op);
 
         engine.loader.blocking_load(ip_resource, engine.get_proxy());
 
@@ -78,14 +58,14 @@ impl Texture {
     /// Attempts to load the file at the path and then turn it into a texture. This also allows you to select what sampling type to use
     /// for both the `mag_sampler`, when the texture is being drawn larger than the orignal resolution and `min_sampler`, when the texture 
     /// is being drawn smaller than the original resolution.
-    pub fn new_with_mag_min_sampler<P>(engine: &mut Engine, path: P, mag_sampler: SamplerType, min_sampler: SamplerType) -> ResourceId<Texture> 
+    pub fn new_with_mag_min_sampler<P>(engine: &mut Engine, path: P, mag_sampler: SamplerType, min_sampler: SamplerType, loading_op: LoadingOp) -> ResourceId<Texture> 
     where
         P: AsRef<Path>
     {
         let typed_id = resource::generate_id::<Texture>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(mag_sampler, min_sampler), LoadingOperation::Blocking);
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(mag_sampler, min_sampler), loading_op);
 
         engine.loader.blocking_load(ip_resource, engine.get_proxy());
 

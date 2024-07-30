@@ -49,7 +49,7 @@ use crate::{layouts, vec2};
 use crate::material::{self, Material};
 use crate::matrix_math::normalize_points;
 use crate::render::Renderer;
-use crate::resource::{self, InProgressResource, LoadingOperation, ResourceId, ResourceManager, ResourceType};
+use crate::resource::{self, InProgressResource, LoadingOp, ResourceId, ResourceManager, ResourceType};
 use crate::vectors::Vec2;
 use crate::vertex::{self, Vertex};
 
@@ -832,11 +832,11 @@ pub struct Font {
 impl Font {
     /// Attempts to load in a Shader from file. This will halt the engine for more information on
     /// this halting behavior check the [resource module](crate::resource).
-    pub fn new<P: AsRef<Path>>(path: P, engine: &mut Engine) -> ResourceId<Font> {
+    pub fn new<P: AsRef<Path>>(path: P, engine: &mut Engine, loading_op: LoadingOp) -> ResourceId<Font> {
         let typed_id = resource::generate_id::<Font>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Font, LoadingOperation::Blocking);
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Font, loading_op);
 
         engine.loader.blocking_load(ip_resource, engine.get_proxy());
 

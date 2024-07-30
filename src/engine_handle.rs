@@ -21,13 +21,13 @@ use crate::context::{GraphicsContext, WindowOptions};
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::render;
 use crate::resource::{
-    InProgressResource, Loader, LoadingOperation, Resource, ResourceError, ResourceId, ResourceManager, ResourceType
+    InProgressResource, Loader, LoadingOp, Resource, ResourceError, ResourceId, ResourceManager, ResourceType
 };
 use crate::shader::{FinalShaderOptions, IntermediateOptions, Shader};
 use crate::text::Font;
 use crate::texture::{SamplerType, Texture};
 use crate::vectors::Vec2;
-use crate::{layouts, Game};
+use crate::Game;
 use crate::resource;
 
 /// The thing that makes the computer go
@@ -286,32 +286,6 @@ impl Engine {
         self.cursor_visibility = true;
     }
 
-    /// nessicary for creating shaders and wanting to include the camera in the layouts
-    /// this is required if you would like to use the camera in the shader
-    pub fn camera_layout(&self) -> wgpu::BindGroupLayout {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
-        layouts::create_camera_layout(&context.wgpu.device)
-    }
-
-    // pub(crate) fn camera_bindgroup(&self) -> &wgpu::BindGroup {
-    //     &self.camera_bind_group
-    // }
-
-    /// nessicary for creating shaders and wanting to include textures in the layouts
-    /// this is required if you would like to use textures in your shader
-    pub fn texture_layout(&self) -> wgpu::BindGroupLayout {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
-        layouts::create_texture_layout(&context.wgpu.device)
-    }
-
-    /// nessicary for creating shaders and wanting to use your own unifroms
-    /// this should be pretty generic as it is exposed to both the vertex
-    /// and fragment stage
-    pub fn uniform_layout(&self) -> wgpu::BindGroupLayout {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
-        layouts::create_uniform_layout(&context.wgpu.device)
-    }
-
     /// Gets the time since the previous frame or change in time between now and last frame
     pub fn get_frame_delta_time(&self) -> f32 {
         Instant::now().duration_since(self.last_frame).as_secs_f32()
@@ -406,14 +380,18 @@ impl Engine {
     /// Loads in a byte vector resource, can be used to load arbitary files. This will halt
     /// the engine utill it is done loading. For more information on this behavoir see the
     /// [resource module](crate::resource)
-    pub fn create_resource<P: AsRef<Path>>(&mut self, path: P) -> ResourceId<Vec<u8>> {
+    pub fn create_resource<P: AsRef<Path>>(&mut self, path: P, loading_op: LoadingOp) -> ResourceId<Vec<u8>> {
         let typed_id = resource::generate_id::<Vec<u8>>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Bytes, LoadingOperation::Blocking);
+        let ip_resource = InProgressResource::new(path, id, ResourceType::Bytes, loading_op);
 
         self.loader.blocking_load(ip_resource, self.proxy.clone());
         typed_id
+    }
+
+    pub fn get_resource_count(&self) -> usize {
+        self.loader.get_loading_resources()
     }
 
     /// Attemps to fetch a byte resource.
@@ -510,9 +488,6 @@ impl Engine {
     }
 
     fn handle_resource(&mut self, resource: Result<Resource, ResourceError>) {
-        // remove ip resource
-
-
         match resource {
             Ok(data) => {
                     self.loader.remove_item_loading(data.loading_op);
@@ -653,7 +628,6 @@ impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
                 &engine.defualt_resources,
             ))
         }
-        engine.loader.execute_preload_queue(engine.get_proxy());
     }
 
     fn window_event(

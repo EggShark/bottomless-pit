@@ -8,6 +8,7 @@ use bottomless_pit::shader::{Shader, ShaderOptions, UniformData, UniformError};
 use bottomless_pit::{*, engine_handle::EngineBuilder};
 use bottomless_pit::texture::UniformTexture;
 use encase::ShaderType;
+use resource::LoadingOp;
 use vectors::Vec2;
 use colour::Colour;
 
@@ -31,7 +32,7 @@ fn main() {
     let light_data = UniformData::new(&light);
 
     let shader_options = ShaderOptions::with_all(&light_data, &uniform_texture);
-    let light_shader = Shader::new("examples/light.wgsl", shader_options, &mut engine);
+    let light_shader = Shader::new("examples/light.wgsl", shader_options, &mut engine, LoadingOp::Blocking);
 
     let material = MaterialBuilder::new()
         .set_shader(light_shader)

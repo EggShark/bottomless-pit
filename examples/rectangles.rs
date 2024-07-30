@@ -3,6 +3,7 @@ use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::input::{Key, MouseKey};
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderHandle;
+use bottomless_pit::resource::LoadingOp;
 use bottomless_pit::texture::Texture;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::vec2;
@@ -13,7 +14,7 @@ fn main() {
         .build()
         .unwrap();
 
-    let texture = Texture::new(&mut engine, "examples/bplogo.png");
+    let texture = Texture::new(&mut engine, "examples/bplogo.png", LoadingOp::Blocking);
 
     let texture_material = MaterialBuilder::new()
         .add_texture(texture)
@@ -109,7 +110,7 @@ impl Game for Position {
         let dt = engine_handle.get_frame_delta_time();
         self.pos.x += 100.0 * dt;
         if engine_handle.is_mouse_key_pressed(MouseKey::Left) {
-            let new_texture = Texture::new(engine_handle, "examples/eggshark.png");
+            let new_texture = Texture::new(engine_handle, "examples/eggshark.png", LoadingOp::Background);
             self.texture_material.change_texture(new_texture);
         }
 

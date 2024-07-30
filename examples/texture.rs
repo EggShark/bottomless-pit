@@ -1,6 +1,7 @@
 use bottomless_pit::input::MouseKey;
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderHandle;
+use bottomless_pit::resource::LoadingOp;
 use bottomless_pit::texture::Texture;
 use bottomless_pit::engine_handle::{EngineBuilder, Engine};
 use bottomless_pit::colour::Colour;
@@ -15,7 +16,7 @@ fn main() {
         .build()
         .unwrap();
 
-    let texture = Texture::new(&mut engine, "examples/bplogo.png");
+    let texture = Texture::new(&mut engine, "examples/bplogo.png", LoadingOp::Blocking);
 
     let texture = MaterialBuilder::new()
         .add_texture(texture)

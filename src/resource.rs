@@ -144,8 +144,6 @@ impl From<std::io::Error> for ReadError {
 pub(crate) struct Loader {
     blocked_loading: usize,
     background_loading: usize,
-    // for items that were laoded before engine.run()
-    preload_queue: Vec<InProgressResource>,
     #[cfg(not(target_arch="wasm32"))]
     pool: ThreadPool,
 }
@@ -155,16 +153,19 @@ impl Loader {
         Self {
             background_loading: 0,
             blocked_loading: 0,
-            preload_queue: Vec::new(),
             #[cfg(not(target_arch="wasm32"))]
             pool: ThreadPool::new().unwrap(),
         }
     }
 
-    pub fn remove_item_loading(&mut self, loading_op: LoadingOperation) {
+    pub fn remove_item_loading(&mut self, loading_op: LoadingOp) {
+        println!("removing item: {:?}", loading_op);
+        println!("Background: {}", self.background_loading);
+        println!("Blocking: {}", self.background_loading);
+
         match loading_op {
-            LoadingOperation::Background => self.background_loading -= 1,
-            LoadingOperation::Blocking => self.blocked_loading -= 1,
+            LoadingOp::Background => self.background_loading -= 1,
+            LoadingOp::Blocking => self.blocked_loading -= 1,
         }
     }
 
@@ -175,6 +176,13 @@ impl Loader {
     #[cfg(target_arch="wasm32")]
     pub fn is_blocked(&self) -> bool {
         self.blocked_loading > 0
+    }
+
+    pub fn load(&mut self, ip_resource: InProgressResource, proxy: EventLoopProxy<BpEvent>) {
+        match ip_resource.loading_op {
+            LoadingOp::Background => self.background_load(ip_resource, proxy),
+            LoadingOp::Blocking => self.blocking_load(ip_resource, proxy),
+        }
     }
 
     // just fs read that stuff man
@@ -232,19 +240,6 @@ impl Loader {
             });
         }
     }
-
-    pub fn preload(&mut self, ip_resource: InProgressResource) {
-        self.preload_queue.push(ip_resource);
-    }
-
-    pub fn execute_preload_queue(&mut self, proxy: EventLoopProxy<BpEvent>) {
-        let mut e_vec = Vec::new();
-        std::mem::swap(&mut self.preload_queue, &mut e_vec);
-
-        for item in e_vec {
-            self.blocking_load(item, proxy.clone());
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -253,7 +248,7 @@ pub(crate) struct Resource {
     pub(crate) data: Vec<u8>,
     pub(crate) id: NonZeroU64,
     pub(crate) resource_type: ResourceType,
-    pub(crate) loading_op: LoadingOperation,
+    pub(crate) loading_op: LoadingOp,
 }
 
 #[derive(Debug)]
@@ -262,7 +257,7 @@ pub(crate) struct ResourceError {
     _path: PathBuf,
     pub(crate) id: NonZeroU64,
     pub(crate) resource_type: ResourceType,
-    pub(crate) loading_op: LoadingOperation,
+    pub(crate) loading_op: LoadingOp,
 }
 
 impl Resource {
@@ -271,7 +266,7 @@ impl Resource {
         path: PathBuf,
         id: NonZeroU64,
         resource_type: ResourceType,
-        loading_op: LoadingOperation,
+        loading_op: LoadingOp,
     ) -> Result<Self, ResourceError> {
         match result {
             Ok(data) => Ok(Self {
@@ -297,11 +292,11 @@ pub(crate) struct InProgressResource {
     path: PathBuf,
     id: NonZeroU64,
     resource_type: ResourceType,
-    loading_op: LoadingOperation,
+    loading_op: LoadingOp,
 }
 
 impl InProgressResource {
-    pub fn new(path: &Path, id: NonZeroU64, resource_type: ResourceType, loading_op: LoadingOperation) -> Self {
+    pub fn new(path: &Path, id: NonZeroU64, resource_type: ResourceType, loading_op: LoadingOp) -> Self {
         Self {
             path: path.to_owned(),
             id,
@@ -336,7 +331,7 @@ impl PartialEq for ResourceType {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum LoadingOperation {
+pub enum LoadingOp {
     Background,
     Blocking,
 }

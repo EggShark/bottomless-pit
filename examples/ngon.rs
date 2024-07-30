@@ -4,6 +4,7 @@ use bottomless_pit::colour::Colour;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderHandle;
+use bottomless_pit::resource::LoadingOp;
 use bottomless_pit::shader::{Shader, ShaderOptions};
 use bottomless_pit::shader::UniformData;
 use bottomless_pit::vectors::Vec2;
@@ -28,7 +29,7 @@ fn main() {
 
     let uniform_data = UniformData::new(&data);
 
-    let mouse_shader = Shader::new("examples/sinewaves.wgsl", ShaderOptions::with_uniform_data(&uniform_data), &mut engine);
+    let mouse_shader = Shader::new("examples/sinewaves.wgsl", ShaderOptions::with_uniform_data(&uniform_data), &mut engine, LoadingOp::Blocking);
 
     let regular_material = MaterialBuilder::new()
         .set_shader(mouse_shader)

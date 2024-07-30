@@ -4,6 +4,7 @@ use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::input::Key;
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderHandle;
+use bottomless_pit::resource::LoadingOp;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::{vec2, Game};
 use bottomless_pit::texture::Texture;
@@ -12,7 +13,7 @@ use bottomless_pit::text::TextMaterial;
 fn main() {
     let mut engine = EngineBuilder::new().build().unwrap();
 
-    let texture = Texture::new(&mut engine, "examples/bplogo.png");
+    let texture = Texture::new(&mut engine, "examples/bplogo.png", LoadingOp::Blocking);
 
     let material = MaterialBuilder::new()
         .add_texture(texture)
