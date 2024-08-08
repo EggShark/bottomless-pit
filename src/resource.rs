@@ -159,10 +159,6 @@ impl Loader {
     }
 
     pub fn remove_item_loading(&mut self, loading_op: LoadingOp) {
-        println!("removing item: {:?}", loading_op);
-        println!("Background: {}", self.background_loading);
-        println!("Blocking: {}", self.background_loading);
-
         match loading_op {
             LoadingOp::Background => self.background_loading -= 1,
             LoadingOp::Blocking => self.blocked_loading -= 1,

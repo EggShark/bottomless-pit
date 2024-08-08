@@ -716,8 +716,8 @@ impl InnerMaterial {
         
         text_buffer.set_size(
             &mut font_info.text_handle.font_system,
-            f32::MAX,
-            f32::MAX,
+            None,
+            None,
         );
 
         text_buffer.set_text(

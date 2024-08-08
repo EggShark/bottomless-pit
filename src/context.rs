@@ -98,6 +98,7 @@ impl GraphicsContext {
                 required_features: wgpu::Features::empty(),
                 required_limits: limits,
                 label: None,
+                memory_hints: wgpu::MemoryHints::Performance,
             },
             None,
         )).unwrap();

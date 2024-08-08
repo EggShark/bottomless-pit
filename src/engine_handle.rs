@@ -354,8 +354,8 @@ impl Engine {
 
         buffer.set_size(
             &mut context.text_renderer.font_system,
-            physical_height,
-            physical_width,
+            Some(physical_height),
+            Some(physical_width),
         );
         buffer.set_text(
             &mut context.text_renderer.font_system,

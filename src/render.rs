@@ -67,6 +67,7 @@ pub(crate) fn make_pipeline(
             alpha_to_coverage_enabled: false, // something to do with AA
         },
         multiview: None,
+        cache: None,
     })
 }
 

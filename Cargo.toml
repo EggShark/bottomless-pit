@@ -27,10 +27,10 @@ lru = "0.11"
 cfg-if = "1.0.0"
 web-time = "0.2.3"
 futures = {version = "0.3.29", features = ["thread-pool"]}
-glyphon = {git = "https://github.com/grovesNL/glyphon.git"}
+glyphon = {git = "https://github.com/grovesNL/glyphon.git", rev = "ce6ede951caf84569563ffdf1ef5a98aeae484e1"}
 
 [dependencies.wgpu]
-version = "0.20"
+version = "22"
 default-features = true
 
 [dependencies.glam]
@@ -46,7 +46,7 @@ features = ["png", "jpeg"]
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.6"
 console_log = "1.0"
-wgpu = { version = "0.20", features = ["webgl"]}
+wgpu = { version = "22", features = ["webgl"]}
 web-sys = { version = "0.3", features = [
     "Document",
     "Window",
