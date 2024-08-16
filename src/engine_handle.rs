@@ -377,9 +377,7 @@ impl Engine {
         }
     }
 
-    /// Loads in a byte vector resource, can be used to load arbitary files. This will halt
-    /// the engine utill it is done loading. For more information on this behavoir see the
-    /// [resource module](crate::resource)
+    /// Loads in a byte vector resource, can be used to load arbitary files.
     pub fn create_resource<P: AsRef<Path>>(&mut self, path: P, loading_op: LoadingOp) -> ResourceId<Vec<u8>> {
         let typed_id = resource::generate_id::<Vec<u8>>();
         let id = typed_id.get_id();
@@ -396,9 +394,7 @@ impl Engine {
 
     /// Attemps to fetch a byte resource.
     ///
-    /// Returns `None` if the resource isnt loaded yet. Resources will always be available
-    /// on the next frame after being requested. Please see the [resource module](crate::resource)
-    /// for more information.
+    /// Returns `None` if the resource isnt loaded yet.
     pub fn get_byte_resource(&self, id: ResourceId<Vec<u8>>) -> Option<&Vec<u8>> {
         self.resource_manager.get_byte_resource(&id)
     }
@@ -472,6 +468,8 @@ impl Engine {
 
     fn resize(&mut self, new_size: Vec2<u32>) {
         let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
+
+        log::info!("RESZING");
 
         if new_size.x > 0 && new_size.y > 0 {
             context.config.width = new_size.x;
@@ -663,7 +661,9 @@ impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
                         }
                     }
                 }
-                _ => {},
+                e => {
+                    log::info!("{:?}", e);
+                },
             }
         }
     }

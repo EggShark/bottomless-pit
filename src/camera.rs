@@ -49,7 +49,7 @@ impl Camera {
     }
 
     /// This will transform a point in screen space to camera space.
-    /// You can get the screen size from [Engine::get_window_size]
+    /// You can get the screen size from [crate::Engine::get_window_size]
     pub fn transform_point(&self, point: Vec2<f32>, screen_size: Vec2<u32>) -> Vec2<f32> {
         let screen_size = Vec2{x: screen_size.x as f32, y: screen_size.y as f32};
 

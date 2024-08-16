@@ -20,9 +20,7 @@ pub struct Texture {
 }
 
 impl Texture {
-    /// Attempts to both read a file at the specified path and turn it into an image. This will halt the engine
-    /// untill loading is finished please see the [resource module](crate::resource) module for more information
-    /// on how resource loading works.
+    /// Attempts to both read a file at the specified path and turn it into an image.
     pub fn new<P>(engine: &mut Engine, path: P, loading_op: LoadingOp) -> ResourceId<Texture>
     where
         P: AsRef<Path>,
@@ -37,10 +35,7 @@ impl Texture {
         typed_id
     }
 
-    /// Attempts to both read a file at the specified path and turn it into an image. This will halt the engine
-    /// untill loading is finished please see the [resource module](crate::resource) module for more information
-    /// on how resource loading works. This also lets you choose how you would like the texture sampled when 
-    /// it samples more than one or less than one pixel.
+    /// Attempts to both read a file at the specified path and turn it into an image.
     pub fn new_with_sampler<P>(engine: &mut Engine, path: P, sampler: SamplerType, loading_op: LoadingOp) -> ResourceId<Texture>
     where
         P: AsRef<Path>,

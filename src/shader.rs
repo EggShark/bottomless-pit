@@ -31,8 +31,8 @@ pub struct Shader {
 }
 
 impl Shader {
-    /// Attempts to create a shader from a file. This will halt the engine due to resource loading please see
-    /// the [resource module](crate::resource) for more information.
+    /// Attempts to create a shader from a file. Requires [ShaderOptions]
+    /// which implents Defualt for quick and easy creation.
     pub fn new<P: AsRef<Path>, T>(
         path: P,
         options: ShaderOptions<T>,

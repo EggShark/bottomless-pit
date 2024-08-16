@@ -1,18 +1,18 @@
 //! Contains the code for the loading of all assets and [ResourceId]
 //!
-//! In order for bottomless-pit to run on both desktop and web enviorments file reading
-//! has to be done asynchronously. When you call [Texture::new](crate::texture::Texture::new),
-//! [Shader::new](crate::shader::Shader::new), [Font::new](crate::text::Font::new),
-//! or [Engine::create_resource](crate::engine_handle::Engine::create_resource) you are given a
-//! handle to the resource and not the resoruce directly. Since resources are loaded asynchronously it will not
-//! be imeaditly availble. In order to have the resource be available to use as soon as possible the engine halts
-//! while waiting for the resource. [Game::update](crate::Game::update) will not be called and
-//! [Game::render](crate::Game::render) will not be called either.
+//! All Resources have two types of loading a `Blocking` method and a `Background`
+//! method. On native platforms (Mac, Windows, Linux) The blocking method will
+//! just read from the file system and your resource will be available
+//! immediately. Background loads resources on a diffrent thread and it will be 
+//! done when its done. On Wasm all things are loaded asynchronously so the
+//! Blocking method is faked by not updating or redrawing the game untill
+//! all blocking resources are loaded. There are no platform diffrences
+//! for background loading.
 //! ```rust
 //! fn main() {
 //!     let engine = mut EngineBuilder::new().build();
 //!     
-//!     let texture: ResourceId<Texture> = Texture::new(&mut engine, "path.png");
+//!     let texture: ResourceId<Texture> = Texture::new(&mut engine, "path.png", LoadingOp::Blocking);
 //!     // anything loaded in main will be ready on the first frame of the game
 //!     let material = MaterialBuilder::new().add_texture(texture).build();
 //!
@@ -28,7 +28,7 @@
 //! impl Game for YourGame {
 //!     fn update(&mut self, engine: &mut Engine) {
 //!         if engine.is_key_pressed(Key::A) {
-//!             let texutre = Texture::new(engine, "path2.png");
+//!             let texutre = Texture::new(engine, "path2.png", LoadingOp::Blocking);
 //!             // render and update wont be called until after the texture finishes loading
 //!         }
 //!     }
@@ -326,6 +326,13 @@ impl PartialEq for ResourceType {
     }
 }
 
+/// This enum is used to control how resources are loaded.
+/// Background loading will load the resource on another thread
+/// and the resource will be ready when its ready. Blocking Loads
+/// on native platforms will read directly from the filesystem and
+/// the resource will be availble immediately. However on WASM
+/// the blocking behavoir is faked by pausing the game loop
+/// untill all blocking resources are done loading.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LoadingOp {
     Background,

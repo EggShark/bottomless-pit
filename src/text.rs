@@ -830,8 +830,7 @@ pub struct Font {
 }
 
 impl Font {
-    /// Attempts to load in a Shader from file. This will halt the engine for more information on
-    /// this halting behavior check the [resource module](crate::resource).
+    /// Attempts to load in a Font from file.
     pub fn new<P: AsRef<Path>>(path: P, engine: &mut Engine, loading_op: LoadingOp) -> ResourceId<Font> {
         let typed_id = resource::generate_id::<Font>();
         let id = typed_id.get_id();
