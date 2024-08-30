@@ -42,8 +42,6 @@ impl GraphicsContext {
         #[cfg(target_arch = "wasm32")]
         {
             use crate::engine_handle::BuildError;
-            use env_logger::builder;
-
             use winit::platform::web::WindowExtWebSys;
 
             let title = window.title();
