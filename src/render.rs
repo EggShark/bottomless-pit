@@ -1,5 +1,20 @@
-//! Contains the Renderer struct which also contains all the
-//! functions and logic to draw things to the screen
+//! Bottomles Pit supports multipass rendering. This means you can go through
+//! multiple render passes within the [Game::render] function. This can be used
+//! to render to a texture then render to the screen. The [RenderHandle] is used 
+//! to create render passes and then within the passes the [Renderer] is used to
+//! actually interface with materials and other objects that render.
+//! ```rust
+//! impl Game for MyCoolGame {
+//!     fn render<'o>(&'o mut self, mut render_handle: RenderHandle<'o>) {
+//!         {
+//!             let mut p1 = render_handle.begin_texture_pass(&mut self.uniform_texture, Colour::WHITE);
+//!             // render what ever you want to the texture
+//!         }
+//!         let mut p2 = render_handle.begin_pass(Colour::Black);
+//!         // render whatever you want to the screen
+//!     }
+//! }
+//! ```
 
 use crate::colour::Colour;
 use crate::context::WgpuClump;
@@ -95,6 +110,7 @@ where
     Ok(())
 }
 
+/// The renderer is used to create render passes or [Renderer]s 
 pub struct RenderHandle<'a> {
     // ME WHEN BC HACKS :3
     encoder: Option<wgpu::CommandEncoder>,
@@ -109,6 +125,7 @@ pub struct RenderHandle<'a> {
 }
 
 impl<'a> RenderHandle<'a> {
+    /// Creates a render pass that will render onto the windows surface.
     pub fn begin_pass<'o, 'p>(&'o mut self, clear_colour: Colour) -> Renderer<'o, 'p> {
 
         let mut pass = match &mut self.encoder {
@@ -137,6 +154,9 @@ impl<'a> RenderHandle<'a> {
         }
     }
 
+    /// Creates a render pass that can be used to render to a texture. This is usefull for 
+    /// lightmaps, or generating heightmaps. Any advanced graphics techique that requires
+    /// uniform textures.
     pub fn begin_texture_pass<'o, 'p>(&'o mut self, texture: &'o mut UniformTexture, clear_colour: Colour) -> Renderer<'o, 'p> {
         let size = texture.get_size();
         
@@ -226,6 +246,8 @@ impl Drop for RenderHandle<'_> {
     }
 }
 
+/// Use the Renderer with [Materials](crate::material::Material) to draw things
+/// to the current render surface
 pub struct Renderer<'o, 'p> where 'o: 'p {
     pub(crate) pass: wgpu::RenderPass<'p>,
     pub(crate) size: Vec2<u32>,
@@ -236,10 +258,12 @@ pub struct Renderer<'o, 'p> where 'o: 'p {
 }
 
 impl<'p, 'o> Renderer<'p, 'o> {
+    /// Resets the camera to the defualt camera.
     pub fn reset_camera(&mut self) {
         self.pass.set_bind_group(1, self.camera_bindgroup, &[]);
     }
 
+    /// Gives the size of the current render surface
     pub fn get_size(&self) -> Vec2<u32> {
         self.size
     }

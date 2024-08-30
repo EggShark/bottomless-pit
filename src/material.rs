@@ -32,7 +32,7 @@ use crate::vertex::{self, LineVertex, Vertex};
 /// If you don't have any uniform data attached to the shader
 /// utilized by the material use the unit `()` type.
 #[derive(Debug)]
-pub struct Material<T> {
+pub struct Material<T = ()> {
     pipeline_id: ResourceId<Shader>,
     /// counts the bytes of vertex not the actual number
     pub(crate) vertex_size: u64,
@@ -72,6 +72,7 @@ impl<T> Material<T> {
         }
     }
 
+    /// Swaps out the inner texture of the material
     pub fn change_texture(&mut self, texture: ResourceId<Texture>) {
         self.texture_id = texture
     }

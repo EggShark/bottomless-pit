@@ -64,7 +64,7 @@ struct MousePos {
 struct ShaderExample {
     mouse_material: Material<MousePos>,
     circle_material: Material<MousePos>,
-    defualt_material: Material<()>,
+    defualt_material: Material,
     data: MousePos,
     theta: MousePos,
 }

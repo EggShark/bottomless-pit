@@ -33,8 +33,8 @@ fn main() {
 }
 
 struct TextureExample {
-    current: Material<()>,
-    other: Material<()>,
+    current: Material,
+    other: Material,
     pos: Vec2<f32>,
 }
 

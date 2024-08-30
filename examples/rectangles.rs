@@ -33,8 +33,8 @@ fn main() {
 
 struct Position {
     pos: Vec2<f32>,
-    regular_material: Material<()>,
-    texture_material: Material<()>,
+    regular_material: Material,
+    texture_material: Material,
     state: bool,
 }
 

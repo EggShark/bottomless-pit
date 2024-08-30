@@ -63,7 +63,7 @@ fn main() {
 
 struct TextureExample {
     material: Material<Light>,
-    ocluder_material: Material<()>,
+    ocluder_material: Material,
     light: Light,
     uniform_texture: UniformTexture,
     rectangles: Vec<Rectangle>,

@@ -125,6 +125,8 @@ impl Engine {
         self.input_handle.is_key_released(key)
     }
 
+    /// This will tell you if certain keys like CTRL or Shift
+    /// are modifying the current key presses.
     pub fn check_modifiers(&self, modifer: ModifierKeys) -> bool {
         self.input_handle.check_modifiers(modifer)
     }
@@ -166,24 +168,32 @@ impl Engine {
     }
 
     /// Checks if the window has focus
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn window_has_focus(&self) -> bool {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         context.window.has_focus()
     }
 
     /// Checks if the window is maximized not fullscreened
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn is_window_maximized(&self) -> bool {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         context.window.is_maximized()
     }
 
     /// Checks to see if the window is minimized
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn is_window_minimized(&self) -> bool {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         context.window.is_minimized().unwrap_or(false)
     }
 
     /// Checks to see if the window is fullscreen not maximized
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn is_window_fullscreen(&self) -> bool {
         // based on limited docs knowledge this should work
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
@@ -191,12 +201,16 @@ impl Engine {
     }
 
     /// Will maximize the window
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn maximize_window(&self) {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         context.window.set_maximized(true);
     }
 
     /// Will minimize the window
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn minimize_window(&self) {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         context.window.set_minimized(true);
@@ -207,7 +221,10 @@ impl Engine {
         self.should_close = true;
     }
 
-    /// Will attempt to set the window icon for more details check the [winit docs](https://docs.rs/winit/latest/winit/window/struct.Window.html#method.set_window_icon)
+    /// Will attempt to set the window icon for more details check the 
+    /// [winit docs](https://docs.rs/winit/latest/winit/window/struct.Window.html#method.set_window_icon)
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn set_window_icon(&self, path: &str) -> Result<(), IconError> {
         let image = image::open(path)?.into_rgba8();
         let (width, height) = image.dimensions();
@@ -221,12 +238,16 @@ impl Engine {
     }
 
     /// Sets the window title
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn set_window_title(&self, title: &str) {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         context.window.set_title(title);
     }
 
-    /// Changes the Position of the window in PhysicalPixles
+    /// Changes the Position of the window in Physical Pixles
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn set_window_position(&self, x: f32, y: f32) {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         context.window
@@ -234,6 +255,8 @@ impl Engine {
     }
 
     /// Sets the physical minimum size of the window
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn set_window_min_size(&self, width: f32, height: f32) {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         context.window
@@ -241,6 +264,8 @@ impl Engine {
     }
 
     /// Gets the physical postion of the window
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn get_window_position(&self) -> Option<Vec2<i32>> {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         match context.window.outer_position() {
@@ -255,13 +280,18 @@ impl Engine {
     }
 
     /// Gets the scale factor to help handle diffrence between phyiscial and logical pixels
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn get_window_scale_factor(&self) -> f64 {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         context.window.scale_factor()
     }
 
     /// Toggels fullscreen mode may fail on certain Operating Systems
-    /// check the [winit docs](https://docs.rs/winit/latest/winit/window/struct.Window.html#method.set_fullscreen) for more information
+    /// check the [winit docs](https://docs.rs/winit/latest/winit/window/struct.Window.html#method.set_fullscreen)
+    /// for more information
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn toggle_fullscreen(&self) {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         if self.is_window_fullscreen() {
@@ -273,6 +303,8 @@ impl Engine {
     }
 
     /// Hides the cursor
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn hide_cursor(&mut self) {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         context.window.set_cursor_visible(false);
@@ -280,6 +312,8 @@ impl Engine {
     }
 
     /// Shows the cursor if its hidden
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn show_cursor(&mut self) {
         let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
         context.window.set_cursor_visible(true);
@@ -311,6 +345,8 @@ impl Engine {
     /// Will turn off vysnc if the platform suports it, using
     /// AutoNoVsync for more information check
     /// [PresentMode::AutoNoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html).
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn remove_vsync(&mut self) {
         let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
         context.config.present_mode = wgpu::PresentMode::AutoNoVsync;
@@ -321,6 +357,8 @@ impl Engine {
     /// Will turn off vysnc if the platform suports it, using
     /// AutoVsync for more information check
     /// [PresentMode::AutoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html).
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn add_vsync(&mut self) {
         let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
         context.config.present_mode = wgpu::PresentMode::AutoVsync;
@@ -338,6 +376,8 @@ impl Engine {
 
     /// Measures string based on the default font. To measure a string with a custom font
     /// use [TextMaterial::get_measurements()](../text/struct.TextMaterial.html#method.get_measurements)
+    /// # Panics
+    /// When called outside of the functions in the [Game] trait
     pub fn measure_string(&mut self, text: &str, font_size: f32, line_height: f32) -> Vec2<f32> {
         let size = self.get_window_size();
         let scale_factor = self.get_window_scale_factor();
@@ -388,7 +428,9 @@ impl Engine {
         typed_id
     }
 
-    pub fn get_resource_count(&self) -> usize {
+    /// This returns the current number of resources that
+    /// are loading
+    pub fn get_loading_resource_count(&self) -> usize {
         self.loader.get_loading_resources()
     }
 
