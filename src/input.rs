@@ -150,8 +150,7 @@ impl InputHandle {
     pub(crate) fn get_text_value(&self) -> Option<&str> {
         self
             .current_text
-            .as_ref()
-            .map(|s| s.as_str())
+            .as_deref()
     }
 
     pub(crate) fn check_modifiers(&self, modifer: ModifierKeys) -> bool {

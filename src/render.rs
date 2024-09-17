@@ -126,7 +126,7 @@ pub struct RenderHandle<'a> {
 
 impl<'a> RenderHandle<'a> {
     /// Creates a render pass that will render onto the windows surface.
-    pub fn begin_pass<'o, 'p>(&'o mut self, clear_colour: Colour) -> Renderer<'o, 'p> {
+    pub fn begin_pass<'p>(&mut self, clear_colour: Colour) -> Renderer<'_, 'p> {
 
         let mut pass = match &mut self.encoder {
             Some(encoder) => {
@@ -148,9 +148,9 @@ impl<'a> RenderHandle<'a> {
             pass,
             size: self.defualt_view_size,
             defualt_id: self.defualt_id,
-            resources: &self.resources,
-            camera_bindgroup: &self.camera_bindgroup,
-            wgpu: &self.wgpu,
+            resources: self.resources,
+            camera_bindgroup: self.camera_bindgroup,
+            wgpu: self.wgpu,
         }
     }
 
@@ -181,9 +181,9 @@ impl<'a> RenderHandle<'a> {
             pass,
             size,
             defualt_id: self.defualt_id,
-            resources: &self.resources,
-            camera_bindgroup: &self.camera_bindgroup,
-            wgpu: &self.wgpu,
+            resources: self.resources,
+            camera_bindgroup: self.camera_bindgroup,
+            wgpu: self.wgpu,
         }
     }
 

@@ -34,6 +34,11 @@ impl<T, const N: usize> Buffer<T, N> {
     pub fn len(&self) -> usize {
         N
     }
+
+    /// Buffers can never be empty this always be false
+    pub fn is_empty(&self) -> bool {
+        false
+    }
 }
 
 impl<T, const N: usize> Index<usize> for Buffer<T, N> {

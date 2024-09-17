@@ -302,7 +302,7 @@ impl TextMaterial {
 
     /// Measuers the text contained within the widget
     pub fn get_measurements(&self) -> Vec2<u32> {
-        self.inner.as_ref().and_then(|c| Some(c.size)).unwrap_or(vec2!(0))
+        self.inner.as_ref().map(|c| c.size).unwrap_or(vec2!(0))
     }
 
     pub fn get_text(&self) -> &str {
@@ -628,8 +628,6 @@ impl TextMaterial {
             font_info.wgpu,
         );
 
-        drop(font_info);
-
         inner.bind_group = context.wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Text Widget BindGroup"),
             layout: &layouts::create_texture_layout(&context.wgpu.device),
@@ -647,9 +645,9 @@ impl TextMaterial {
     }
 
     /// Draws all queued text instances to the screen
-    pub fn draw<'pass, 'others>(
+    pub fn draw<'others>(
         &'others mut self,
-        information: &mut Renderer<'pass, 'others>,
+        information: &mut Renderer<'_, 'others>,
     ) {
         let inner = self.inner.as_ref().unwrap();
 
@@ -693,6 +691,7 @@ struct InnerMaterial {
 }
 
 impl InnerMaterial {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         wgpu: &WgpuClump,
         text_handle: &mut TextRenderer,

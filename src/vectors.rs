@@ -143,9 +143,9 @@ impl From<glam::Vec2> for Vec2<f32> {
     }
 }
 
-impl Into<glam::Vec2> for Vec2<f32> {
-    fn into(self) -> glam::Vec2 {
-        glam::Vec2 { x: self.x, y: self.y }
+impl From<Vec2<f32>> for glam::Vec2 {
+    fn from(val: Vec2<f32>) -> Self {
+        Self { x: val.x, y: val.y }
     }
 }
 

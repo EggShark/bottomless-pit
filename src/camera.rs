@@ -113,7 +113,7 @@ impl Camera {
     }
 
     /// Sets this camera to the active camera transforming all objects with this camera.
-    pub fn set_active<'others, 'pass>(&'others mut self, renderer: &mut Renderer<'pass, 'others>) {
+    pub fn set_active<'others>(&'others mut self, renderer: &mut Renderer<'_, 'others>) {
         self.write_matrix(renderer.wgpu, renderer.size);
 
         renderer.pass.set_bind_group(1, &self.inner.as_ref().unwrap().bind_group, &[]);

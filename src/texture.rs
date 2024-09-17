@@ -220,7 +220,7 @@ impl UniformTexture {
         let inner_texture = engine
             .context
             .as_ref()
-            .and_then(|c| Some(InnerTexture::from_wgpu(size, SamplerType::LinearInterpolation, SamplerType::NearestNeighbor, c.get_texture_format(), &c.wgpu)));
+            .map(|c| InnerTexture::from_wgpu(size, SamplerType::LinearInterpolation, SamplerType::NearestNeighbor, c.get_texture_format(), &c.wgpu));
 
         Self {
             inner_texture,
@@ -238,7 +238,7 @@ impl UniformTexture {
         let inner_texture = engine
             .context
             .as_ref()
-            .and_then(|c| Some(InnerTexture::from_wgpu(size, mag_sampler, min_sampler, c.get_texture_format(), &c.wgpu)));
+            .map(|c| InnerTexture::from_wgpu(size, mag_sampler, min_sampler, c.get_texture_format(), &c.wgpu));
 
         Self {
             inner_texture,
@@ -365,7 +365,7 @@ impl InnerTexture {
         })
     }
 
-    pub(crate) fn make_render_view<'a>(&'a mut self) -> &'a wgpu::TextureView {
+    pub(crate) fn make_render_view(&mut self) -> &wgpu::TextureView {
         self.view = self.inner_texture.create_view(&wgpu::TextureViewDescriptor {
             label: Some("Uniform Texture View"),
             ..Default::default()

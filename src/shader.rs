@@ -138,7 +138,7 @@ impl Shader {
         self.options.update_uniform_texture(texture, wgpu, format)
     }
 
-    pub(crate) fn set_active<'o, 'p>(&'o self, renderer: &mut Renderer<'o, 'p>) {
+    pub(crate) fn set_active<'o>(&'o self, renderer: &mut Renderer<'o, '_>) {
         renderer.pass.set_pipeline(&self.pipeline);
         
         if let Some(bind_group) = &self.options.bind_group {
@@ -292,15 +292,15 @@ impl FinalShaderOptions {
         let wgpu = &context.wgpu;
         let format = context.get_texture_format();
 
-        let buffer = options.uniform_data.and_then(|d| {
-            Some(wgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let buffer = options.uniform_data.map(|d| {
+            wgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("User Uniform Data Buffer"),
                 contents: &d,
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            }))
+            })
         });
 
-        let uniform_texture = options.uniform_texture.and_then(|(mag, min, size)| {
+        let uniform_texture = options.uniform_texture.map(|(mag, min, size)| {
             let sampler = wgpu.device.create_sampler(&wgpu::SamplerDescriptor {
                 address_mode_u: wgpu::AddressMode::Repeat,
                 address_mode_v: wgpu::AddressMode::Repeat,
@@ -326,20 +326,18 @@ impl FinalShaderOptions {
 
             let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
 
-            Some((view, sampler))
+            (view, sampler)
         });
 
         let bind_group = make_layout_internal(&wgpu.device, buffer.is_some(), uniform_texture.is_some())
-            .and_then(|layout| {
+            .map(|layout| {
                 let entires = make_entries(buffer.as_ref(), uniform_texture.as_ref().map(|(a, b)| (a, b)), None);
                 
-                let bind_group = wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor { 
+                wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor { 
                     label: Some("User Shader Option Bind Group"),
                     layout: &layout,
                     entries: &entires
-                });
-
-                Some(bind_group)
+                })
             });
         
 
@@ -438,11 +436,11 @@ fn make_entries<'a>(
     if let Some((view, sampler)) = uniform_texture {
         entries.push(wgpu::BindGroupEntry {
             binding: entries.len() as u32,
-            resource: wgpu::BindingResource::TextureView(&view),
+            resource: wgpu::BindingResource::TextureView(view),
         });
         entries.push(wgpu::BindGroupEntry {
             binding: entries.len() as u32,
-            resource: wgpu::BindingResource::Sampler(other_sampler.unwrap_or(&sampler)),
+            resource: wgpu::BindingResource::Sampler(other_sampler.unwrap_or(sampler)),
         });
     }
 

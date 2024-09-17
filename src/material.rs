@@ -448,7 +448,7 @@ impl<T> Material<T> {
     /// Returns the size of the texture in pixels.
     /// Returns None when the texture is not loaded yet
     pub fn get_texture_size(&self, engine: &Engine) -> Option<Vec2<f32>> {
-        engine.resource_manager.get_texture(&self.texture_id).and_then(|t| Some(t.size))
+        engine.resource_manager.get_texture(&self.texture_id).map(|t| t.size)
     }
 
     fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {
@@ -548,9 +548,9 @@ impl<T> Material<T> {
 
     // there where 'others: 'pass notation says that 'others lives longer than 'pass
     /// Draws all queued shapes to the screen.
-    pub fn draw<'pass, 'others>(
+    pub fn draw<'others>(
         &'others mut self,
-        information: &mut Renderer<'pass, 'others>,
+        information: &mut Renderer<'_, 'others>,
     ) {
         if self.vertex_count == 0 {
             return;
@@ -756,7 +756,7 @@ impl LineMaterial {
         }
 
         wgpu.queue.write_buffer(
-            &vertex_buffer,
+            vertex_buffer,
             self.vertex_count,
             bytemuck::cast_slice(&verts),
         );
@@ -808,9 +808,9 @@ impl LineMaterial {
     }
 
     /// Draws all queued lines to the screen.
-    pub fn draw<'pass, 'others>(
+    pub fn draw<'others>(
         &'others mut self,
-        information: &mut Renderer<'pass, 'others>,
+        information: &mut Renderer<'_, 'others>,
     ) {
         if self.vertex_count == 0 {
             return;

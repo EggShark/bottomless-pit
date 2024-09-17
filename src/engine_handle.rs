@@ -462,9 +462,9 @@ impl Engine {
     }
 
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
-    pub fn run<T: 'static>(mut self, game: T)
+    pub fn run<T>(mut self, game: T)
     where
-        T: Game,
+        T: Game + 'static,
     {
         let event_loop = self.event_loop.take().unwrap(); //should never panic
         event_loop.run_app(&mut (self, game)).unwrap();
