@@ -1,4 +1,4 @@
-# Bottomless-pit (working title)
+# Bottomless-pit
 Bottomless-pit is a simple 2D game engine that is still a work in progress.
 This library is inspired slightly by Raylib and other rust based game engines like GGEZ.
 All Bottomless-pit does currently is handle keyboard and mouse input while also providing
@@ -28,7 +28,8 @@ impl CoolGame {
 }
 
 impl Game for CoolGame {
-    fn render<'pass, 'others>(&'others mut self, mut render_handle: RenderInformation<'pass, 'others>) where 'others: 'pass {
+    fn render<'o>(&'o mut self, mut render: RenderHandle<'o>) {
+        let render_pass = render.begin_pass(Colour::BLACK);
         // render what ever you want
     }
     fn update(&mut self, engine_handle: &mut Engine) {
