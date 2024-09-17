@@ -5,11 +5,11 @@
 //!         if engine_handle.is_key_down(Key::W) {
 //!             // do something
 //!         }
-//! 
+//!
 //!         if engine.check_modifiers(ModifierKeys::Ctrl) && engine.is_key_pressed(Key::S) {
 //!             // wow ctrl + s better save
 //!         }
-//! 
+//!
 //!         if engine_handle.is_mouse_key_down(MouseKey::Left) {
 //!             // do more things
 //!         }
@@ -44,7 +44,7 @@ impl InputHandle {
             current_mouse_state: [false; 6],
             current_text: None,
             mouse_position: Vec2 { x: 0.0, y: 0.0 },
-            mouse_delta: Vec2{ x: 0.0, y: 0.0 },
+            mouse_delta: Vec2 { x: 0.0, y: 0.0 },
         }
     }
 
@@ -52,14 +52,13 @@ impl InputHandle {
         self.previous_keyboard_state = self.current_keyboard_state;
         self.previous_mouse_state = self.current_mouse_state;
         self.current_text = None;
-        self.mouse_delta = Vec2{ x: 0.0, y: 0.0};
+        self.mouse_delta = Vec2 { x: 0.0, y: 0.0 };
     }
 
     pub(crate) fn process_input(&mut self, event: &WindowEvent) -> bool {
         match event {
             WindowEvent::KeyboardInput {
-                event: key_event,
-                ..
+                event: key_event, ..
             } => self.process_keyboard_input(key_event),
             WindowEvent::MouseInput { state, button, .. } => {
                 self.process_mouse_input(*state, *button)
@@ -88,10 +87,7 @@ impl InputHandle {
         true
     }
 
-    fn process_keyboard_input(
-        &mut self,
-        event: &KeyEvent,
-    ) -> bool {
+    fn process_keyboard_input(&mut self, event: &KeyEvent) -> bool {
         let key_bool = event.state == ElementState::Pressed;
         let key_code = match event.physical_key {
             PhysicalKey::Code(c) => c,
@@ -99,13 +95,10 @@ impl InputHandle {
         };
 
         if key_bool {
-            self.current_text = event
-                .text
-                .as_ref()
-                .map(|s| s.to_string());
+            self.current_text = event.text.as_ref().map(|s| s.to_string());
         }
 
-        let key: Key = key_code.into(); 
+        let key: Key = key_code.into();
 
         if key == Key::Unrecognized {
             return false;
@@ -148,9 +141,7 @@ impl InputHandle {
     }
 
     pub(crate) fn get_text_value(&self) -> Option<&str> {
-        self
-            .current_text
-            .as_deref()
+        self.current_text.as_deref()
     }
 
     pub(crate) fn check_modifiers(&self, modifer: ModifierKeys) -> bool {

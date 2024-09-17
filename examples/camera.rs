@@ -5,10 +5,10 @@ use bottomless_pit::input::Key;
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderHandle;
 use bottomless_pit::resource::LoadingOp;
+use bottomless_pit::text::TextMaterial;
+use bottomless_pit::texture::Texture;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::{vec2, Game};
-use bottomless_pit::texture::Texture;
-use bottomless_pit::text::TextMaterial;
 
 fn main() {
     let mut engine = EngineBuilder::new().build().unwrap();
@@ -18,10 +18,15 @@ fn main() {
     let material = MaterialBuilder::new()
         .add_texture(texture)
         .build(&mut engine);
-    
+
     let camera = Camera::default();
 
-    let text = TextMaterial::new("Mouse pos: 0,0 \n Mouse pos: 0, 0", Colour::WHITE, 15.0, 20.0);
+    let text = TextMaterial::new(
+        "Mouse pos: 0,0 \n Mouse pos: 0, 0",
+        Colour::WHITE,
+        15.0,
+        20.0,
+    );
 
     let game = CameraExample {
         material,
@@ -39,19 +44,22 @@ struct CameraExample {
 }
 
 impl Game for CameraExample {
-    fn render<'o>(
-        &'o mut self,
-        mut render: RenderHandle<'o>,
-    ) {
+    fn render<'o>(&'o mut self, mut render: RenderHandle<'o>) {
         let mut render_handle = render.begin_pass(Colour::BLACK);
 
-        self.material.add_rectangle(Vec2 { x: 0.0, y: 0.0 }, Vec2{x: 300.0, y: 300.0}, Colour::WHITE, &render_handle);
+        self.material.add_rectangle(
+            Vec2 { x: 0.0, y: 0.0 },
+            Vec2 { x: 300.0, y: 300.0 },
+            Colour::WHITE,
+            &render_handle,
+        );
 
         self.camera.set_active(&mut render_handle);
         self.material.draw(&mut render_handle);
 
         render_handle.reset_camera();
-        self.text.add_instance(vec2!(0.0), Colour::WHITE, &render_handle);
+        self.text
+            .add_instance(vec2!(0.0), Colour::WHITE, &render_handle);
         self.text.draw(&mut render_handle);
     }
 
@@ -101,7 +109,10 @@ impl Game for CameraExample {
         let trans_mouse = self.camera.transform_point(mouse_pos, size);
 
         self.text.set_text(
-            &format!("Screen mouse pos: {:.3}, {:.3}\nWorld mouse pos: {:.3}, {:.3}", mouse_pos.x, mouse_pos.y, trans_mouse.x, trans_mouse.y),
+            &format!(
+                "Screen mouse pos: {:.3}, {:.3}\nWorld mouse pos: {:.3}, {:.3}",
+                mouse_pos.x, mouse_pos.y, trans_mouse.x, trans_mouse.y
+            ),
             Colour::WHITE,
             engine_handle,
         );

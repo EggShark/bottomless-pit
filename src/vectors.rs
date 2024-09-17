@@ -23,11 +23,11 @@ impl<T> Vec2<T> {
 #[macro_export]
 macro_rules! vec2 {
     ($x:expr, $y:expr) => {
-        Vec2{x: $x, y: $y}
+        Vec2 { x: $x, y: $y }
     };
 
     ($x:expr) => {
-        Vec2{x: $x, y: $x}
+        Vec2 { x: $x, y: $x }
     };
 }
 
@@ -87,8 +87,11 @@ from_vec2_impl!(f32, u16);
 from_vec2_impl!(f32, u8);
 
 impl<T: Mul<Output = T> + Copy> Vec2<T> {
-    pub fn scale(self, number: T) -> Vec2<T>{
-        Vec2{x: self.x * number, y: self.y * number}
+    pub fn scale(self, number: T) -> Vec2<T> {
+        Vec2 {
+            x: self.x * number,
+            y: self.y * number,
+        }
     }
 }
 

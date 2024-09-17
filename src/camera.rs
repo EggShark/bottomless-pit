@@ -1,4 +1,4 @@
-//! This contains a simple 2D camera that can be used to transform 
+//! This contains a simple 2D camera that can be used to transform
 //! the world.
 //! ```rust
 //!     fn render<'pass, 'others>(
@@ -51,7 +51,10 @@ impl Camera {
     /// This will transform a point in screen space to camera space.
     /// You can get the screen size from [crate::Engine::get_window_size]
     pub fn transform_point(&self, point: Vec2<f32>, screen_size: Vec2<u32>) -> Vec2<f32> {
-        let screen_size = Vec2{x: screen_size.x as f32, y: screen_size.y as f32};
+        let screen_size = Vec2 {
+            x: screen_size.x as f32,
+            y: screen_size.y as f32,
+        };
 
         let scale_x = self.scale.x;
         let scale_y = self.scale.y;
@@ -66,18 +69,33 @@ impl Camera {
         let cos = self.rotation.to_radians().cos();
 
         let mat: Mat3 = Mat3::from_cols_array(&[
-            scale_x * cos, scale_y * sin, 0.0,
+            scale_x * cos,
+            scale_y * sin,
+            0.0,
             //c2
-            -scale_x * sin, scale_y * cos, 0.0,
+            -scale_x * sin,
+            scale_y * cos,
+            0.0,
             //c3
-            scale_x * x_trans * cos - scale_x * y_trans * sin - rot_x * scale_x * cos + rot_y * scale_x * sin + rot_x, scale_y * x_trans * sin + scale_y * y_trans * cos - rot_x * scale_y * sin - rot_y * scale_y * cos + rot_y, 1.0,
-        ]).inverse();
+            scale_x * x_trans * cos - scale_x * y_trans * sin - rot_x * scale_x * cos
+                + rot_y * scale_x * sin
+                + rot_x,
+            scale_y * x_trans * sin + scale_y * y_trans * cos
+                - rot_x * scale_y * sin
+                - rot_y * scale_y * cos
+                + rot_y,
+            1.0,
+        ])
+        .inverse();
 
         mat.transform_point2(point.into()).into()
     }
 
     fn write_matrix(&mut self, wgpu: &WgpuClump, screen_size: Vec2<u32>) {
-        let screen_size = Vec2{x: screen_size.x as f32, y: screen_size.y as f32};
+        let screen_size = Vec2 {
+            x: screen_size.x as f32,
+            y: screen_size.y as f32,
+        };
 
         let scale_x = self.scale.x;
         let scale_y = self.scale.y;
@@ -94,29 +112,50 @@ impl Camera {
         //THIS IS T(rot)S(x_scale, y_scale)R(d)T(-rot)T(x_trans, y_trans)
         let matrix: [f32; 16] = [
             //c1
-            scale_x * cos, scale_y * sin, 0.0, 0.0,
+            scale_x * cos,
+            scale_y * sin,
+            0.0,
+            0.0,
             //c2
-            -scale_x * sin, scale_y * cos, 0.0, 0.0,
+            -scale_x * sin,
+            scale_y * cos,
+            0.0,
+            0.0,
             //c3
-            scale_x * x_trans * cos - scale_x * y_trans * sin - rot_x * scale_x * cos + rot_y * scale_x * sin + rot_x, scale_y * x_trans * sin + scale_y * y_trans * cos - rot_x * scale_y * sin - rot_y * scale_y * cos + rot_y, 1.0, 0.0,
+            scale_x * x_trans * cos - scale_x * y_trans * sin - rot_x * scale_x * cos
+                + rot_y * scale_x * sin
+                + rot_x,
+            scale_y * x_trans * sin + scale_y * y_trans * cos
+                - rot_x * scale_y * sin
+                - rot_y * scale_y * cos
+                + rot_y,
+            1.0,
+            0.0,
             //screen size
-            screen_size.x, screen_size.y, 0.0, 0.0,
+            screen_size.x,
+            screen_size.y,
+            0.0,
+            0.0,
         ];
 
         if self.inner.is_none() {
             self.inner = Some(InternalCamera::new(wgpu, &matrix));
         }
 
-        wgpu
-            .queue
-            .write_buffer(&self.inner.as_ref().unwrap().buffer, 0, bytemuck::cast_slice(&matrix));
+        wgpu.queue.write_buffer(
+            &self.inner.as_ref().unwrap().buffer,
+            0,
+            bytemuck::cast_slice(&matrix),
+        );
     }
 
     /// Sets this camera to the active camera transforming all objects with this camera.
     pub fn set_active<'others>(&'others mut self, renderer: &mut Renderer<'_, 'others>) {
         self.write_matrix(renderer.wgpu, renderer.size);
 
-        renderer.pass.set_bind_group(1, &self.inner.as_ref().unwrap().bind_group, &[]);
+        renderer
+            .pass
+            .set_bind_group(1, &self.inner.as_ref().unwrap().bind_group, &[]);
     }
 }
 
@@ -132,9 +171,9 @@ impl Default for Camera {
     fn default() -> Self {
         Self {
             inner: None,
-            center: Vec2{x: 0.0, y: 0.0},
+            center: Vec2 { x: 0.0, y: 0.0 },
             rotation: 0.0,
-            scale: Vec2{x: 1.0, y: 1.0},
+            scale: Vec2 { x: 1.0, y: 1.0 },
         }
     }
 }
@@ -146,28 +185,25 @@ struct InternalCamera {
 
 impl InternalCamera {
     fn new(wgpu: &WgpuClump, matrix: &[f32; 16]) -> Self {
-        let buffer = wgpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(matrix),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST
-        });
+        let buffer = wgpu
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Camera Buffer"),
+                contents: bytemuck::cast_slice(matrix),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
 
         let camera_bind_group_layout = layouts::create_camera_layout(&wgpu.device);
 
-        let bind_group = wgpu
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                layout: &camera_bind_group_layout,
-                entries: &[wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: buffer.as_entire_binding(),
-                }],
-                label: Some("camera_bind_group"),
+        let bind_group = wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: buffer.as_entire_binding(),
+            }],
+            label: Some("camera_bind_group"),
         });
 
-        Self {
-            bind_group,
-            buffer,
-        }
+        Self { bind_group, buffer }
     }
 }

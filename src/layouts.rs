@@ -84,7 +84,7 @@ pub(crate) fn create_texture_uniform_layout(device: &wgpu::Device) -> wgpu::Bind
                 visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
                 ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
                 count: None,
-            }
+            },
         ],
         label: Some("uniform data and texture layout"),
     })

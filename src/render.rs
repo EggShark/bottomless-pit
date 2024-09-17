@@ -1,6 +1,6 @@
 //! Bottomles Pit supports multipass rendering. This means you can go through
 //! multiple render passes within the [Game::render] function. This can be used
-//! to render to a texture then render to the screen. The [RenderHandle] is used 
+//! to render to a texture then render to the screen. The [RenderHandle] is used
 //! to create render passes and then within the passes the [Renderer] is used to
 //! actually interface with materials and other objects that render.
 //! ```rust
@@ -23,7 +23,7 @@ use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
 use crate::texture::UniformTexture;
 use crate::vectors::Vec2;
-use crate::{Game, vec2};
+use crate::{vec2, Game};
 
 pub(crate) fn make_pipeline(
     device: &wgpu::Device,
@@ -49,7 +49,7 @@ pub(crate) fn make_pipeline(
             module: shader,
             entry_point: "vs_main", //specify the entry point (can be whatever as long as it exists)
             buffers: vertex_buffers, // specfies what type of vertices we want to pass to the shader,
-            compilation_options: wgpu::PipelineCompilationOptions::default()
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
         },
         fragment: Some(wgpu::FragmentState {
             // techically optional. Used to store colour data to the surface
@@ -110,7 +110,7 @@ where
     Ok(())
 }
 
-/// The renderer is used to create render passes or [Renderer]s 
+/// The renderer is used to create render passes or [Renderer]s
 pub struct RenderHandle<'a> {
     // ME WHEN BC HACKS :3
     encoder: Option<wgpu::CommandEncoder>,
@@ -127,11 +127,8 @@ pub struct RenderHandle<'a> {
 impl<'a> RenderHandle<'a> {
     /// Creates a render pass that will render onto the windows surface.
     pub fn begin_pass<'p>(&mut self, clear_colour: Colour) -> Renderer<'_, 'p> {
-
         let mut pass = match &mut self.encoder {
-            Some(encoder) => {
-                Self::create_pass(encoder, &self.defualt_view, clear_colour.into())
-            }
+            Some(encoder) => Self::create_pass(encoder, &self.defualt_view, clear_colour.into()),
             None => unreachable!(),
         };
 
@@ -154,25 +151,30 @@ impl<'a> RenderHandle<'a> {
         }
     }
 
-    /// Creates a render pass that can be used to render to a texture. This is usefull for 
+    /// Creates a render pass that can be used to render to a texture. This is usefull for
     /// lightmaps, or generating heightmaps. Any advanced graphics techique that requires
     /// uniform textures.
-    pub fn begin_texture_pass<'o, 'p>(&'o mut self, texture: &'o mut UniformTexture, clear_colour: Colour) -> Renderer<'o, 'p> {
+    pub fn begin_texture_pass<'o, 'p>(
+        &'o mut self,
+        texture: &'o mut UniformTexture,
+        clear_colour: Colour,
+    ) -> Renderer<'o, 'p> {
         let size = texture.get_size();
-        
+
         let mut pass = match &mut self.encoder {
-            Some(encoder) => {
-                Self::create_pass(encoder, texture.make_render_view(self.wgpu, self.format), clear_colour.into())
-            }
+            Some(encoder) => Self::create_pass(
+                encoder,
+                texture.make_render_view(self.wgpu, self.format),
+                clear_colour.into(),
+            ),
             None => unreachable!(),
         };
 
-
         let pipeline = &self
-        .resources
-        .get_pipeline(&self.defualt_id)
-        .unwrap()
-        .pipeline;
+            .resources
+            .get_pipeline(&self.defualt_id)
+            .unwrap()
+            .pipeline;
 
         pass.set_pipeline(pipeline);
         pass.set_bind_group(1, self.camera_bindgroup, &[]);
@@ -187,7 +189,11 @@ impl<'a> RenderHandle<'a> {
         }
     }
 
-    fn create_pass<'p>(encoder: &'p mut wgpu::CommandEncoder, view: &'p wgpu::TextureView, clear_colour: wgpu::Color) -> wgpu::RenderPass<'p> {
+    fn create_pass<'p>(
+        encoder: &'p mut wgpu::CommandEncoder,
+        view: &'p wgpu::TextureView,
+        clear_colour: wgpu::Color,
+    ) -> wgpu::RenderPass<'p> {
         let render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
             label: Some("Render Pass"),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -205,24 +211,26 @@ impl<'a> RenderHandle<'a> {
 
         render_pass
     }
-
 }
 
 impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
     fn from(value: &'a mut Engine) -> Self {
         let context = value.context.as_ref().unwrap();
 
-        let encoder = context.wgpu.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("render encoder")
-        });
+        let encoder = context
+            .wgpu
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("render encoder"),
+            });
 
-        let texture = context
-            .get_surface_texture()
-            .unwrap();
+        let texture = context.get_surface_texture().unwrap();
 
         let defualt_view_size = texture.texture.size();
         let defualt_view_size = vec2!(defualt_view_size.width, defualt_view_size.height);
-        let defualt_view = texture.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let defualt_view = texture
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
         Self {
             encoder: Some(encoder),
@@ -240,7 +248,9 @@ impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
 
 impl Drop for RenderHandle<'_> {
     fn drop(&mut self) {
-        self.wgpu.queue.submit(std::iter::once(self.encoder.take().unwrap().finish()));
+        self.wgpu
+            .queue
+            .submit(std::iter::once(self.encoder.take().unwrap().finish()));
 
         self.surface.take().unwrap().present();
     }
@@ -248,7 +258,10 @@ impl Drop for RenderHandle<'_> {
 
 /// Use the Renderer with [Materials](crate::material::Material) to draw things
 /// to the current render surface
-pub struct Renderer<'o, 'p> where 'o: 'p {
+pub struct Renderer<'o, 'p>
+where
+    'o: 'p,
+{
     pub(crate) pass: wgpu::RenderPass<'p>,
     pub(crate) size: Vec2<u32>,
     pub(crate) resources: &'o ResourceManager,

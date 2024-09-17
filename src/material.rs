@@ -123,19 +123,14 @@ impl<T> Material<T> {
             .resources
             .get_texture(&self.texture_id)
             .map(|t| t.size)
-            .unwrap_or(Vec2{x: 1.0, y: 1.0});
-            // doesnt matter what i put here bc the texture isnt loaded regardless
+            .unwrap_or(Vec2 { x: 1.0, y: 1.0 });
+        // doesnt matter what i put here bc the texture isnt loaded regardless
 
         let uv_size = normalize_points(uv_size, texture_size);
         let uv_position = normalize_points(uv_position, texture_size);
 
-        let verts = vertex::from_pixels_with_uv(
-            position,
-            size,
-            colour.as_raw(),
-            uv_position,
-            uv_size,
-        );
+        let verts =
+            vertex::from_pixels_with_uv(position, size, colour.as_raw(), uv_position, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -151,12 +146,7 @@ impl<T> Material<T> {
     ) {
         let wgpu = render.wgpu;
 
-        let verts = vertex::from_pixels_with_rotation(
-            position,
-            size,
-            colour.as_raw(),
-            rotation,
-        );
+        let verts = vertex::from_pixels_with_rotation(position, size, colour.as_raw(), rotation);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -237,8 +227,7 @@ impl<T> Material<T> {
             normalize_points(uv_points[3], texture_size),
         ];
 
-        let verts =
-            vertex::from_pixels_custom(points, uv_points, rotation, colour.as_raw());
+        let verts = vertex::from_pixels_custom(points, uv_points, rotation, colour.as_raw());
 
         self.push_rectangle(wgpu, verts);
     }
@@ -301,8 +290,13 @@ impl<T> Material<T> {
         }
 
         if self.inner.is_none() {
-            let (vert, ind) =
-                Self::create_buffers(&render.wgpu.device, self.vertex_size, 50, self.index_size, 50);
+            let (vert, ind) = Self::create_buffers(
+                &render.wgpu.device,
+                self.vertex_size,
+                50,
+                self.index_size,
+                50,
+            );
 
             self.inner = Some(InnerBuffer {
                 vertex_buffer: vert,
@@ -317,9 +311,7 @@ impl<T> Material<T> {
                 x: radius * (2.0 * PI * num as f32 / number_of_sides as f32).cos() + center.x,
                 y: radius * (2.0 * PI * num as f32 / number_of_sides as f32).sin() + center.y,
             })
-            .map(|point| {
-                Vertex::from_2d([point.x, point.y], [0.0, 0.0], colour.as_raw())
-            })
+            .map(|point| Vertex::from_2d([point.x, point.y], [0.0, 0.0], colour.as_raw()))
             .collect::<Vec<Vertex>>();
 
         let number_of_vertices = self.get_vertex_number() as u16;
@@ -391,7 +383,12 @@ impl<T> Material<T> {
     /// This will attempt to resize the texture stored within the shader.
     /// This will fail in the event that the shader has not loaded yet or
     /// if the shader used to create the material never had an UniformTexture.
-    pub fn resize_uniform_texture(&mut self, texture: &mut UniformTexture, size: Vec2<u32>, engine: &mut Engine) -> Result<(), UniformError> {
+    pub fn resize_uniform_texture(
+        &mut self,
+        texture: &mut UniformTexture,
+        size: Vec2<u32>,
+        engine: &mut Engine,
+    ) -> Result<(), UniformError> {
         let context = match &engine.context {
             Some(c) => c,
             None => return Ok(()),
@@ -399,9 +396,9 @@ impl<T> Material<T> {
             // is no reason for you to resize unless ur being silly for no
             // reason
         };
-        
+
         let texture_format = context.get_texture_format();
-        
+
         let options = match engine.resource_manager.get_mut_shader(&self.pipeline_id) {
             Some(shader) => shader,
             None => Err(UniformError::NotLoadedYet)?,
@@ -414,7 +411,11 @@ impl<T> Material<T> {
         Ok(())
     }
 
-    pub fn update_uniform_texture(&mut self, texture: &mut UniformTexture, engine: &mut Engine) -> Result<(), UniformError> {
+    pub fn update_uniform_texture(
+        &mut self,
+        texture: &mut UniformTexture,
+        engine: &mut Engine,
+    ) -> Result<(), UniformError> {
         let context = match &engine.context {
             Some(c) => c,
             None => return Ok(()),
@@ -424,14 +425,14 @@ impl<T> Material<T> {
         };
 
         let texture_format = context.get_texture_format();
-        
+
         let options = match engine.resource_manager.get_mut_shader(&self.pipeline_id) {
             Some(shader) => shader,
             None => Err(UniformError::NotLoadedYet)?,
         };
 
         options.update_uniform_texture(texture, &context.wgpu, texture_format)?;
-        
+
         Ok(())
     }
 
@@ -448,12 +449,16 @@ impl<T> Material<T> {
     /// Returns the size of the texture in pixels.
     /// Returns None when the texture is not loaded yet
     pub fn get_texture_size(&self, engine: &Engine) -> Option<Vec2<f32>> {
-        engine.resource_manager.get_texture(&self.texture_id).map(|t| t.size)
+        engine
+            .resource_manager
+            .get_texture(&self.texture_id)
+            .map(|t| t.size)
     }
 
     fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {
         if self.inner.is_none() {
-            let (vert, ind) = Self::create_buffers(&wgpu.device, self.vertex_size, 50, self.index_size, 50);
+            let (vert, ind) =
+                Self::create_buffers(&wgpu.device, self.vertex_size, 50, self.index_size, 50);
             self.inner = Some(InnerBuffer {
                 vertex_buffer: vert,
                 index_buffer: ind,
@@ -465,10 +470,14 @@ impl<T> Material<T> {
 
         let max_verts = buffers.vertex_buffer.size();
         if self.vertex_count + (4 * self.vertex_size) > max_verts {
-            grow_buffer(&mut buffers.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
+            grow_buffer(
+                &mut buffers.vertex_buffer,
+                wgpu,
+                1,
+                wgpu::BufferUsages::VERTEX,
+            );
         }
 
-        
         let indicies = [
             num_verts,
             1 + num_verts,
@@ -480,7 +489,12 @@ impl<T> Material<T> {
 
         let max_indicies = buffers.index_buffer.size();
         if self.index_count + (6 * self.index_size) > max_indicies {
-            grow_buffer(&mut buffers.index_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
+            grow_buffer(
+                &mut buffers.index_buffer,
+                wgpu,
+                1,
+                wgpu::BufferUsages::INDEX,
+            );
         }
 
         wgpu.queue.write_buffer(
@@ -500,7 +514,8 @@ impl<T> Material<T> {
 
     fn push_triangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 3]) {
         if self.inner.is_none() {
-            let (vert, ind) = Self::create_buffers(&wgpu.device, self.vertex_size, 50, self.index_size, 50);
+            let (vert, ind) =
+                Self::create_buffers(&wgpu.device, self.vertex_size, 50, self.index_size, 50);
             self.inner = Some(InnerBuffer {
                 vertex_buffer: vert,
                 index_buffer: ind,
@@ -512,7 +527,12 @@ impl<T> Material<T> {
 
         let max_verts = buffers.vertex_buffer.size();
         if self.vertex_count + (3 * self.vertex_size) > max_verts {
-            grow_buffer(&mut buffers.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
+            grow_buffer(
+                &mut buffers.vertex_buffer,
+                wgpu,
+                1,
+                wgpu::BufferUsages::VERTEX,
+            );
         }
 
         // yes its wastefull to do this but this is the only way to not have
@@ -528,7 +548,12 @@ impl<T> Material<T> {
 
         let max_indicies = buffers.index_buffer.size();
         if self.index_count + (6 * self.index_size) > max_indicies {
-            grow_buffer(&mut buffers.index_buffer, wgpu, 1, wgpu::BufferUsages::INDEX);
+            grow_buffer(
+                &mut buffers.index_buffer,
+                wgpu,
+                1,
+                wgpu::BufferUsages::INDEX,
+            );
         }
 
         wgpu.queue.write_buffer(
@@ -548,27 +573,23 @@ impl<T> Material<T> {
 
     // there where 'others: 'pass notation says that 'others lives longer than 'pass
     /// Draws all queued shapes to the screen.
-    pub fn draw<'others>(
-        &'others mut self,
-        information: &mut Renderer<'_, 'others>,
-    ) {
+    pub fn draw<'others>(&'others mut self, information: &mut Renderer<'_, 'others>) {
         if self.vertex_count == 0 {
             return;
         }
 
         // returns early bc stuff inst loaded so we just ignore it ! :3
-        let Some(shader) = information
-            .resources
-            .get_pipeline(&self.pipeline_id) else {
-                return;
-            };
+        let Some(shader) = information.resources.get_pipeline(&self.pipeline_id) else {
+            return;
+        };
 
         let Some(texture) = information
             .resources
             .get_texture(&self.texture_id)
-            .map(|t| &t.bind_group) else {
-                return;
-            };
+            .map(|t| &t.bind_group)
+        else {
+            return;
+        };
         // should never panic as the vertex == 0 means that there has been
         // some data put in which means this should be Some(T)
         let buffers = self.inner.as_ref().unwrap();
@@ -645,7 +666,7 @@ pub struct MaterialBuilder<T> {
     // in the case of a texture the defualt is just the White_Pixel
     texture_change: Option<ResourceId<Texture>>,
     shader_change: Option<ResourceId<Shader>>,
-    _marker: PhantomData<T>
+    _marker: PhantomData<T>,
 }
 
 impl<T> MaterialBuilder<T> {
@@ -655,7 +676,7 @@ impl<T> MaterialBuilder<T> {
         Self {
             texture_change: None,
             shader_change: None,
-            _marker: PhantomData
+            _marker: PhantomData,
         }
     }
 
@@ -664,7 +685,7 @@ impl<T> MaterialBuilder<T> {
         Self {
             texture_change: Some(texture),
             shader_change: self.shader_change,
-            _marker: PhantomData
+            _marker: PhantomData,
         }
     }
 
@@ -673,12 +694,15 @@ impl<T> MaterialBuilder<T> {
         Self {
             texture_change: self.texture_change,
             shader_change: Some(shader),
-            _marker: PhantomData
+            _marker: PhantomData,
         }
     }
 
     /// This is used to set the type of data used for the materials Uniform ensuring type saftey across the GPU
-    pub fn add_uniform_data<H: ShaderType + WriteInto>(self, _data: &UniformData<H>) -> MaterialBuilder<H> {
+    pub fn add_uniform_data<H: ShaderType + WriteInto>(
+        self,
+        _data: &UniformData<H>,
+    ) -> MaterialBuilder<H> {
         MaterialBuilder {
             texture_change: self.texture_change,
             shader_change: self.shader_change,
@@ -741,12 +765,11 @@ impl LineMaterial {
             }));
         }
 
-        
         let verts = [
             LineVertex::new(start.to_raw(), colour.as_raw()),
             LineVertex::new(end.to_raw(), colour.as_raw()),
         ];
-            
+
         let vertex_buffer = self.vertex_buffer.as_mut().unwrap();
 
         let max_verts = vertex_buffer.size();
@@ -808,18 +831,16 @@ impl LineMaterial {
     }
 
     /// Draws all queued lines to the screen.
-    pub fn draw<'others>(
-        &'others mut self,
-        information: &mut Renderer<'_, 'others>,
-    ) {
+    pub fn draw<'others>(&'others mut self, information: &mut Renderer<'_, 'others>) {
         if self.vertex_count == 0 {
             return;
         }
 
         let Some(pipeline) = information
-        .resources
-        .get_pipeline(&self.pipe_id)
-        .map(|p| &p.pipeline) else {
+            .resources
+            .get_pipeline(&self.pipe_id)
+            .map(|p| &p.pipeline)
+        else {
             return;
         };
 

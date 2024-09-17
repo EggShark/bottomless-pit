@@ -6,15 +6,13 @@ use std::slice::Iter;
 /// A buffer than can contain any type and at a specific length
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Buffer<T, const N: usize> {
-    inner: [T; N]
+    inner: [T; N],
 }
 
 impl<T, const N: usize> Buffer<T, N> {
     /// Creates a buffer with the starting data provided
     pub fn new(inital_data: [T; N]) -> Self {
-        Self {
-            inner: inital_data,
-        }
+        Self { inner: inital_data }
     }
 
     /// This adds a new entry into the buffer and deletes

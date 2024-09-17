@@ -3,7 +3,7 @@
 //! All Resources have two types of loading a `Blocking` method and a `Background`
 //! method. On native platforms (Mac, Windows, Linux) The blocking method will
 //! just read from the file system and your resource will be available
-//! immediately. Background loads resources on a diffrent thread and it will be 
+//! immediately. Background loads resources on a diffrent thread and it will be
 //! done when its done. On Wasm all things are loaded asynchronously so the
 //! Blocking method is faked by not updating or redrawing the game untill
 //! all blocking resources are loaded. There are no platform diffrences
@@ -121,7 +121,7 @@ impl From<std::io::Error> for ReadError {
 pub(crate) struct Loader {
     blocked_loading: usize,
     background_loading: usize,
-    #[cfg(not(target_arch="wasm32"))]
+    #[cfg(not(target_arch = "wasm32"))]
     pool: ThreadPool,
 }
 
@@ -130,7 +130,7 @@ impl Loader {
         Self {
             background_loading: 0,
             blocked_loading: 0,
-            #[cfg(not(target_arch="wasm32"))]
+            #[cfg(not(target_arch = "wasm32"))]
             pool: ThreadPool::new().unwrap(),
         }
     }
@@ -146,7 +146,7 @@ impl Loader {
         self.background_loading + self.blocked_loading
     }
 
-    #[cfg(target_arch="wasm32")]
+    #[cfg(target_arch = "wasm32")]
     pub fn is_blocked(&self) -> bool {
         self.blocked_loading > 0
     }
@@ -162,54 +162,84 @@ impl Loader {
     // becuase this is all happening on the main thread stuff will be read in before
     // render() is called
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn blocking_load(&mut self, ip_resource: InProgressResource, proxy: EventLoopProxy<BpEvent>) {
+    pub fn blocking_load(
+        &mut self,
+        ip_resource: InProgressResource,
+        proxy: EventLoopProxy<BpEvent>,
+    ) {
         let data: Result<Vec<u8>, ReadError> = match std::fs::read(&ip_resource.path) {
             Ok(d) => Ok(d),
-            Err(e) => Err(e.into())
+            Err(e) => Err(e.into()),
         };
 
-        let resource = Resource::from_result(data, ip_resource.path, ip_resource.id, ip_resource.resource_type, ip_resource.loading_op);
+        let resource = Resource::from_result(
+            data,
+            ip_resource.path,
+            ip_resource.id,
+            ip_resource.resource_type,
+            ip_resource.loading_op,
+        );
         self.blocked_loading += 1;
         proxy.send_event(BpEvent::ResourceLoaded(resource)).unwrap();
     }
 
     // request but flip flag :3
     #[cfg(target_arch = "wasm32")]
-    pub fn blocking_load(&mut self, ip_resource: InProgressResource, proxy: EventLoopProxy<BpEvent>) {
+    pub fn blocking_load(
+        &mut self,
+        ip_resource: InProgressResource,
+        proxy: EventLoopProxy<BpEvent>,
+    ) {
         use wasm_bindgen_futures::spawn_local;
         self.blocked_loading += 1;
         spawn_local(async move {
             let result = web_read(&ip_resource.path).await;
-            let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type, ip_resource.loading_op);
-            proxy
-                .send_event(BpEvent::ResourceLoaded(resource))
-                .unwrap();
+            let resource = Resource::from_result(
+                result,
+                ip_resource.path,
+                ip_resource.id,
+                ip_resource.resource_type,
+                ip_resource.loading_op,
+            );
+            proxy.send_event(BpEvent::ResourceLoaded(resource)).unwrap();
         });
     }
 
     // threadpool / aysnc
-    pub fn background_load(&mut self, ip_resource: InProgressResource, proxy: EventLoopProxy<BpEvent>) {
+    pub fn background_load(
+        &mut self,
+        ip_resource: InProgressResource,
+        proxy: EventLoopProxy<BpEvent>,
+    ) {
         self.background_loading += 1;
-        #[cfg(not(target_arch="wasm32"))]
+        #[cfg(not(target_arch = "wasm32"))]
         {
             self.pool.spawn_ok(async move {
                 let result = read(&ip_resource.path).await;
-                let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type, ip_resource.loading_op);
-                proxy
-                    .send_event(BpEvent::ResourceLoaded(resource))
-                    .unwrap();
+                let resource = Resource::from_result(
+                    result,
+                    ip_resource.path,
+                    ip_resource.id,
+                    ip_resource.resource_type,
+                    ip_resource.loading_op,
+                );
+                proxy.send_event(BpEvent::ResourceLoaded(resource)).unwrap();
             });
         }
 
-        #[cfg(target_arch="wasm32")]
+        #[cfg(target_arch = "wasm32")]
         {
             use wasm_bindgen_futures::spawn_local;
             spawn_local(async move {
                 let result = web_read(&ip_resource.path).await;
-                let resource = Resource::from_result(result, ip_resource.path, ip_resource.id, ip_resource.resource_type, ip_resource.loading_op);
-                proxy
-                    .send_event(BpEvent::ResourceLoaded(resource))
-                    .unwrap();
+                let resource = Resource::from_result(
+                    result,
+                    ip_resource.path,
+                    ip_resource.id,
+                    ip_resource.resource_type,
+                    ip_resource.loading_op,
+                );
+                proxy.send_event(BpEvent::ResourceLoaded(resource)).unwrap();
             });
         }
     }
@@ -269,7 +299,12 @@ pub(crate) struct InProgressResource {
 }
 
 impl InProgressResource {
-    pub fn new(path: &Path, id: NonZeroU64, resource_type: ResourceType, loading_op: LoadingOp) -> Self {
+    pub fn new(
+        path: &Path,
+        id: NonZeroU64,
+        resource_type: ResourceType,
+        loading_op: LoadingOp,
+    ) -> Self {
         Self {
             path: path.to_owned(),
             id,
@@ -294,10 +329,8 @@ impl PartialEq for ResourceType {
             (Self::Font, Self::Font) => true,
             (Self::Shader(option_1), Self::Shader(option_2)) => {
                 option_1.check_has() == option_2.check_has()
-            } 
-            (Self::Image(s1, s2), Self::Image(s3, s4)) => {
-                s1 == s3 && s2 == s4
             }
+            (Self::Image(s1, s2), Self::Image(s3, s4)) => s1 == s3 && s2 == s4,
             _ => false,
         }
     }

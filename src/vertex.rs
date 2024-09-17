@@ -109,12 +109,16 @@ impl LineVertex {
     }
 }
 
-pub(crate) fn new(pos: Vec2<f32>, size: Vec2<f32>, colour: [f32; 4], screen_size: Vec2<u32>) -> [Vertex; 4] {
+pub(crate) fn new(
+    pos: Vec2<f32>,
+    size: Vec2<f32>,
+    colour: [f32; 4],
+    screen_size: Vec2<u32>,
+) -> [Vertex; 4] {
     let pos = pos.to_raw();
     let size = size.to_raw();
     [
-        Vertex::from_2d(pos, [0.0, 0.0], colour)
-            .screenspace_to_pixels(screen_size),
+        Vertex::from_2d(pos, [0.0, 0.0], colour).screenspace_to_pixels(screen_size),
         Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour)
             .screenspace_to_pixels(screen_size),
         Vertex::from_2d([pos[0] + size[0], pos[1] - size[1]], [1.0, 1.0], colour)
@@ -124,11 +128,7 @@ pub(crate) fn new(pos: Vec2<f32>, size: Vec2<f32>, colour: [f32; 4], screen_size
     ]
 }
 
-pub fn from_pixels(
-    pos: Vec2<f32>,
-    size: Vec2<f32>,
-    colour: [f32; 4],
-) -> [Vertex; 4] {
+pub fn from_pixels(pos: Vec2<f32>, size: Vec2<f32>, colour: [f32; 4]) -> [Vertex; 4] {
     let pos = pos.to_raw();
     let size = size.to_raw();
 
@@ -136,7 +136,7 @@ pub fn from_pixels(
         Vertex::from_2d(pos, [0.0, 0.0], colour),
         Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour),
         Vertex::from_2d([pos[0] + size[0], pos[1] + size[1]], [1.0, 1.0], colour),
-        Vertex::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour)
+        Vertex::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour),
     ]
 }
 
@@ -186,14 +186,11 @@ pub(crate) fn from_pixels_with_rotation(
     };
 
     [
-        Vertex::from_2d(pos, [0.0, 0.0], colour)
-            .rotate(rotation, center),
-        Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour)
-            .rotate(rotation, center),
+        Vertex::from_2d(pos, [0.0, 0.0], colour).rotate(rotation, center),
+        Vertex::from_2d([pos[0] + size[0], pos[1]], [1.0, 0.0], colour).rotate(rotation, center),
         Vertex::from_2d([pos[0] + size[0], pos[1] + size[1]], [1.0, 1.0], colour)
             .rotate(rotation, center),
-        Vertex::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour)
-            .rotate(rotation, center),
+        Vertex::from_2d([pos[0], pos[1] + size[1]], [0.0, 1.0], colour).rotate(rotation, center),
     ]
 }
 
@@ -214,8 +211,7 @@ pub(crate) fn from_pixels_ex(
         y: pos[1] + size[1] / 2.0,
     };
     [
-        Vertex::from_2d(pos, uv_pos, colour)
-            .rotate(rotation, center),
+        Vertex::from_2d(pos, uv_pos, colour).rotate(rotation, center),
         Vertex::from_2d(
             [pos[0] + size[0], pos[1]],
             [uv_pos[0] + uv_size.x, uv_pos[1]],
@@ -287,14 +283,10 @@ pub(crate) fn from_pixels_custom(
     let center = get_center_of_four_points(points);
 
     [
-        Vertex::from_2d(points[0].to_raw(), uvs[0].to_raw(), colour)
-            .rotate(rotation, center),
-        Vertex::from_2d(points[1].to_raw(), uvs[1].to_raw(), colour)
-            .rotate(rotation, center),
-        Vertex::from_2d(points[2].to_raw(), uvs[2].to_raw(), colour)
-            .rotate(rotation, center),
-        Vertex::from_2d(points[3].to_raw(), uvs[3].to_raw(), colour)
-            .rotate(rotation, center),
+        Vertex::from_2d(points[0].to_raw(), uvs[0].to_raw(), colour).rotate(rotation, center),
+        Vertex::from_2d(points[1].to_raw(), uvs[1].to_raw(), colour).rotate(rotation, center),
+        Vertex::from_2d(points[2].to_raw(), uvs[2].to_raw(), colour).rotate(rotation, center),
+        Vertex::from_2d(points[3].to_raw(), uvs[3].to_raw(), colour).rotate(rotation, center),
     ]
 }
 

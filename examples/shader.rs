@@ -6,16 +6,14 @@ use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderHandle;
 use bottomless_pit::resource::LoadingOp;
 use bottomless_pit::shader::{Shader, ShaderOptions, UniformData};
+use bottomless_pit::vec2;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
-use bottomless_pit::vec2;
 
 use encase::ShaderType;
 
 fn main() {
-    let mut engine = EngineBuilder::new()
-        .build()
-        .unwrap();
+    let mut engine = EngineBuilder::new().build().unwrap();
 
     let data = MousePos {
         x: 0.0,
@@ -23,15 +21,25 @@ fn main() {
         _junk: 0.0,
         _padding2: 0.0,
     };
-    
+
     let mouse_uniform_data = UniformData::new(&data);
-    let mouse_shader = Shader::new("examples/mouse.wgsl", ShaderOptions::with_uniform_data(&mouse_uniform_data), &mut engine, LoadingOp::Blocking);
-    
+    let mouse_shader = Shader::new(
+        "examples/mouse.wgsl",
+        ShaderOptions::with_uniform_data(&mouse_uniform_data),
+        &mut engine,
+        LoadingOp::Blocking,
+    );
+
     // On wasm we need this to be 16 bytes aligned so we have added this instead of
     // a 0.0_f32
     let circle_uniform_data = UniformData::new(&data);
-    let circle_shader = Shader::new("examples/movement.wgsl", ShaderOptions::with_uniform_data(&circle_uniform_data), &mut engine, LoadingOp::Blocking);
-    
+    let circle_shader = Shader::new(
+        "examples/movement.wgsl",
+        ShaderOptions::with_uniform_data(&circle_uniform_data),
+        &mut engine,
+        LoadingOp::Blocking,
+    );
+
     let mouse_material = MaterialBuilder::new()
         .set_shader(mouse_shader)
         .build(&mut engine);
@@ -70,10 +78,7 @@ struct ShaderExample {
 }
 
 impl Game for ShaderExample {
-    fn render<'o>(
-        &'o mut self,
-        mut render: RenderHandle<'o>,
-    ) {
+    fn render<'o>(&'o mut self, mut render: RenderHandle<'o>) {
         let mut render_handle = render.begin_pass(Colour::BLACK);
 
         self.mouse_material.add_rectangle(

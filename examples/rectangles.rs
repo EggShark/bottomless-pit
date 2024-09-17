@@ -5,14 +5,12 @@ use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderHandle;
 use bottomless_pit::resource::LoadingOp;
 use bottomless_pit::texture::Texture;
-use bottomless_pit::vectors::Vec2;
 use bottomless_pit::vec2;
+use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
 
 fn main() {
-    let mut engine = EngineBuilder::new()
-        .build()
-        .unwrap();
+    let mut engine = EngineBuilder::new().build().unwrap();
 
     let texture = Texture::new(&mut engine, "examples/bplogo.png", LoadingOp::Blocking);
 
@@ -39,10 +37,7 @@ struct Position {
 }
 
 impl Game for Position {
-    fn render<'o>(
-        &'o mut self,
-        mut render: RenderHandle<'o>,
-    ) {
+    fn render<'o>(&'o mut self, mut render: RenderHandle<'o>) {
         let mut render_handle = render.begin_pass(Colour::BLACK);
 
         let defualt_size = vec2! { 50.0 };
@@ -52,12 +47,8 @@ impl Game for Position {
             Colour::RED,
             &render_handle,
         );
-        self.regular_material.add_rectangle(
-            self.pos,
-            vec2! { 100.0 },
-            Colour::RED,
-            &render_handle,
-        );
+        self.regular_material
+            .add_rectangle(self.pos, vec2! { 100.0 }, Colour::RED, &render_handle);
         self.texture_material.add_rectangle(
             vec2! { 0.0, 50.0 },
             defualt_size,
@@ -96,10 +87,20 @@ impl Game for Position {
         self.regular_material
             .add_custom(points, uvs, 0.0, Colour::RED, &render_handle);
 
-        self.regular_material.add_screenspace_rectangle(vec2!(0.0, 0.0), vec2!(1.0), Colour::YELLOW, &render_handle);
+        self.regular_material.add_screenspace_rectangle(
+            vec2!(0.0, 0.0),
+            vec2!(1.0),
+            Colour::YELLOW,
+            &render_handle,
+        );
 
         if self.state {
-            self.regular_material.add_rectangle(vec2!(300.0), vec2!(100.0), Colour::GREEN, &render_handle);
+            self.regular_material.add_rectangle(
+                vec2!(300.0),
+                vec2!(100.0),
+                Colour::GREEN,
+                &render_handle,
+            );
         }
 
         self.texture_material.draw(&mut render_handle);
@@ -110,7 +111,11 @@ impl Game for Position {
         let dt = engine_handle.get_frame_delta_time();
         self.pos.x += 100.0 * dt;
         if engine_handle.is_mouse_key_pressed(MouseKey::Left) {
-            let new_texture = Texture::new(engine_handle, "examples/eggshark.png", LoadingOp::Background);
+            let new_texture = Texture::new(
+                engine_handle,
+                "examples/eggshark.png",
+                LoadingOp::Background,
+            );
             self.texture_material.change_texture(new_texture);
         }
 

@@ -1,13 +1,13 @@
+use bottomless_pit::colour::Colour;
+use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::input::MouseKey;
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderHandle;
 use bottomless_pit::resource::LoadingOp;
 use bottomless_pit::texture::Texture;
-use bottomless_pit::engine_handle::{EngineBuilder, Engine};
-use bottomless_pit::colour::Colour;
+use bottomless_pit::vec2;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
-use bottomless_pit::vec2;
 
 fn main() {
     let mut engine = EngineBuilder::new()
@@ -39,10 +39,7 @@ struct TextureExample {
 }
 
 impl Game for TextureExample {
-    fn render<'o>(
-        &'o mut self,
-        mut render: RenderHandle<'o>,
-    ) {
+    fn render<'o>(&'o mut self, mut render: RenderHandle<'o>) {
         let mut render_handle = render.begin_pass(Colour::BLACK);
 
         self.current.add_rectangle(

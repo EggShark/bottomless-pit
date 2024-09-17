@@ -2,9 +2,9 @@ use bottomless_pit::colour::Colour;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::material::LineMaterial;
 use bottomless_pit::render::RenderHandle;
+use bottomless_pit::vec2;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
-use bottomless_pit::vec2;
 
 fn main() {
     let engine = EngineBuilder::new().build().unwrap();
@@ -23,12 +23,9 @@ struct LineExample {
 }
 
 impl Game for LineExample {
-    fn render<'o>(
-        &'o mut self,
-        mut render: RenderHandle<'o>,
-    ) {
+    fn render<'o>(&'o mut self, mut render: RenderHandle<'o>) {
         let mut render_handle = render.begin_pass(Colour::BLACK);
-        
+
         self.material.add_line(
             vec2! { 0.0, 0.0 },
             vec2! { 100.0, 100.0 },
@@ -36,7 +33,12 @@ impl Game for LineExample {
             &render_handle,
         );
 
-        self.material.add_screenspace_line(vec2!(-1.0, 1.0), vec2!(1.0, -1.0), Colour::RED, &render_handle);
+        self.material.add_screenspace_line(
+            vec2!(-1.0, 1.0),
+            vec2!(1.0, -1.0),
+            Colour::RED,
+            &render_handle,
+        );
 
         self.material.draw(&mut render_handle);
     }

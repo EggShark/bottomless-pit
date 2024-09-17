@@ -28,7 +28,15 @@ impl Texture {
         let typed_id = resource::generate_id::<Texture>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(SamplerType::LinearInterpolation, SamplerType::NearestNeighbor), loading_op);
+        let ip_resource = InProgressResource::new(
+            path,
+            id,
+            ResourceType::Image(
+                SamplerType::LinearInterpolation,
+                SamplerType::NearestNeighbor,
+            ),
+            loading_op,
+        );
 
         engine.loader.load(ip_resource, engine.get_proxy());
 
@@ -36,14 +44,20 @@ impl Texture {
     }
 
     /// Attempts to both read a file at the specified path and turn it into an image.
-    pub fn new_with_sampler<P>(engine: &mut Engine, path: P, sampler: SamplerType, loading_op: LoadingOp) -> ResourceId<Texture>
+    pub fn new_with_sampler<P>(
+        engine: &mut Engine,
+        path: P,
+        sampler: SamplerType,
+        loading_op: LoadingOp,
+    ) -> ResourceId<Texture>
     where
         P: AsRef<Path>,
     {
         let typed_id = resource::generate_id::<Texture>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(sampler, sampler), loading_op);
+        let ip_resource =
+            InProgressResource::new(path, id, ResourceType::Image(sampler, sampler), loading_op);
 
         engine.loader.blocking_load(ip_resource, engine.get_proxy());
 
@@ -51,16 +65,27 @@ impl Texture {
     }
 
     /// Attempts to load the file at the path and then turn it into a texture. This also allows you to select what sampling type to use
-    /// for both the `mag_sampler`, when the texture is being drawn larger than the orignal resolution and `min_sampler`, when the texture 
+    /// for both the `mag_sampler`, when the texture is being drawn larger than the orignal resolution and `min_sampler`, when the texture
     /// is being drawn smaller than the original resolution.
-    pub fn new_with_mag_min_sampler<P>(engine: &mut Engine, path: P, mag_sampler: SamplerType, min_sampler: SamplerType, loading_op: LoadingOp) -> ResourceId<Texture> 
+    pub fn new_with_mag_min_sampler<P>(
+        engine: &mut Engine,
+        path: P,
+        mag_sampler: SamplerType,
+        min_sampler: SamplerType,
+        loading_op: LoadingOp,
+    ) -> ResourceId<Texture>
     where
-        P: AsRef<Path>
+        P: AsRef<Path>,
     {
         let typed_id = resource::generate_id::<Texture>();
         let id = typed_id.get_id();
         let path = path.as_ref();
-        let ip_resource = InProgressResource::new(path, id, ResourceType::Image(mag_sampler, min_sampler), loading_op);
+        let ip_resource = InProgressResource::new(
+            path,
+            id,
+            ResourceType::Image(mag_sampler, min_sampler),
+            loading_op,
+        );
 
         engine.loader.blocking_load(ip_resource, engine.get_proxy());
 
@@ -72,10 +97,16 @@ impl Texture {
         label: Option<&str>,
         data: Vec<u8>,
         mag_sampler: SamplerType,
-        min_sampler: SamplerType
+        min_sampler: SamplerType,
     ) -> Result<Self, TextureError> {
         let img = image::load_from_memory(&data)?;
-        Ok(Self::from_image(engine, img, label, mag_sampler, min_sampler))
+        Ok(Self::from_image(
+            engine,
+            img,
+            label,
+            mag_sampler,
+            min_sampler,
+        ))
     }
 
     pub(crate) fn new_direct(
@@ -92,10 +123,22 @@ impl Texture {
 
     pub(crate) fn default(engine: &Engine) -> Self {
         let image = image::load_from_memory(ERROR_TEXTURE_DATA).unwrap();
-        Self::from_image(engine, image, Some("Error Texture"), SamplerType::LinearInterpolation, SamplerType::NearestNeighbor)
+        Self::from_image(
+            engine,
+            image,
+            Some("Error Texture"),
+            SamplerType::LinearInterpolation,
+            SamplerType::NearestNeighbor,
+        )
     }
 
-    fn from_image(engine: &Engine, img: image::DynamicImage, label: Option<&str>, mag_filter: SamplerType, min_filter: SamplerType) -> Self {
+    fn from_image(
+        engine: &Engine,
+        img: image::DynamicImage,
+        label: Option<&str>,
+        mag_filter: SamplerType,
+        min_filter: SamplerType,
+    ) -> Self {
         let wgpu = &engine.context.as_ref().expect("need graphic context").wgpu;
         let diffuse_rgba = img.to_rgba8();
         let (width, height) = img.dimensions();
@@ -214,13 +257,18 @@ pub struct UniformTexture {
 
 impl UniformTexture {
     /// creates a `UniformTexture` of a specified size
-    /// this can be reszied at anytime with 
+    /// this can be reszied at anytime with
     /// [Material::resize_uniform_texture](crate::material::Material::resize_uniform_texture)
     pub fn new(engine: &Engine, size: Vec2<u32>) -> Self {
-        let inner_texture = engine
-            .context
-            .as_ref()
-            .map(|c| InnerTexture::from_wgpu(size, SamplerType::LinearInterpolation, SamplerType::NearestNeighbor, c.get_texture_format(), &c.wgpu));
+        let inner_texture = engine.context.as_ref().map(|c| {
+            InnerTexture::from_wgpu(
+                size,
+                SamplerType::LinearInterpolation,
+                SamplerType::NearestNeighbor,
+                c.get_texture_format(),
+                &c.wgpu,
+            )
+        });
 
         Self {
             inner_texture,
@@ -234,11 +282,21 @@ impl UniformTexture {
     /// This creates a UniformTexture with samplers which allows you to select what sampling type to use for both the `mag_sampler`,
     /// when the texture is being drawn larger than the orignal resolution and `min_sampler`, when the texture is being drawn
     /// smaller than the original resolution.
-    pub fn new_with_sampler(engine: &Engine, size: Vec2<u32>, mag_sampler: SamplerType, min_sampler: SamplerType) -> Self {
-        let inner_texture = engine
-            .context
-            .as_ref()
-            .map(|c| InnerTexture::from_wgpu(size, mag_sampler, min_sampler, c.get_texture_format(), &c.wgpu));
+    pub fn new_with_sampler(
+        engine: &Engine,
+        size: Vec2<u32>,
+        mag_sampler: SamplerType,
+        min_sampler: SamplerType,
+    ) -> Self {
+        let inner_texture = engine.context.as_ref().map(|c| {
+            InnerTexture::from_wgpu(
+                size,
+                mag_sampler,
+                min_sampler,
+                c.get_texture_format(),
+                &c.wgpu,
+            )
+        });
 
         Self {
             inner_texture,
@@ -249,14 +307,28 @@ impl UniformTexture {
         }
     }
 
-    pub(crate) fn resize(&mut self, new_size: Vec2<u32>, wgpu: &WgpuClump, format: wgpu::TextureFormat) {
+    pub(crate) fn resize(
+        &mut self,
+        new_size: Vec2<u32>,
+        wgpu: &WgpuClump,
+        format: wgpu::TextureFormat,
+    ) {
         if self.inner_texture.is_none() {
-            self.inner_texture = Some(InnerTexture::from_wgpu(new_size, self.mag_sampler, self.min_sampler, format, wgpu));
+            self.inner_texture = Some(InnerTexture::from_wgpu(
+                new_size,
+                self.mag_sampler,
+                self.min_sampler,
+                format,
+                wgpu,
+            ));
             self.size = new_size;
             return;
         }
 
-        self.inner_texture.as_mut().unwrap().resize(new_size, wgpu, format);
+        self.inner_texture
+            .as_mut()
+            .unwrap()
+            .resize(new_size, wgpu, format);
         self.needs_update = true;
     }
 
@@ -273,17 +345,37 @@ impl UniformTexture {
         (self.mag_sampler, self.min_sampler)
     }
 
-    pub(crate) fn make_render_view<'a>(&'a mut self, wgpu: &WgpuClump, format: wgpu::TextureFormat) -> &'a wgpu::TextureView {
+    pub(crate) fn make_render_view<'a>(
+        &'a mut self,
+        wgpu: &WgpuClump,
+        format: wgpu::TextureFormat,
+    ) -> &'a wgpu::TextureView {
         if self.inner_texture.is_none() {
-            self.inner_texture = Some(InnerTexture::from_wgpu(self.size, self.mag_sampler, self.min_sampler, format, wgpu));
+            self.inner_texture = Some(InnerTexture::from_wgpu(
+                self.size,
+                self.mag_sampler,
+                self.min_sampler,
+                format,
+                wgpu,
+            ));
         }
 
         self.inner_texture.as_mut().unwrap().make_render_view()
     }
 
-    pub(crate) fn make_view(&mut self, wgpu: &WgpuClump, format: wgpu::TextureFormat) -> wgpu::TextureView {
+    pub(crate) fn make_view(
+        &mut self,
+        wgpu: &WgpuClump,
+        format: wgpu::TextureFormat,
+    ) -> wgpu::TextureView {
         if self.inner_texture.is_none() {
-            self.inner_texture = Some(InnerTexture::from_wgpu(self.size, self.mag_sampler, self.min_sampler, format, wgpu));
+            self.inner_texture = Some(InnerTexture::from_wgpu(
+                self.size,
+                self.mag_sampler,
+                self.min_sampler,
+                format,
+                wgpu,
+            ));
         }
 
         self.inner_texture.as_ref().unwrap().make_view()
@@ -305,7 +397,13 @@ struct InnerTexture {
 }
 
 impl InnerTexture {
-    fn from_wgpu(size: Vec2<u32>, mag_sampler: SamplerType, min_sampler: SamplerType, format: wgpu::TextureFormat, wgpu: &WgpuClump) -> Self {
+    fn from_wgpu(
+        size: Vec2<u32>,
+        mag_sampler: SamplerType,
+        min_sampler: SamplerType,
+        format: wgpu::TextureFormat,
+        wgpu: &WgpuClump,
+    ) -> Self {
         let sampler = wgpu.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Uniform Texture Sampler"),
             address_mode_u: wgpu::AddressMode::Repeat,
@@ -319,7 +417,11 @@ impl InnerTexture {
 
         let inner_texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Uniform Texture"),
-            size: wgpu::Extent3d { width: size.x, height: size.y, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width: size.x,
+                height: size.y,
+                depth_or_array_layers: 1,
+            },
             dimension: wgpu::TextureDimension::D2,
             mip_level_count: 1,
             sample_count: 1,
@@ -340,7 +442,11 @@ impl InnerTexture {
     fn resize(&mut self, new_size: Vec2<u32>, wgpu: &WgpuClump, format: wgpu::TextureFormat) {
         let inner_texture = wgpu.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Uniform Texture"),
-            size: wgpu::Extent3d { width: new_size.x, height: new_size.y, depth_or_array_layers: 1 },
+            size: wgpu::Extent3d {
+                width: new_size.x,
+                height: new_size.y,
+                depth_or_array_layers: 1,
+            },
             dimension: wgpu::TextureDimension::D2,
             mip_level_count: 1,
             sample_count: 1,
@@ -359,17 +465,20 @@ impl InnerTexture {
     }
 
     pub(crate) fn make_view(&self) -> wgpu::TextureView {
-        self.inner_texture.create_view(&wgpu::TextureViewDescriptor {
-            label: Some("Uniform Texture View"),
-            ..Default::default()
-        })
+        self.inner_texture
+            .create_view(&wgpu::TextureViewDescriptor {
+                label: Some("Uniform Texture View"),
+                ..Default::default()
+            })
     }
 
     pub(crate) fn make_render_view(&mut self) -> &wgpu::TextureView {
-        self.view = self.inner_texture.create_view(&wgpu::TextureViewDescriptor {
-            label: Some("Uniform Texture View"),
-            ..Default::default()
-        });
+        self.view = self
+            .inner_texture
+            .create_view(&wgpu::TextureViewDescriptor {
+                label: Some("Uniform Texture View"),
+                ..Default::default()
+            });
 
         &self.view
     }
@@ -390,12 +499,12 @@ impl Display for TextureError {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SamplerType {
     /// Nearest Neighbor sampling
-    /// 
+    ///
     /// This creates a pixelated look when used in upscaling best
     /// for pixel art games
     NearestNeighbor,
     /// Linear Interpolation sampling
-    /// 
+    ///
     /// Creates a smoother blury look when used in upscaling
     LinearInterpolation,
 }

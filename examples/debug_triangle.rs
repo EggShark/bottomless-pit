@@ -2,9 +2,9 @@ use bottomless_pit::colour::Colour;
 use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderHandle;
+use bottomless_pit::vec2;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
-use bottomless_pit::vec2;
 
 fn main() {
     let mut engine = EngineBuilder::new()
@@ -24,10 +24,7 @@ struct DebugTriangle {
 }
 
 impl Game for DebugTriangle {
-    fn render<'o>(
-        &'o mut self,
-        mut render: RenderHandle<'o>,
-    ) {
+    fn render<'o>(&'o mut self, mut render: RenderHandle<'o>) {
         let mut render_handle = render.begin_pass(Colour::BLACK);
 
         self.material.add_triangle_with_coloured_verticies(
@@ -41,12 +38,8 @@ impl Game for DebugTriangle {
             [Colour::RED, Colour::GREEN, Colour::BLUE],
             &render_handle,
         );
-        self.material.add_rectangle(
-            vec2! { 0.0 },
-            vec2! { 100.0 },
-            Colour::RED,
-            &render_handle,
-        );
+        self.material
+            .add_rectangle(vec2! { 0.0 }, vec2! { 100.0 }, Colour::RED, &render_handle);
         self.material.draw(&mut render_handle);
     }
 

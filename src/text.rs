@@ -43,15 +43,17 @@ use glyphon::{
 };
 
 use crate::colour::Colour;
-use crate::engine_handle::Engine;
 use crate::context::WgpuClump;
-use crate::{layouts, vec2};
+use crate::engine_handle::Engine;
 use crate::material::{self, Material};
 use crate::matrix_math::normalize_points;
 use crate::render::Renderer;
-use crate::resource::{self, InProgressResource, LoadingOp, ResourceId, ResourceManager, ResourceType};
+use crate::resource::{
+    self, InProgressResource, LoadingOp, ResourceId, ResourceManager, ResourceType,
+};
 use crate::vectors::Vec2;
 use crate::vertex::{self, Vertex};
+use crate::{layouts, vec2};
 
 /// Stores Important information nessicary to rendering text. Only on of these should
 /// be created per application.
@@ -136,13 +138,7 @@ pub struct TextMaterial {
 }
 
 impl TextMaterial {
-    pub fn new(
-        text: &str,
-        colour: Colour,
-        font_size: f32,
-        line_height: f32,
-    ) -> Self {
-
+    pub fn new(text: &str, colour: Colour, font_size: f32, line_height: f32) -> Self {
         Self {
             font_size,
             line_height,
@@ -157,16 +153,20 @@ impl TextMaterial {
     /// Sets the text for the widget, using the defualt font.
     /// This only needs to be done once, not every frame like Materials.
     pub fn set_text(&mut self, text: &str, colour: Colour, engine: &mut Engine) {
-        
         self.text = text.into();
-        
+
         // again only fails if called outstide Game Trait and why would you set text
         let context = match &mut engine.context {
             None => return,
             Some(c) => c,
         };
 
-        if self.add_inner(&context.wgpu, &mut context.text_renderer, &engine.resource_manager, &context.texture_sampler) {
+        if self.add_inner(
+            &context.wgpu,
+            &mut context.text_renderer,
+            &engine.resource_manager,
+            &context.texture_sampler,
+        ) {
             return;
         }
 
@@ -199,15 +199,20 @@ impl TextMaterial {
         engine: &mut Engine,
     ) {
         self.text = text.into();
-        
+
         // again only fails if called outstide Game Trait and why would you set text
         let context = match &mut engine.context {
             None => return,
             Some(c) => c,
         };
 
-        self.add_inner(&context.wgpu, &mut context.text_renderer, &engine.resource_manager, &context.texture_sampler);
-        
+        self.add_inner(
+            &context.wgpu,
+            &mut context.text_renderer,
+            &engine.resource_manager,
+            &context.texture_sampler,
+        );
+
         let inner = self.inner.as_mut().unwrap();
         let font_info = FontInformation {
             wgpu: &context.wgpu,
@@ -235,12 +240,11 @@ impl TextMaterial {
     /// Sets bounds for the text. Any text drawn outside of the bounds will be cropped
     pub fn set_bounds(&mut self, position: Vec2<i32>, size: Vec2<i32>) {
         if let Some(inner) = &mut self.inner {
-            inner.bounds = Vec2{
+            inner.bounds = Vec2 {
                 x: position,
                 y: size,
             }
         }
-
     }
 
     /// Sets the font size of the text
@@ -252,7 +256,12 @@ impl TextMaterial {
             Some(c) => c,
         };
 
-        if self.add_inner(&context.wgpu, &mut context.text_renderer, &engine.resource_manager, &context.texture_sampler) {
+        if self.add_inner(
+            &context.wgpu,
+            &mut context.text_renderer,
+            &engine.resource_manager,
+            &context.texture_sampler,
+        ) {
             return;
         }
 
@@ -280,7 +289,12 @@ impl TextMaterial {
             Some(c) => c,
         };
 
-        if self.add_inner(&context.wgpu, &mut context.text_renderer, &engine.resource_manager, &context.texture_sampler) {
+        if self.add_inner(
+            &context.wgpu,
+            &mut context.text_renderer,
+            &engine.resource_manager,
+            &context.texture_sampler,
+        ) {
             return;
         }
 
@@ -290,7 +304,6 @@ impl TextMaterial {
             text_handle: &mut context.text_renderer,
             resources: &engine.resource_manager,
         };
-        
 
         let metrics = Metrics::new(self.font_size, self.line_height);
         inner
@@ -310,7 +323,10 @@ impl TextMaterial {
     }
 
     fn update_measurements(&mut self, font_info: FontInformation) {
-        let inner = self.inner.as_mut().expect("inner should be inilized before measuring");
+        let inner = self
+            .inner
+            .as_mut()
+            .expect("inner should be inilized before measuring");
 
         let hieght = inner.text_buffer.lines.len() as f32 * inner.text_buffer.metrics().line_height;
         let run_width = inner
@@ -325,22 +341,28 @@ impl TextMaterial {
             y: hieght.ceil() as u32,
         };
 
-        inner.texture = font_info.wgpu.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("Text Texture"),
-            size: wgpu::Extent3d {
-                width: inner.size.x,
-                height: inner.size.y,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
-        });
+        inner.texture = font_info
+            .wgpu
+            .device
+            .create_texture(&wgpu::TextureDescriptor {
+                label: Some("Text Texture"),
+                size: wgpu::Extent3d {
+                    width: inner.size.x,
+                    height: inner.size.y,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                    | wgpu::TextureUsages::TEXTURE_BINDING,
+                view_formats: &[],
+            });
 
-        inner.viewport.update(&font_info.wgpu.queue, inner.size.into());
+        inner
+            .viewport
+            .update(&font_info.wgpu.queue, inner.size.into());
     }
 
     /// Queues a peice of text at the specified position. Its size will be the size of the entire
@@ -374,12 +396,7 @@ impl TextMaterial {
             y: inner.size.y as f32,
         };
         let wgpu = render.wgpu;
-        let verts = vertex::from_pixels_with_rotation(
-            position,
-            rect_size,
-            tint.as_raw(),
-            degrees,
-        );
+        let verts = vertex::from_pixels_with_rotation(position, rect_size, tint.as_raw(), degrees);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -414,13 +431,7 @@ impl TextMaterial {
             },
         );
 
-        let verts = vertex::from_pixels_with_uv(
-            position,
-            size,
-            tint.as_raw(),
-            uv_pos,
-            uv_size,
-        );
+        let verts = vertex::from_pixels_with_uv(position, size, tint.as_raw(), uv_pos, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -456,14 +467,7 @@ impl TextMaterial {
             },
         );
 
-        let verts = vertex::from_pixels_ex(
-            position,
-            size,
-            tint.as_raw(),
-            degrees,
-            uv_pos,
-            uv_size,
-        );
+        let verts = vertex::from_pixels_ex(position, size, tint.as_raw(), degrees, uv_pos, uv_size);
 
         self.push_rectangle(wgpu, verts);
     }
@@ -513,24 +517,26 @@ impl TextMaterial {
             ),
         ];
 
-        let verts =
-            vertex::from_pixels_custom(points, uv_points, degrees, tint.as_raw());
+        let verts = vertex::from_pixels_custom(points, uv_points, degrees, tint.as_raw());
 
         self.push_rectangle(wgpu, verts);
     }
 
     fn push_rectangle(&mut self, wgpu: &WgpuClump, verts: [Vertex; 4]) {
-
         let num_verts = self.get_vertex_number() as u16;
         let inner = self.inner.as_mut().unwrap();
-
 
         let vertex_size = std::mem::size_of::<Vertex>() as u64;
         let index_size = 2;
 
         let max_verts = inner.vertex_buffer.size();
         if self.vertex_count + (4 * vertex_size) > max_verts {
-            material::grow_buffer(&mut inner.vertex_buffer, wgpu, 1, wgpu::BufferUsages::VERTEX);
+            material::grow_buffer(
+                &mut inner.vertex_buffer,
+                wgpu,
+                1,
+                wgpu::BufferUsages::VERTEX,
+            );
         }
 
         let indicies = [
@@ -570,21 +576,28 @@ impl TextMaterial {
         self.index_count / 2
     }
 
-    fn add_inner(&mut self, wgpu: &WgpuClump, text_handle: &mut TextRenderer, resources: &ResourceManager, sampler: &wgpu::Sampler) -> bool {
+    fn add_inner(
+        &mut self,
+        wgpu: &WgpuClump,
+        text_handle: &mut TextRenderer,
+        resources: &ResourceManager,
+        sampler: &wgpu::Sampler,
+    ) -> bool {
         if self.inner.is_none() {
-            self.inner = Some(
-                InnerMaterial::new(
-                    wgpu,
-                    text_handle,
-                    resources,
-                    sampler,
-                    &self.text,
-                    self.font_size,
-                    self.line_height,
-                    self.colour
+            self.inner = Some(InnerMaterial::new(
+                wgpu,
+                text_handle,
+                resources,
+                sampler,
+                &self.text,
+                self.font_size,
+                self.line_height,
+                self.colour,
             ));
             true
-        } else { false }
+        } else {
+            false
+        }
     }
 
     /// This function needs to be run any time you update the text. This updates the internal
@@ -597,16 +610,15 @@ impl TextMaterial {
         };
 
         if self.inner.is_none() {
-            self.inner = Some(
-                InnerMaterial::new(
-                    &context.wgpu,
-                    &mut context.text_renderer,
-                    &engine.resource_manager,
-                    &context.texture_sampler,
-                    &self.text,
-                    self.font_size,
-                    self.line_height,
-                    self.colour
+            self.inner = Some(InnerMaterial::new(
+                &context.wgpu,
+                &mut context.text_renderer,
+                &engine.resource_manager,
+                &context.texture_sampler,
+                &self.text,
+                self.font_size,
+                self.line_height,
+                self.colour,
             ));
         }
 
@@ -618,7 +630,9 @@ impl TextMaterial {
 
         let inner = self.inner.as_mut().unwrap();
 
-        let texture_view = inner.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let texture_view = inner
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
         render_text_to_texture(
             font_info.text_handle,
             &inner.text_buffer,
@@ -628,27 +642,27 @@ impl TextMaterial {
             font_info.wgpu,
         );
 
-        inner.bind_group = context.wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Text Widget BindGroup"),
-            layout: &layouts::create_texture_layout(&context.wgpu.device),
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&texture_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&context.texture_sampler),
-                },
-            ],
-        });
+        inner.bind_group = context
+            .wgpu
+            .device
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Text Widget BindGroup"),
+                layout: &layouts::create_texture_layout(&context.wgpu.device),
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&texture_view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&context.texture_sampler),
+                    },
+                ],
+            });
     }
 
     /// Draws all queued text instances to the screen
-    pub fn draw<'others>(
-        &'others mut self,
-        information: &mut Renderer<'_, 'others>,
-    ) {
+    pub fn draw<'others>(&'others mut self, information: &mut Renderer<'_, 'others>) {
         let inner = self.inner.as_ref().unwrap();
 
         let pipeline = &information
@@ -658,9 +672,7 @@ impl TextMaterial {
             .pipeline;
 
         information.pass.set_pipeline(pipeline);
-        information
-            .pass
-            .set_bind_group(0, &inner.bind_group, &[]);
+        information.pass.set_bind_group(0, &inner.bind_group, &[]);
 
         information
             .pass
@@ -700,7 +712,7 @@ impl InnerMaterial {
         text: &str,
         font_size: f32,
         line_height: f32,
-        colour: Colour
+        colour: Colour,
     ) -> Self {
         let font_info = FontInformation {
             wgpu,
@@ -712,12 +724,8 @@ impl InnerMaterial {
             &mut font_info.text_handle.font_system,
             Metrics::new(font_size, line_height),
         );
-        
-        text_buffer.set_size(
-            &mut font_info.text_handle.font_system,
-            None,
-            None,
-        );
+
+        text_buffer.set_size(&mut font_info.text_handle.font_system, None, None);
 
         text_buffer.set_text(
             &mut font_info.text_handle.font_system,
@@ -767,7 +775,8 @@ impl InnerMaterial {
             y: hieght.ceil() as u32,
         };
 
-        let mut viewport = glyphon::Viewport::new(&font_info.wgpu.device, &font_info.text_handle.text_cache);
+        let mut viewport =
+            glyphon::Viewport::new(&font_info.wgpu.device, &font_info.text_handle.text_cache);
         viewport.update(&font_info.wgpu.queue, texture_size.into());
 
         let texture_view = texture.create_view(&Default::default());
@@ -786,22 +795,20 @@ impl InnerMaterial {
         let (vertex_buffer, index_buffer) =
             Material::<()>::create_buffers(&wgpu.device, vertex_size, 16, 2, 32);
 
-        let bind_group = wgpu
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Text Widget BindGroup"),
-                layout: &layouts::create_texture_layout(&wgpu.device),
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&texture_view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(sampler),
-                    },
-                ],
-            });
+        let bind_group = wgpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Text Widget BindGroup"),
+            layout: &layouts::create_texture_layout(&wgpu.device),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(sampler),
+                },
+            ],
+        });
 
         Self {
             size: texture_size,
@@ -830,7 +837,11 @@ pub struct Font {
 
 impl Font {
     /// Attempts to load in a Font from file.
-    pub fn new<P: AsRef<Path>>(path: P, engine: &mut Engine, loading_op: LoadingOp) -> ResourceId<Font> {
+    pub fn new<P: AsRef<Path>>(
+        path: P,
+        engine: &mut Engine,
+        loading_op: LoadingOp,
+    ) -> ResourceId<Font> {
         let typed_id = resource::generate_id::<Font>();
         let id = typed_id.get_id();
         let path = path.as_ref();

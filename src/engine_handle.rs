@@ -7,11 +7,11 @@ use glyphon::{Attrs, Metrics, Shaping};
 
 use image::ImageError;
 use spin_sleep::SpinSleeper;
-use winit::application::ApplicationHandler;
 use std::num::NonZeroU64;
 use std::path::Path;
 use web_time::Instant;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
+use winit::application::ApplicationHandler;
 use winit::error::OsError;
 use winit::event::*;
 use winit::event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy};
@@ -20,15 +20,16 @@ use winit::window::BadIcon;
 use crate::context::{GraphicsContext, WindowOptions};
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::render;
+use crate::resource;
 use crate::resource::{
-    InProgressResource, Loader, LoadingOp, Resource, ResourceError, ResourceId, ResourceManager, ResourceType
+    InProgressResource, Loader, LoadingOp, Resource, ResourceError, ResourceId, ResourceManager,
+    ResourceType,
 };
 use crate::shader::{FinalShaderOptions, IntermediateOptions, Shader};
 use crate::text::Font;
 use crate::texture::{SamplerType, Texture};
 use crate::vectors::Vec2;
 use crate::Game;
-use crate::resource;
 
 /// The thing that makes the computer go
 pub struct Engine {
@@ -171,7 +172,10 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn window_has_focus(&self) -> bool {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.window.has_focus()
     }
 
@@ -179,7 +183,10 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn is_window_maximized(&self) -> bool {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.window.is_maximized()
     }
 
@@ -187,7 +194,10 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn is_window_minimized(&self) -> bool {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.window.is_minimized().unwrap_or(false)
     }
 
@@ -196,7 +206,10 @@ impl Engine {
     /// When called outside of the functions in the [Game] trait
     pub fn is_window_fullscreen(&self) -> bool {
         // based on limited docs knowledge this should work
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.window.fullscreen().is_some()
     }
 
@@ -204,7 +217,10 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn maximize_window(&self) {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.window.set_maximized(true);
     }
 
@@ -212,7 +228,10 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn minimize_window(&self) {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.window.set_minimized(true);
     }
 
@@ -221,7 +240,7 @@ impl Engine {
         self.should_close = true;
     }
 
-    /// Will attempt to set the window icon for more details check the 
+    /// Will attempt to set the window icon for more details check the
     /// [winit docs](https://docs.rs/winit/latest/winit/window/struct.Window.html#method.set_window_icon)
     /// # Panics
     /// When called outside of the functions in the [Game] trait
@@ -231,7 +250,10 @@ impl Engine {
         let image_bytes = image.into_raw();
         let icon = winit::window::Icon::from_rgba(image_bytes, width, height)?;
 
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
 
         context.window.set_window_icon(Some(icon));
         Ok(())
@@ -241,7 +263,10 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn set_window_title(&self, title: &str) {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.window.set_title(title);
     }
 
@@ -249,8 +274,12 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn set_window_position(&self, x: f32, y: f32) {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
-        context.window
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
+        context
+            .window
             .set_outer_position(winit::dpi::PhysicalPosition::new(x, y));
     }
 
@@ -258,8 +287,12 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn set_window_min_size(&self, width: f32, height: f32) {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
-        context.window
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
+        context
+            .window
             .set_min_inner_size(Some(winit::dpi::PhysicalSize::new(width, height)));
     }
 
@@ -267,7 +300,10 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn get_window_position(&self) -> Option<Vec2<i32>> {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         match context.window.outer_position() {
             Ok(v) => Some((v.x, v.y).into()),
             Err(_) => None,
@@ -283,7 +319,10 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn get_window_scale_factor(&self) -> f64 {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.window.scale_factor()
     }
 
@@ -293,9 +332,13 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn toggle_fullscreen(&self) {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         if self.is_window_fullscreen() {
-            context.window
+            context
+                .window
                 .set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
         } else {
             context.window.set_fullscreen(None);
@@ -306,7 +349,10 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn hide_cursor(&mut self) {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.window.set_cursor_visible(false);
         self.cursor_visibility = false;
     }
@@ -315,7 +361,10 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn show_cursor(&mut self) {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.window.set_cursor_visible(true);
         self.cursor_visibility = true;
     }
@@ -348,9 +397,13 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn remove_vsync(&mut self) {
-        let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_mut()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.config.present_mode = wgpu::PresentMode::AutoNoVsync;
-        context.surface
+        context
+            .surface
             .configure(&context.wgpu.device, &context.config);
     }
 
@@ -360,9 +413,13 @@ impl Engine {
     /// # Panics
     /// When called outside of the functions in the [Game] trait
     pub fn add_vsync(&mut self) {
-        let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_mut()
+            .expect("Context hasnt been created yet run inside impl Game");
         context.config.present_mode = wgpu::PresentMode::AutoVsync;
-        context.surface
+        context
+            .surface
             .configure(&context.wgpu.device, &context.config);
     }
 
@@ -381,14 +438,17 @@ impl Engine {
     pub fn measure_string(&mut self, text: &str, font_size: f32, line_height: f32) -> Vec2<f32> {
         let size = self.get_window_size();
         let scale_factor = self.get_window_scale_factor();
-        
-        let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
+
+        let context = self
+            .context
+            .as_mut()
+            .expect("Context hasnt been created yet run inside impl Game");
 
         let mut buffer = glyphon::Buffer::new(
             &mut context.text_renderer.font_system,
             Metrics::new(font_size, line_height),
         );
-        
+
         let physical_width = (size.x as f64 * scale_factor) as f32;
         let physical_height = (size.y as f64 * scale_factor) as f32;
 
@@ -418,7 +478,11 @@ impl Engine {
     }
 
     /// Loads in a byte vector resource, can be used to load arbitary files.
-    pub fn create_resource<P: AsRef<Path>>(&mut self, path: P, loading_op: LoadingOp) -> ResourceId<Vec<u8>> {
+    pub fn create_resource<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        loading_op: LoadingOp,
+    ) -> ResourceId<Vec<u8>> {
         let typed_id = resource::generate_id::<Vec<u8>>();
         let id = typed_id.get_id();
         let path = path.as_ref();
@@ -509,14 +573,18 @@ impl Engine {
     }
 
     fn resize(&mut self, new_size: Vec2<u32>) {
-        let context = self.context.as_mut().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_mut()
+            .expect("Context hasnt been created yet run inside impl Game");
 
         log::info!("RESZING");
 
         if new_size.x > 0 && new_size.y > 0 {
             context.config.width = new_size.x;
             context.config.height = new_size.y;
-            context.surface
+            context
+                .surface
                 .configure(&context.wgpu.device, &context.config);
             self.size = new_size;
             context.wgpu.queue.write_buffer(
@@ -530,8 +598,8 @@ impl Engine {
     fn handle_resource(&mut self, resource: Result<Resource, ResourceError>) {
         match resource {
             Ok(data) => {
-                    self.loader.remove_item_loading(data.loading_op);
-                    match data.resource_type {
+                self.loader.remove_item_loading(data.loading_op);
+                match data.resource_type {
                     ResourceType::Bytes => self.add_finished_bytes(data.data, data.id, &data.path),
                     ResourceType::Image(mag, min) => {
                         self.add_finished_image(data.data, data.id, mag, min, &data.path)
@@ -541,7 +609,7 @@ impl Engine {
                     }
                     ResourceType::Font => self.add_finished_font(data),
                 }
-            },
+            }
             Err(e) => {
                 log::error!(
                     "could not load resource: {:?}, becuase: {:?}, loading defualt replacement",
@@ -593,7 +661,8 @@ impl Engine {
         options: IntermediateOptions,
         path: &Path,
     ) {
-        let final_option = FinalShaderOptions::from_intermediate(options, self.context.as_ref().unwrap());
+        let final_option =
+            FinalShaderOptions::from_intermediate(options, self.context.as_ref().unwrap());
 
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
         let shader = Shader::from_resource_data(&data, final_option, self);
@@ -631,7 +700,10 @@ impl Engine {
     }
 
     fn add_defualt_shader(&mut self, id: NonZeroU64) {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
 
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
         let shader = Shader::defualt(&context.wgpu, context.get_texture_format());
@@ -639,7 +711,10 @@ impl Engine {
     }
 
     fn add_defualt_font(&mut self, id: NonZeroU64) {
-        let context = self.context.as_ref().expect("Context hasnt been created yet run inside impl Game");
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
 
         let typed_id: ResourceId<Font> = ResourceId::from_number(id);
         let font = Font::from_str(context.text_renderer.get_defualt_font_name());
@@ -648,11 +723,15 @@ impl Engine {
 
     pub(crate) fn is_loading(&self) -> bool {
         // self.loader.get_loading_resources() > 0
-        #[cfg(not(target_arch="wasm32"))]
-        { false }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            false
+        }
 
-        #[cfg(target_arch="wasm32")]
-        { self.loader.is_blocked() } 
+        #[cfg(target_arch = "wasm32")]
+        {
+            self.loader.is_blocked()
+        }
     }
 }
 
@@ -705,7 +784,7 @@ impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
                 }
                 e => {
                     log::info!("{:?}", e);
-                },
+                }
             }
         }
     }
@@ -720,10 +799,8 @@ impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
         let (engine, _) = self;
         engine.context.as_ref().unwrap().window.request_redraw();
-        
     }
 }
-
 
 /// A builder class that helps create an application
 /// with specific details

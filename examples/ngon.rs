@@ -5,11 +5,11 @@ use bottomless_pit::engine_handle::{Engine, EngineBuilder};
 use bottomless_pit::material::{Material, MaterialBuilder};
 use bottomless_pit::render::RenderHandle;
 use bottomless_pit::resource::LoadingOp;
-use bottomless_pit::shader::{Shader, ShaderOptions};
 use bottomless_pit::shader::UniformData;
+use bottomless_pit::shader::{Shader, ShaderOptions};
+use bottomless_pit::vec2;
 use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
-use bottomless_pit::vec2;
 
 use encase::ShaderType;
 
@@ -29,7 +29,12 @@ fn main() {
 
     let uniform_data = UniformData::new(&data);
 
-    let mouse_shader = Shader::new("examples/sinewaves.wgsl", ShaderOptions::with_uniform_data(&uniform_data), &mut engine, LoadingOp::Blocking);
+    let mouse_shader = Shader::new(
+        "examples/sinewaves.wgsl",
+        ShaderOptions::with_uniform_data(&uniform_data),
+        &mut engine,
+        LoadingOp::Blocking,
+    );
 
     let regular_material = MaterialBuilder::new()
         .set_shader(mouse_shader)
@@ -57,10 +62,7 @@ struct Position {
 }
 
 impl Game for Position {
-    fn render<'o>(
-        &'o mut self,
-        mut render: RenderHandle<'o>,
-    ) {
+    fn render<'o>(&'o mut self, mut render: RenderHandle<'o>) {
         let mut render_handle = render.begin_pass(Colour::BLACK);
 
         self.regular_material.add_regular_n_gon(
@@ -78,6 +80,7 @@ impl Game for Position {
         let dt = engine_handle.get_frame_delta_time();
         self.time.time = (self.time.time + dt) % (32.0 * PI);
         self.regular_material
-            .update_uniform_data(&self.time, &engine_handle).unwrap();
+            .update_uniform_data(&self.time, &engine_handle)
+            .unwrap();
     }
 }

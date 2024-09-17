@@ -1,20 +1,19 @@
-use std::sync::Arc;
 use crate::engine_handle::{DefualtResources, EngineBuilder};
-use crate::resource::ResourceManager;
-use crate::WHITE_PIXEL;
 use crate::layouts;
 use crate::render::make_pipeline;
+use crate::resource::ResourceManager;
+use crate::shader::Shader;
 use crate::text::TextRenderer;
 use crate::texture::Texture;
-use crate::shader::Shader;
 use crate::vectors::Vec2;
 use crate::vertex::LineVertex;
+use crate::WHITE_PIXEL;
+use std::sync::Arc;
 
 use image::GenericImageView;
+use wgpu::util::DeviceExt;
 use winit::event_loop::ActiveEventLoop;
 use winit::window::{Window, WindowAttributes};
-use wgpu::util::DeviceExt;
-
 
 pub(crate) struct GraphicsContext {
     pub(crate) wgpu: WgpuClump,
@@ -45,9 +44,14 @@ impl GraphicsContext {
             use winit::platform::web::WindowExtWebSys;
 
             let title = window.title();
-            let web_window = web_sys::window().ok_or(BuildError::CantGetWebWindow).unwrap();
+            let web_window = web_sys::window()
+                .ok_or(BuildError::CantGetWebWindow)
+                .unwrap();
             let canvas = web_sys::Element::from(window.canvas().unwrap());
-            let document = web_window.document().ok_or(BuildError::CantGetDocument).unwrap();
+            let document = web_window
+                .document()
+                .ok_or(BuildError::CantGetDocument)
+                .unwrap();
 
             match document.get_element_by_id(&title) {
                 Some(element) => {
@@ -99,7 +103,8 @@ impl GraphicsContext {
                 memory_hints: wgpu::MemoryHints::Performance,
             },
             None,
-        )).unwrap();
+        ))
+        .unwrap();
 
         let wgpu_clump = WgpuClump { device, queue };
 
@@ -301,7 +306,7 @@ impl GraphicsContext {
 
     pub(crate) fn get_surface_texture(&self) -> Result<wgpu::SurfaceTexture, wgpu::SurfaceError> {
         self.surface.get_current_texture()
-    } 
+    }
 }
 
 pub(crate) struct WindowOptions {
