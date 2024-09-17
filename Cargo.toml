@@ -18,16 +18,14 @@ env_logger = "0.10.0"
 log = "0.4.17"
 pollster = "0.2.5"
 winit = "0.30"
-glyph_brush = "0.7"
 spin_sleep = "1.1.1"
 encase = "0.6.1"
 etagere = "0.2.8"
-cosmic-text = "0.10"
 lru = "0.11"
 cfg-if = "1.0.0"
 web-time = "0.2.3"
 futures = {version = "0.3.29", features = ["thread-pool"]}
-glyphon = {git = "https://github.com/grovesNL/glyphon.git", rev = "ce6ede951caf84569563ffdf1ef5a98aeae484e1"}
+glyphon = "0.6.0"
 
 [dependencies.wgpu]
 version = "22"

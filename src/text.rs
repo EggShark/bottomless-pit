@@ -869,6 +869,7 @@ fn render_text_to_texture(
             bottom: bounds.y.y,
         },
         default_color: glyphon::Color::rgb(255, 255, 255),
+        custom_glyphs: &[],
     };
 
     text_handle
