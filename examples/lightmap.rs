@@ -101,11 +101,11 @@ impl Game for TextureExample {
         self.light.pos_y = mouse_pos.y / window_size.y as f32;
         self.material
             .update_uniform_data(&self.light, &engine_handle)
-            .unwrap();
+            .unwrap_or_default();
 
         self.material
             .update_uniform_texture(&mut self.uniform_texture, engine_handle)
-            .unwrap_or_else(|_| {});
+            .unwrap_or_default();
     }
 
     fn on_resize(&mut self, new_size: Vec2<u32>, engine_handle: &mut Engine) {
