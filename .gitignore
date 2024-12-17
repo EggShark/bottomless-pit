@@ -3,5 +3,4 @@
 /crates/bottomless-pit/target
 /examples/*/target
 /examples/*/Cargo.lock
-Cargo.lock
 .obsidian
