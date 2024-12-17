@@ -123,9 +123,9 @@ impl Game for ShaderExample {
         self.data = new_data;
         self.mouse_material
             .update_uniform_data(&self.data, &engine_handle)
-            .unwrap();
+            .unwrap_or_default();
         self.circle_material
             .update_uniform_data(&self.theta, &engine_handle)
-            .unwrap();
+            .unwrap_or_default();
     }
 }
