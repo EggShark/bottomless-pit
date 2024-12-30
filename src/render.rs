@@ -47,14 +47,14 @@ pub(crate) fn make_pipeline(
         layout: Some(&layout),
         vertex: wgpu::VertexState {
             module: shader,
-            entry_point: "vs_main", //specify the entry point (can be whatever as long as it exists)
+            entry_point: Some("vs_main"), //specify the entry point (can be whatever as long as it exists)
             buffers: vertex_buffers, // specfies what type of vertices we want to pass to the shader,
             compilation_options: wgpu::PipelineCompilationOptions::default(),
         },
         fragment: Some(wgpu::FragmentState {
             // techically optional. Used to store colour data to the surface
             module: shader,
-            entry_point: "fs_main",
+            entry_point: Some("fs_main"),
             targets: &[Some(wgpu::ColorTargetState {
                 // tells wgpu what colour outputs it should set up.
                 format: texture_format,

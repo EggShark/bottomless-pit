@@ -47,7 +47,9 @@ impl GraphicsContext {
             let web_window = web_sys::window()
                 .ok_or(BuildError::CantGetWebWindow)
                 .unwrap();
+            
             let canvas = web_sys::Element::from(window.canvas().unwrap());
+
             let document = web_window
                 .document()
                 .ok_or(BuildError::CantGetDocument)

@@ -4,6 +4,7 @@
 //! Engine gives you access to all the crucial logic functions
 
 use glyphon::{Attrs, Metrics, Shaping};
+use log::warn;
 
 use image::ImageError;
 use spin_sleep::SpinSleeper;
@@ -760,6 +761,7 @@ impl<T: Game> ApplicationHandler<BpEvent> for (T, Engine) {
             match event {
                 WindowEvent::CloseRequested => event_loop.exit(),
                 WindowEvent::Resized(physical_size) => {
+                    warn!("Resize Event");
                     engine.resize(physical_size.into());
                     game.on_resize(physical_size.into(), engine);
                 }
