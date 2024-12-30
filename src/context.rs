@@ -17,13 +17,13 @@ use winit::window::{Window, WindowAttributes};
 
 pub(crate) struct GraphicsContext {
     pub(crate) wgpu: WgpuClump,
-    pub(crate) window: Arc<Window>,
     pub(crate) surface: wgpu::Surface<'static>,
     pub(crate) texture_sampler: wgpu::Sampler,
     pub(crate) config: wgpu::SurfaceConfiguration,
     pub(crate) camera_bind_group: wgpu::BindGroup,
     pub(crate) camera_buffer: wgpu::Buffer,
     pub(crate) text_renderer: TextRenderer,
+    pub(crate) window: Arc<Window>,
 }
 
 impl GraphicsContext {

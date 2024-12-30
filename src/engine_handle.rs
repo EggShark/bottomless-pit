@@ -33,8 +33,8 @@ use crate::Game;
 
 /// The thing that makes the computer go
 pub struct Engine {
-    input_handle: InputHandle,
     event_loop: Option<EventLoop<BpEvent>>,
+    input_handle: InputHandle,
     window_options: Option<WindowOptions>,
     proxy: EventLoopProxy<BpEvent>,
     cursor_visibility: bool,
@@ -45,11 +45,11 @@ pub struct Engine {
     spin_sleeper: SpinSleeper,
     current_frametime: Instant,
     size: Vec2<u32>,
-    pub(crate) context: Option<GraphicsContext>,
     pub(crate) resource_manager: ResourceManager,
     pub(crate) loader: Loader,
     pub(crate) defualt_resources: DefualtResources,
     ma_frame_time: f32,
+    pub(crate) context: Option<GraphicsContext>,
 }
 
 impl Engine {
@@ -531,7 +531,7 @@ impl Engine {
         T: Game + 'static,
     {
         let event_loop = self.event_loop.take().unwrap(); //should never panic
-        event_loop.run_app(&mut (self, game)).unwrap();
+        event_loop.run_app(&mut (game, self)).unwrap();
     }
 
     fn update(&mut self, elwt: &ActiveEventLoop) {
@@ -735,9 +735,9 @@ impl Engine {
     }
 }
 
-impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
+impl<T: Game> ApplicationHandler<BpEvent> for (T, Engine) {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        let (engine, _) = self;
+        let (_, engine) = self;
 
         if engine.context.is_none() {
             engine.context = Some(GraphicsContext::from_active_loop(
@@ -755,7 +755,7 @@ impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
         window_id: winit::window::WindowId,
         event: WindowEvent,
     ) {
-        let (engine, game) = self;
+        let (game, engine) = self;
         if window_id == engine.context.as_ref().unwrap().window.id() && !engine.input(&event) {
             match event {
                 WindowEvent::CloseRequested => event_loop.exit(),
@@ -790,14 +790,14 @@ impl<T: Game> ApplicationHandler<BpEvent> for (Engine, T) {
     }
 
     fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: BpEvent) {
-        let (engine, _) = self;
+        let (_, engine) = self;
         match event {
             BpEvent::ResourceLoaded(resource) => engine.handle_resource(resource),
         }
     }
 
     fn about_to_wait(&mut self, _event_loop: &ActiveEventLoop) {
-        let (engine, _) = self;
+        let (_, engine) = self;
         engine.context.as_ref().unwrap().window.request_redraw();
     }
 }
