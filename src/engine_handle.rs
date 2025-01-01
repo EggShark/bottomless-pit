@@ -18,6 +18,9 @@ use winit::event::*;
 use winit::event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy};
 use winit::window::BadIcon;
 
+#[cfg(target_arch="wasm32")]
+use winit::platform::web::EventLoopExtWebSys;
+
 use crate::context::{GraphicsContext, WindowOptions};
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::render;
@@ -532,7 +535,14 @@ impl Engine {
         T: Game + 'static,
     {
         let event_loop = self.event_loop.take().unwrap(); //should never panic
-        event_loop.run_app(&mut (game, self)).unwrap();
+        #[cfg(target_arch="wasm32")]
+        {
+            event_loop.spawn_app((game, self));
+        }
+        #[cfg(not(target_arch="wasm32"))] 
+        {
+            event_loop.run_app(&mut (game, self)).unwrap();
+        }
     }
 
     fn update(&mut self, elwt: &ActiveEventLoop) {
