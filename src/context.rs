@@ -34,6 +34,10 @@ impl GraphicsContext {
         resources: &DefualtResources,
     ) -> Self {
         // should never fail as we will always set it
+
+        #[cfg(target_arch="wasm32")]
+        let title = window_options.attributes.title.clone();
+
         let size: Vec2<u32> = window_options.attributes.inner_size.unwrap().into();
 
         let window = Arc::new(event_loop.create_window(window_options.attributes).unwrap());
@@ -43,7 +47,6 @@ impl GraphicsContext {
             use crate::engine_handle::BuildError;
             use winit::platform::web::WindowExtWebSys;
 
-            let title = window.title();
             let web_window = web_sys::window()
                 .ok_or(BuildError::CantGetWebWindow)
                 .unwrap();
