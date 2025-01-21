@@ -78,11 +78,13 @@ impl GraphicsContext {
 
         let backend = wgpu::Backends::all();
 
-        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: backend,
-            dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
+            backend_options: wgpu::BackendOptions {
+                gl: wgpu::GlBackendOptions { gles_minor_version: wgpu::Gles3MinorVersion::Automatic },
+                dx12: wgpu::Dx12BackendOptions { shader_compiler: wgpu::Dx12Compiler::Fxc } 
+            },
             flags: wgpu::InstanceFlags::default(),
-            gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
         });
 
         let surface = instance.create_surface(window.clone()).unwrap();
@@ -210,14 +212,14 @@ impl GraphicsContext {
         });
 
         wgpu_clump.queue.write_texture(
-            wgpu::ImageCopyTextureBase {
+            wgpu::TexelCopyTextureInfo {
                 texture: &white_pixel_texture,
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
             &white_pixel_rgba,
-            wgpu::ImageDataLayout {
+            wgpu::TexelCopyBufferLayout {
                 offset: 0,
                 bytes_per_row: Some(width * 4),
                 rows_per_image: Some(height),

@@ -4,7 +4,6 @@
 //! Engine gives you access to all the crucial logic functions
 
 use glyphon::{Attrs, Metrics, Shaping};
-use log::warn;
 
 use image::ImageError;
 use spin_sleep::SpinSleeper;
@@ -589,7 +588,7 @@ impl Engine {
             .as_mut()
             .expect("Context hasnt been created yet run inside impl Game");
 
-        log::info!("RESZING");
+        log::warn!("scale factor {}", context.window.scale_factor());
 
         if new_size.x > 0 && new_size.y > 0 {
             context.config.width = new_size.x;
@@ -760,6 +759,11 @@ impl<T: Game> ApplicationHandler<BpEvent> for (T, Engine) {
         }
     }
 
+    fn new_events(&mut self, event_loop: &ActiveEventLoop, cause: StartCause) {
+        let _ = (self, event_loop);
+        log::info!("{:?}", cause);
+    }
+
     fn window_event(
         &mut self,
         event_loop: &ActiveEventLoop,
@@ -767,11 +771,11 @@ impl<T: Game> ApplicationHandler<BpEvent> for (T, Engine) {
         event: WindowEvent,
     ) {
         let (game, engine) = self;
+        log::info!("event: {:?}, {:?}", event, window_id);
         if window_id == engine.context.as_ref().unwrap().window.id() && !engine.input(&event) {
             match event {
                 WindowEvent::CloseRequested => event_loop.exit(),
                 WindowEvent::Resized(physical_size) => {
-                    warn!("Resize Event");
                     engine.resize(physical_size.into());
                     game.on_resize(physical_size.into(), engine);
                 }

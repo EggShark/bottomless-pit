@@ -17,7 +17,7 @@ bytemuck = {version = "1.12.3", features = ["derive"]}
 env_logger = "0.10.0"
 log = "0.4.17"
 pollster = "0.2.5"
-winit = "0.30"
+winit = "0.30.8"
 spin_sleep = "1.1.1"
 encase = "0.6.1"
 etagere = "0.2.8"
@@ -25,10 +25,10 @@ lru = "0.11"
 cfg-if = "1.0.0"
 web-time = "0.2.3"
 futures = {version = "0.3.29", features = ["thread-pool"]}
-glyphon = "0.7.0"
+glyphon = {git = "https://github.com/grovesNL/glyphon.git"}
 
 [dependencies.wgpu]
-version = "23"
+version = "24"
 default-features = true
 
 [dependencies.glam]
@@ -44,7 +44,7 @@ features = ["png", "jpeg"]
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.6"
 console_log = "1.0"
-wgpu = { version = "23", features = ["webgl"]}
+wgpu = { version = "24", features = ["webgl"]}
 web-sys = { version = "0.3", features = [
     "Document",
     "Window",
