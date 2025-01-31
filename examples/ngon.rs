@@ -80,7 +80,7 @@ impl Game for Position {
         let dt = engine_handle.get_frame_delta_time();
         self.time.time = (self.time.time + dt) % (32.0 * PI);
         self.regular_material
-            .update_uniform_data(&self.time, &engine_handle)
-            .unwrap();
+            .update_uniform_data(&self.time, engine_handle)
+            .unwrap_or(());
     }
 }
