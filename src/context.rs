@@ -95,6 +95,23 @@ impl GraphicsContext {
             force_fallback_adapter: false,
         }));
 
+        let intermediate = Intermediate {
+            surface,
+            window,
+            instance,
+            size,
+            presentation: window_options.presentation,
+        };
+
+        Self::from_contiuned(adapter, intermediate, resource_manager, resources)
+    }
+
+    pub(crate) fn from_contiuned(
+        adapter: Option<wgpu::Adapter>,
+        pre_made: Intermediate,
+        resource_manager: &mut ResourceManager,
+        resources: &DefualtResources,
+    ) -> Self {
         let adapter = match adapter {
             Some(a) => a,
             None => panic!("AHHHHHHHH no adapter"),
@@ -115,7 +132,7 @@ impl GraphicsContext {
 
         let wgpu_clump = WgpuClump { device, queue };
 
-        let surface_capabilities = surface.get_capabilities(&adapter);
+        let surface_capabilities = pre_made.surface.get_capabilities(&adapter);
         let surface_format = surface_capabilities
             .formats
             .iter()
@@ -126,14 +143,15 @@ impl GraphicsContext {
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
             format: surface_format,
-            width: size.x,
-            height: size.y,
-            present_mode: window_options.presentation,
+            width: pre_made.size.x,
+            height: pre_made.size.y,
+            present_mode: pre_made.presentation,
             alpha_mode: surface_capabilities.alpha_modes[0],
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
         };
-        surface.configure(&wgpu_clump.device, &config);
+
+        pre_made.surface.configure(&wgpu_clump.device, &config);
 
         let texture_sampler = wgpu_clump.device.create_sampler(&wgpu::SamplerDescriptor {
             // what to do when given cordinates outside the textures height/width
@@ -161,8 +179,8 @@ impl GraphicsContext {
             0.0,
             1.0,
             0.0,
-            size.x as f32,
-            size.y as f32,
+            pre_made.size.x as f32,
+            pre_made.size.y as f32,
             0.0,
             0.0,
         ];
@@ -297,8 +315,8 @@ impl GraphicsContext {
 
         Self {
             wgpu: wgpu_clump,
-            window,
-            surface,
+            window: pre_made.window,
+            surface: pre_made.surface,
             texture_sampler,
             config,
             camera_bind_group,
@@ -343,6 +361,15 @@ impl From<EngineBuilder> for WindowOptions {
             presentation: value.vsync,
         }
     }
+}
+
+#[derive(Debug)]
+pub(crate) struct Intermediate {
+    surface: wgpu::Surface<'static>,
+    window: Arc<Window>,
+    size: Vec2<u32>,
+    instance: wgpu::Instance,
+    presentation: wgpu::PresentMode,
 }
 
 pub(crate) struct WgpuClump {

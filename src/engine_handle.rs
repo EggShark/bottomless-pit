@@ -20,7 +20,7 @@ use winit::window::BadIcon;
 #[cfg(target_arch="wasm32")]
 use winit::platform::web::EventLoopExtWebSys;
 
-use crate::context::{GraphicsContext, WindowOptions};
+use crate::context::{GraphicsContext, Intermediate, WindowOptions};
 use crate::input::{InputHandle, Key, ModifierKeys, MouseKey};
 use crate::render::render;
 use crate::resource;
@@ -749,6 +749,7 @@ impl<T: Game> ApplicationHandler<BpEvent> for (T, Engine) {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         let (_, engine) = self;
 
+        // WASM branch
         if engine.context.is_none() {
             engine.context = Some(GraphicsContext::from_active_loop(
                 event_loop,
@@ -809,6 +810,7 @@ impl<T: Game> ApplicationHandler<BpEvent> for (T, Engine) {
         let (_, engine) = self;
         match event {
             BpEvent::ResourceLoaded(resource) => engine.handle_resource(resource),
+            BpEvent::AdapterReady(thing) => {}
         }
     }
 
@@ -1103,4 +1105,5 @@ pub(crate) struct DefualtResources {
 #[derive(Debug)]
 pub(crate) enum BpEvent {
     ResourceLoaded(Result<Resource, ResourceError>),
+    AdapterReady((Option<wgpu::Adapter>, Intermediate)),
 }
