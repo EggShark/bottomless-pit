@@ -121,7 +121,18 @@ macro_rules! vec2_math_impl {
     };
 }
 
+vec2_math_impl!(u8);
+vec2_math_impl!(u16);
+vec2_math_impl!(u32);
+vec2_math_impl!(u64);
+vec2_math_impl!(u128);
+vec2_math_impl!(i8);
+vec2_math_impl!(i16);
+vec2_math_impl!(i32);
+vec2_math_impl!(i64);
+vec2_math_impl!(i128);
 vec2_math_impl!(f32);
+vec2_math_impl!(f64);
 from_vec2_impl!(i128, i8);
 from_vec2_impl!(i128, i16);
 from_vec2_impl!(i128, i32);
