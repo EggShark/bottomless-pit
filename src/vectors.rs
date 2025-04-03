@@ -64,6 +64,12 @@ macro_rules! vec2_div_mul_impl {
                 }
             }
         }
+        impl MulAssign<$type_one> for Vec2<$type_one> {
+            fn mul_assign(&mut self, rhs: $type_one) {
+                self.x *= rhs;
+                self.y *= rhs;
+            }
+        }
         impl Div<Vec2<$type_one>> for $type_one {
             type Output = Vec2<$type_one>;
             fn div(self, rhs: Vec2<$type_one>) -> Self::Output {
@@ -80,6 +86,12 @@ macro_rules! vec2_div_mul_impl {
                     x: self.x / rhs,
                     y: self.y / rhs,
                 }
+            }
+        }
+        impl DivAssign<$type_one> for Vec2<$type_one> {
+            fn div_assign(&mut self, rhs: $type_one) {
+                self.x /= rhs;
+                self.y /= rhs;
             }
         }
     };
