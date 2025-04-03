@@ -44,6 +44,48 @@ macro_rules! from_vec2_impl {
     };
 }
 
+macro_rules! vec2_div_mul_impl {
+    ($type_one:ident) => {
+        impl Mul<Vec2<$type_one>> for $type_one {
+            type Output = Vec2<$type_one>;
+            fn mul(self, rhs: Vec2<$type_one>) -> Self::Output {
+                Vec2 {
+                    x: self * rhs.x,
+                    y: self * rhs.y,
+                }
+            }
+        }
+        impl Mul<$type_one> for Vec2<$type_one> {
+            type Output = Vec2<$type_one>;
+            fn mul(self, rhs: $type_one) -> Self::Output {
+                Vec2 {
+                    x: self.x * rhs,
+                    y: self.y * rhs,
+                }
+            }
+        }
+        impl Div<Vec2<$type_one>> for $type_one {
+            type Output = Vec2<$type_one>;
+            fn div(self, rhs: Vec2<$type_one>) -> Self::Output {
+                Vec2 {
+                    x: self / rhs.x,
+                    y: self / rhs.y,
+                }
+            }
+        }
+        impl Div<$type_one> for Vec2<$type_one> {
+            type Output = Vec2<$type_one>;
+            fn div(self, rhs: $type_one) -> Self::Output {
+                Vec2 {
+                    x: self.x / rhs,
+                    y: self.y / rhs,
+                }
+            }
+        }
+    };
+}
+
+vec2_div_mul_impl!(f32);
 from_vec2_impl!(i128, i8);
 from_vec2_impl!(i128, i16);
 from_vec2_impl!(i128, i32);
