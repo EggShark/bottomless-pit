@@ -1,5 +1,5 @@
 //! Generic implmentation of 2D Vectors
-use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 use winit::dpi::Size;
 
@@ -172,6 +172,26 @@ impl<T: Sub<Output = T>> Sub for Vec2<T> {
     }
 }
 
+impl<T: Mul<Output = T>> Mul for Vec2<T> {
+    type Output = Vec2<T>;
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+        }
+    }
+}
+
+impl<T: Div<Output = T>> Div for Vec2<T> {
+    type Output = Vec2<T>;
+    fn div(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x / rhs.x,
+            y: self.y / rhs.y,
+        }
+    }
+}
+
 impl<T: AddAssign> AddAssign for Vec2<T> {
     fn add_assign(&mut self, rhs: Self) {
         self.x += rhs.x;
@@ -183,5 +203,19 @@ impl<T: SubAssign> SubAssign for Vec2<T> {
     fn sub_assign(&mut self, rhs: Self) {
         self.x -= rhs.x;
         self.y -= rhs.y;
+    }
+}
+
+impl<T: DivAssign> DivAssign for Vec2<T> {
+    fn div_assign(&mut self, rhs: Self) {
+        self.x /= rhs.x;
+        self.y /= rhs.y;
+    }
+}
+
+impl<T: MulAssign> MulAssign for Vec2<T> {
+    fn mul_assign(&mut self, rhs: Self) {
+        self.x *= rhs.x;
+        self.y *= rhs.y;
     }
 }
