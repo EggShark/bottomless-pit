@@ -26,6 +26,9 @@ cfg-if = "1.0.0"
 web-time = "0.2.3"
 futures = {version = "0.3.29", features = ["thread-pool"]}
 glyphon = {git = "https://github.com/grovesNL/glyphon.git"}
+# mint is the same version that glam uses
+mint = { version = "0.5.9", optional = true }
+dpi = "0.1.1"
 
 [dependencies.wgpu]
 version = "24"
@@ -56,3 +59,7 @@ web-sys = { version = "0.3", features = [
 wasm-bindgen = "0.2.99"
 wasm-bindgen-futures = "0.4.49"
 js-sys = "0.3"
+
+[features]
+default = ["mint"]
+mint = ["dep:mint", "winit/mint", "dpi/mint", "glam/mint"]

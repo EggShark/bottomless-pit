@@ -57,6 +57,9 @@ pub mod texture;
 pub mod vectors;
 mod vertex;
 
+#[cfg(feature = "mint")]
+pub use mint;
+
 use engine_handle::Engine;
 use render::RenderHandle;
 use vectors::Vec2;

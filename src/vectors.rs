@@ -219,3 +219,20 @@ impl<T: MulAssign> MulAssign for Vec2<T> {
         self.y *= rhs.y;
     }
 }
+
+#[cfg(feature = "mint")]
+impl<T> From<mint::Vector2<T>> for Vec2<T>{
+    fn from(v: mint::Vector2<T>) -> Self {
+        Self::new(v.x, v.y)
+    }
+}
+
+#[cfg(feature = "mint")]
+impl<T> From<Vec2<T>> for mint::Vector2<T> {
+    fn from(v: Vec2<T>) -> Self {
+        mint::Vector2::<T> {
+            x: v.x,
+            y: v.y,
+        }
+    }
+}
