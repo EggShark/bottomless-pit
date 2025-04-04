@@ -414,17 +414,13 @@ impl TextMaterial {
         let inner = self.inner.as_ref().unwrap();
 
         let wgpu = render.wgpu;
+        let inner_size = Vec2 {
+            x: inner.size.x as f32,
+            y: inner.size.y as f32,
+        };
 
-        let uv_pos = uv_pos
-            / Vec2 {
-                x: inner.size.x as f32,
-                y: inner.size.y as f32,
-            };
-        let uv_size = uv_size
-            / Vec2 {
-                x: inner.size.x as f32,
-                y: inner.size.y as f32,
-            };
+        let uv_pos = uv_pos / inner_size;
+        let uv_size = uv_size / inner_size;
 
         let verts = vertex::from_pixels_with_uv(position, size, tint.as_raw(), uv_pos, uv_size);
 
@@ -446,17 +442,13 @@ impl TextMaterial {
         let inner = self.inner.as_ref().unwrap();
 
         let wgpu = render.wgpu;
+        let inner_size = Vec2 {
+            x: inner.size.x as f32,
+            y: inner.size.y as f32,
+        };
 
-        let uv_pos = uv_pos
-            / Vec2 {
-                x: inner.size.x as f32,
-                y: inner.size.y as f32,
-            };
-        let uv_size = uv_size
-            / Vec2 {
-                x: inner.size.x as f32,
-                y: inner.size.y as f32,
-            };
+        let uv_pos = uv_pos / inner_size;
+        let uv_size = uv_size / inner_size;
 
         let verts = vertex::from_pixels_ex(position, size, tint.as_raw(), degrees, uv_pos, uv_size);
 
@@ -476,28 +468,16 @@ impl TextMaterial {
         let inner = self.inner.as_ref().unwrap();
 
         let wgpu = render.wgpu;
+        let inner_size = Vec2 {
+            x: inner.size.x as f32,
+            y: inner.size.y as f32,
+        };
 
         let uv_points = [
-            uv_points[0]
-                / Vec2 {
-                    x: inner.size.x as f32,
-                    y: inner.size.y as f32,
-                },
-            uv_points[1]
-                / Vec2 {
-                    x: inner.size.x as f32,
-                    y: inner.size.y as f32,
-                },
-            uv_points[2]
-                / Vec2 {
-                    x: inner.size.x as f32,
-                    y: inner.size.y as f32,
-                },
-            uv_points[3]
-                / Vec2 {
-                    x: inner.size.x as f32,
-                    y: inner.size.y as f32,
-                },
+            uv_points[0] / inner_size,
+            uv_points[1] / inner_size,
+            uv_points[2] / inner_size,
+            uv_points[3] / inner_size,
         ];
 
         let verts = vertex::from_pixels_custom(points, uv_points, degrees, tint.as_raw());
