@@ -59,11 +59,8 @@ impl Camera {
         let scale_x = self.scale.x;
         let scale_y = self.scale.y;
 
-        let rot_x = screen_size.x / 2.0;
-        let rot_y = screen_size.y / 2.0;
-
-        let x_trans = rot_x - self.center.x;
-        let y_trans = rot_y - self.center.y;
+        let rot_v = screen_size / 2.0;
+        let trans_v = rot_v - self.center;
 
         let sin = self.rotation.to_radians().sin();
         let cos = self.rotation.to_radians().cos();
@@ -77,13 +74,13 @@ impl Camera {
             scale_y * cos,
             0.0,
             //c3
-            scale_x * x_trans * cos - scale_x * y_trans * sin - rot_x * scale_x * cos
-                + rot_y * scale_x * sin
-                + rot_x,
-            scale_y * x_trans * sin + scale_y * y_trans * cos
-                - rot_x * scale_y * sin
-                - rot_y * scale_y * cos
-                + rot_y,
+            scale_x * trans_v.x * cos - scale_x * trans_v.y * sin - rot_v.x * scale_x * cos
+                + rot_v.x * scale_x * sin
+                + rot_v.x,
+            scale_y * trans_v.x * sin + scale_y * trans_v.y * cos
+                - rot_v.x * scale_y * sin
+                - rot_v.y * scale_y * cos
+                + rot_v.y,
             1.0,
         ])
         .inverse();
@@ -100,11 +97,8 @@ impl Camera {
         let scale_x = self.scale.x;
         let scale_y = self.scale.y;
 
-        let rot_x = screen_size.x / 2.0;
-        let rot_y = screen_size.y / 2.0;
-
-        let x_trans = rot_x - self.center.x;
-        let y_trans = rot_y - self.center.y;
+        let rot_v = screen_size / 2.0;
+        let trans_v = rot_v - self.center;
 
         let sin = self.rotation.to_radians().sin();
         let cos = self.rotation.to_radians().cos();
@@ -122,13 +116,13 @@ impl Camera {
             0.0,
             0.0,
             //c3
-            scale_x * x_trans * cos - scale_x * y_trans * sin - rot_x * scale_x * cos
-                + rot_y * scale_x * sin
-                + rot_x,
-            scale_y * x_trans * sin + scale_y * y_trans * cos
-                - rot_x * scale_y * sin
-                - rot_y * scale_y * cos
-                + rot_y,
+            scale_x * trans_v.x * cos - scale_x * trans_v.y * sin - rot_v.x * scale_x * cos
+                + rot_v.y * scale_x * sin
+                + rot_v.x,
+            scale_y * trans_v.x * sin + scale_y * trans_v.y * cos
+                - rot_v.x * scale_y * sin
+                - rot_v.y * scale_y * cos
+                + rot_v.y,
             1.0,
             0.0,
             //screen size

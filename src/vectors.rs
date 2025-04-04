@@ -175,15 +175,6 @@ from_vec2_impl!(f32, i8);
 from_vec2_impl!(f32, u16);
 from_vec2_impl!(f32, u8);
 
-impl<T: Mul<Output = T> + Copy> Vec2<T> {
-    pub fn scale(self, number: T) -> Vec2<T> {
-        Vec2 {
-            x: self.x * number,
-            y: self.y * number,
-        }
-    }
-}
-
 impl<T> From<Vec2<T>> for (T, T) {
     fn from(value: Vec2<T>) -> Self {
         (value.x, value.y)
