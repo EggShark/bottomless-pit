@@ -17,7 +17,7 @@ use winit::event::*;
 use winit::event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy};
 use winit::window::BadIcon;
 
-#[cfg(target_arch="wasm32")]
+#[cfg(target_arch = "wasm32")]
 use winit::platform::web::EventLoopExtWebSys;
 
 use crate::context::{GraphicsContext, Intermediate, WindowOptions};
@@ -534,11 +534,11 @@ impl Engine {
         T: Game + 'static,
     {
         let event_loop = self.event_loop.take().unwrap(); //should never panic
-        #[cfg(target_arch="wasm32")]
+        #[cfg(target_arch = "wasm32")]
         {
             event_loop.spawn_app((game, self));
         }
-        #[cfg(not(target_arch="wasm32"))] 
+        #[cfg(not(target_arch = "wasm32"))]
         {
             event_loop.run_app(&mut (game, self)).unwrap();
         }
@@ -861,29 +861,14 @@ impl EngineBuilder {
 
     /// Overides the defualt resolution
     pub fn with_resolution(self, resolution: (u32, u32)) -> Self {
-        Self {
-            resolution,
-            full_screen: self.full_screen,
-            target_fps: self.target_fps,
-            close_key: self.close_key,
-            window_icon: self.window_icon,
-            window_title: self.window_title,
-            resizable: self.resizable,
-            vsync: self.vsync,
-        }
+        Self { resolution, ..self }
     }
 
     /// Will cause the window to be fullscreen upon launch
     pub fn fullscreen(self) -> Self {
         Self {
-            resolution: self.resolution,
             full_screen: true,
-            target_fps: self.target_fps,
-            close_key: self.close_key,
-            window_icon: self.window_icon,
-            window_title: self.window_title,
-            resizable: self.resizable,
-            vsync: self.vsync,
+            ..self
         }
     }
 
@@ -893,14 +878,8 @@ impl EngineBuilder {
     /// no action is taken to "speed" up the rendering and updating
     pub fn set_target_fps(self, fps: u16) -> Self {
         Self {
-            resolution: self.resolution,
-            full_screen: self.full_screen,
             target_fps: Some(fps),
-            close_key: self.close_key,
-            window_icon: self.window_icon,
-            window_title: self.window_title,
-            resizable: self.resizable,
-            vsync: self.vsync,
+            ..self
         }
     }
 
@@ -910,70 +889,41 @@ impl EngineBuilder {
     /// [PresentMode::AutoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html)
     pub fn remove_vsync(self) -> Self {
         Self {
-            resolution: self.resolution,
-            full_screen: self.full_screen,
-            target_fps: self.target_fps,
-            close_key: self.close_key,
-            window_icon: self.window_icon,
-            window_title: self.window_title,
-            resizable: self.resizable,
             vsync: wgpu::PresentMode::AutoNoVsync,
+            ..self
         }
     }
 
     /// Sets a key that will instantly close the window
     pub fn set_close_key(self, key: Key) -> Self {
         Self {
-            resolution: self.resolution,
-            full_screen: self.full_screen,
-            target_fps: self.target_fps,
             close_key: Some(key),
-            window_icon: self.window_icon,
-            window_title: self.window_title,
-            resizable: self.resizable,
-            vsync: self.vsync,
+            ..self
         }
     }
 
     /// Sets the title of the window
     pub fn set_window_title(self, title: &str) -> Self {
         Self {
-            resolution: self.resolution,
-            full_screen: self.full_screen,
-            target_fps: self.target_fps,
-            close_key: self.close_key,
-            window_icon: self.window_icon,
             window_title: title.into(),
-            resizable: self.resizable,
-            vsync: self.vsync,
+            ..self
         }
     }
 
     /// Sets the window icon
     pub fn set_window_icon(self, icon: winit::window::Icon) -> Self {
         Self {
-            resolution: self.resolution,
-            full_screen: self.full_screen,
-            target_fps: self.target_fps,
-            close_key: self.close_key,
             window_icon: Some(icon),
-            window_title: self.window_title,
-            resizable: self.resizable,
-            vsync: self.vsync,
+            ..self
         }
     }
 
     /// Prevents the window from being resized during runtime
     pub fn unresizable(self) -> Self {
         Self {
-            resolution: self.resolution,
-            full_screen: self.full_screen,
-            target_fps: self.target_fps,
-            close_key: self.close_key,
-            window_icon: self.window_icon,
-            window_title: self.window_title,
             resizable: false,
             vsync: self.vsync,
+            ..self
         }
     }
 

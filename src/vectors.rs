@@ -1,5 +1,5 @@
 //! Generic implmentation of 2D Vectors
-use std::ops::{Add, AddAssign, Mul, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
 use winit::dpi::Size;
 
@@ -44,6 +44,95 @@ macro_rules! from_vec2_impl {
     };
 }
 
+macro_rules! vec2_math_impl {
+    ($type_one:ident) => {
+        impl Add<Vec2<$type_one>> for $type_one {
+            type Output = Vec2<$type_one>;
+            fn add(self, rhs: Vec2<$type_one>) -> Self::Output {
+                Vec2 {
+                    x: self + rhs.x,
+                    y: self + rhs.y,
+                }
+            }
+        }
+        impl Add<$type_one> for Vec2<$type_one> {
+            type Output = Vec2<$type_one>;
+            fn add(self, rhs: $type_one) -> Self::Output {
+                Vec2 {
+                    x: self.x + rhs,
+                    y: self.y + rhs,
+                }
+            }
+        }
+        impl Sub<Vec2<$type_one>> for $type_one {
+            type Output = Vec2<$type_one>;
+            fn sub(self, rhs: Vec2<$type_one>) -> Self::Output {
+                Vec2 {
+                    x: self - rhs.x,
+                    y: self - rhs.y,
+                }
+            }
+        }
+        impl Sub<$type_one> for Vec2<$type_one> {
+            type Output = Vec2<$type_one>;
+            fn sub(self, rhs: $type_one) -> Self::Output {
+                Vec2 {
+                    x: self.x - rhs,
+                    y: self.y - rhs,
+                }
+            }
+        }
+        impl Mul<Vec2<$type_one>> for $type_one {
+            type Output = Vec2<$type_one>;
+            fn mul(self, rhs: Vec2<$type_one>) -> Self::Output {
+                Vec2 {
+                    x: self * rhs.x,
+                    y: self * rhs.y,
+                }
+            }
+        }
+        impl Mul<$type_one> for Vec2<$type_one> {
+            type Output = Vec2<$type_one>;
+            fn mul(self, rhs: $type_one) -> Self::Output {
+                Vec2 {
+                    x: self.x * rhs,
+                    y: self.y * rhs,
+                }
+            }
+        }
+        impl Div<Vec2<$type_one>> for $type_one {
+            type Output = Vec2<$type_one>;
+            fn div(self, rhs: Vec2<$type_one>) -> Self::Output {
+                Vec2 {
+                    x: self / rhs.x,
+                    y: self / rhs.y,
+                }
+            }
+        }
+        impl Div<$type_one> for Vec2<$type_one> {
+            type Output = Vec2<$type_one>;
+            fn div(self, rhs: $type_one) -> Self::Output {
+                Vec2 {
+                    x: self.x / rhs,
+                    y: self.y / rhs,
+                }
+            }
+        }
+    };
+}
+
+vec2_math_impl!(u8);
+vec2_math_impl!(u16);
+vec2_math_impl!(u32);
+vec2_math_impl!(u64);
+vec2_math_impl!(u128);
+vec2_math_impl!(i8);
+vec2_math_impl!(i16);
+vec2_math_impl!(i32);
+vec2_math_impl!(i64);
+vec2_math_impl!(i128);
+vec2_math_impl!(f32);
+vec2_math_impl!(f64);
 from_vec2_impl!(i128, i8);
 from_vec2_impl!(i128, i16);
 from_vec2_impl!(i128, i32);
@@ -85,15 +174,6 @@ from_vec2_impl!(f32, i16);
 from_vec2_impl!(f32, i8);
 from_vec2_impl!(f32, u16);
 from_vec2_impl!(f32, u8);
-
-impl<T: Mul<Output = T> + Copy> Vec2<T> {
-    pub fn scale(self, number: T) -> Vec2<T> {
-        Vec2 {
-            x: self.x * number,
-            y: self.y * number,
-        }
-    }
-}
 
 impl<T> From<Vec2<T>> for (T, T) {
     fn from(value: Vec2<T>) -> Self {
@@ -172,6 +252,26 @@ impl<T: Sub<Output = T>> Sub for Vec2<T> {
     }
 }
 
+impl<T: Mul<Output = T>> Mul for Vec2<T> {
+    type Output = Vec2<T>;
+    fn mul(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+        }
+    }
+}
+
+impl<T: Div<Output = T>> Div for Vec2<T> {
+    type Output = Vec2<T>;
+    fn div(self, rhs: Self) -> Self::Output {
+        Self {
+            x: self.x / rhs.x,
+            y: self.y / rhs.y,
+        }
+    }
+}
+
 impl<T: AddAssign> AddAssign for Vec2<T> {
     fn add_assign(&mut self, rhs: Self) {
         self.x += rhs.x;
@@ -183,5 +283,36 @@ impl<T: SubAssign> SubAssign for Vec2<T> {
     fn sub_assign(&mut self, rhs: Self) {
         self.x -= rhs.x;
         self.y -= rhs.y;
+    }
+}
+
+impl<T: DivAssign> DivAssign for Vec2<T> {
+    fn div_assign(&mut self, rhs: Self) {
+        self.x /= rhs.x;
+        self.y /= rhs.y;
+    }
+}
+
+impl<T: MulAssign> MulAssign for Vec2<T> {
+    fn mul_assign(&mut self, rhs: Self) {
+        self.x *= rhs.x;
+        self.y *= rhs.y;
+    }
+}
+
+#[cfg(feature = "mint")]
+impl<T> From<mint::Vector2<T>> for Vec2<T>{
+    fn from(v: mint::Vector2<T>) -> Self {
+        Self::new(v.x, v.y)
+    }
+}
+
+#[cfg(feature = "mint")]
+impl<T> From<Vec2<T>> for mint::Vector2<T> {
+    fn from(v: Vec2<T>) -> Self {
+        mint::Vector2::<T> {
+            x: v.x,
+            y: v.y,
+        }
     }
 }

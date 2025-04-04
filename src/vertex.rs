@@ -202,14 +202,11 @@ pub(crate) fn from_pixels_ex(
     uv_pos: Vec2<f32>,
     uv_size: Vec2<f32>,
 ) -> [Vertex; 4] {
+    let center = (pos + size) / 2.0;
     let pos = pos.to_raw();
     let size = size.to_raw();
     let uv_pos = uv_pos.to_raw();
 
-    let center = Vec2 {
-        x: pos[0] + size[0] / 2.0,
-        y: pos[1] + size[1] / 2.0,
-    };
     [
         Vertex::from_2d(pos, uv_pos, colour).rotate(rotation, center),
         Vertex::from_2d(
@@ -242,14 +239,10 @@ pub(crate) fn new_ex(
     uv_pos: Vec2<f32>,
     uv_size: Vec2<f32>,
 ) -> [Vertex; 4] {
+    let center = (pos + size) / 2.0;
     let pos = pos.to_raw();
     let size = size.to_raw();
     let uv_pos = uv_pos.to_raw();
-
-    let center = Vec2 {
-        x: pos[0] + size[0] / 2.0,
-        y: pos[1] + size[1] / 2.0,
-    };
 
     [
         Vertex::from_2d(pos, uv_pos, colour).rotate(rotation, center),
@@ -291,17 +284,9 @@ pub(crate) fn from_pixels_custom(
 }
 
 fn get_center_of_four_points(points: [Vec2<f32>; 4]) -> Vec2<f32> {
-    let tri1_centroid_x = (points[0].x + points[1].x + points[3].x) / 3.0;
-    let tri1_centroid_y = (points[0].y + points[1].y + points[3].y) / 3.0;
+    let tri1_centroid = (points[0] + points[1] + points[3]) / 3.0;
 
-    let tri2_centriod_x = (points[1].x + points[2].x + points[3].x) / 3.0;
-    let tri2_centroid_y = (points[1].y + points[2].y + points[3].y) / 3.0;
+    let tri2_centroid = (points[1] + points[2] + points[3]) / 3.0; 
 
-    let mid_point_x = (tri1_centroid_x + tri2_centriod_x) / 2.0;
-    let mid_point_y = (tri1_centroid_y + tri2_centroid_y) / 2.0;
-
-    Vec2 {
-        x: mid_point_x,
-        y: mid_point_y,
-    }
+    (tri1_centroid + tri2_centroid) / 2.0
 }

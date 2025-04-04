@@ -19,7 +19,6 @@ use encase::ShaderType;
 use crate::colour::Colour;
 use crate::context::WgpuClump;
 use crate::engine_handle::Engine;
-use crate::matrix_math::normalize_points;
 use crate::render::Renderer;
 use crate::resource::ResourceId;
 use crate::shader::{Shader, UniformData, UniformError};
@@ -126,8 +125,8 @@ impl<T> Material<T> {
             .unwrap_or(Vec2 { x: 1.0, y: 1.0 });
         // doesnt matter what i put here bc the texture isnt loaded regardless
 
-        let uv_size = normalize_points(uv_size, texture_size);
-        let uv_position = normalize_points(uv_position, texture_size);
+        let uv_size = uv_size / texture_size;
+        let uv_position = uv_position / texture_size;
 
         let verts =
             vertex::from_pixels_with_uv(position, size, colour.as_raw(), uv_position, uv_size);
@@ -167,8 +166,8 @@ impl<T> Material<T> {
 
         let texture_size = render.resources.get_texture(&self.texture_id).unwrap().size;
 
-        let uv_size = normalize_points(uv_size, texture_size);
-        let uv_position = normalize_points(uv_position, texture_size);
+        let uv_size = uv_size / texture_size;
+        let uv_position = uv_position / texture_size;
 
         let verts = vertex::from_pixels_ex(
             position,
@@ -221,10 +220,10 @@ impl<T> Material<T> {
         let wgpu = render.wgpu;
         let texture_size = render.resources.get_texture(&self.texture_id).unwrap().size;
         let uv_points = [
-            normalize_points(uv_points[0], texture_size),
-            normalize_points(uv_points[1], texture_size),
-            normalize_points(uv_points[2], texture_size),
-            normalize_points(uv_points[3], texture_size),
+            uv_points[0] / texture_size,
+            uv_points[1] / texture_size,
+            uv_points[2] / texture_size,
+            uv_points[3] / texture_size,
         ];
 
         let verts = vertex::from_pixels_custom(points, uv_points, rotation, colour.as_raw());
