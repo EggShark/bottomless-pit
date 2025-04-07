@@ -1,4 +1,4 @@
-use crate::engine_handle::{DefualtResources, EngineBuilder};
+use crate::engine_handle::{BuildError, DefualtResources, EngineBuilder};
 use crate::layouts;
 use crate::render::make_pipeline;
 use crate::resource::ResourceManager;
@@ -29,7 +29,7 @@ pub(crate) struct GraphicsContext {
 impl GraphicsContext {
     pub fn from_active_loop(
         event_loop: &ActiveEventLoop,
-        window_options: WindowOptions,
+        mut window_options: WindowOptions,
         resource_manager: &mut ResourceManager,
         resources: &DefualtResources,
     ) -> Self {
@@ -40,28 +40,30 @@ impl GraphicsContext {
 
         let size: Vec2<u32> = window_options.attributes.inner_size.unwrap().into();
 
-        let window = Arc::new(event_loop.create_window(window_options.attributes).unwrap());
-
-        #[cfg(target_arch = "wasm32")]
+        #[cfg(target_arch="wasm32")]
         {
             use crate::engine_handle::BuildError;
-            use winit::platform::web::WindowExtWebSys;
+            use winit::platform::web::WindowAttributesExtWebSys;
+            use wasm_bindgen::JsCast;
 
-            let web_window = web_sys::window()
+            let document = web_sys::window()
                 .ok_or(BuildError::CantGetWebWindow)
-                .unwrap();
-            
-            let canvas = web_sys::Element::from(window.canvas().unwrap());
-
-            let document = web_window
+                .unwrap()
                 .document()
                 .ok_or(BuildError::CantGetDocument)
                 .unwrap();
-
+            let canvas = document.create_element("canvas")
+                .unwrap()
+                .dyn_into::<web_sys::HtmlCanvasElement>()
+                .unwrap();
+            let style = canvas.style();
+            let _ = style.set_property("width", "100%");
+            let _ = style.set_property("height", "100%");
+            
             match document.get_element_by_id(&title) {
                 Some(element) => {
                     let array = js_sys::Array::new();
-                    array.push(&wasm_bindgen::JsValue::from(canvas));
+                    array.push(&wasm_bindgen::JsValue::from(&canvas));
                     element.replace_with_with_node(&array).unwrap();
                 }
                 None => {
@@ -74,7 +76,11 @@ impl GraphicsContext {
                     body.append_child(&canvas).unwrap();
                 }
             }
+
+            window_options.attributes = window_options.attributes.with_canvas(Some(canvas));
         }
+
+        let window = Arc::new(event_loop.create_window(window_options.attributes).unwrap());
 
         let backend = wgpu::Backends::all();
 
