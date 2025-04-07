@@ -299,6 +299,14 @@ impl Engine {
             .set_min_inner_size(Some(winit::dpi::PhysicalSize::new(width, height)));
     }
 
+    pub fn set_window_size(&self, width: f32, height: f32) {
+        let context = self
+            .context
+            .as_ref()
+            .expect("Context hasnt been created yet run inside impl Game");
+        let _ = context.window.request_inner_size(winit::dpi::PhysicalSize::new(width, height));
+    }
+
     /// Gets the physical postion of the window
     /// # Panics
     /// When called outside of the functions in the [Game] trait
