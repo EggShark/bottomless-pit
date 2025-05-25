@@ -176,12 +176,14 @@ impl TextMaterial {
             resources: &engine.resource_manager,
         };
 
+        let attrs = Attrs::new()
+                .color(colour.into())
+                .family(Family::Name(&font_info.text_handle.defualt_font_name));
+
         inner.text_buffer.set_text(
             &mut font_info.text_handle.font_system,
             text,
-            Attrs::new()
-                .color(colour.into())
-                .family(Family::Name(&font_info.text_handle.defualt_font_name)),
+            &attrs,
             Shaping::Basic,
         );
 
@@ -226,10 +228,12 @@ impl TextMaterial {
             .map(|f| &f.name)
             .unwrap_or(backup);
 
+        let attrs = Attrs::new().color(colour.into()).family(Family::Name(name));
+
         inner.text_buffer.set_text(
             &mut font_info.text_handle.font_system,
             text,
-            Attrs::new().color(colour.into()).family(Family::Name(name)),
+            &attrs,
             Shaping::Basic,
         );
 
@@ -690,12 +694,15 @@ impl InnerMaterial {
 
         text_buffer.set_size(&mut font_info.text_handle.font_system, None, None);
 
+        let attrs = 
+            Attrs::new()
+                .color(colour.into())
+                .family(Family::Name(&font_info.text_handle.defualt_font_name));
+
         text_buffer.set_text(
             &mut font_info.text_handle.font_system,
             text,
-            Attrs::new()
-                .color(colour.into())
-                .family(Family::Name(&font_info.text_handle.defualt_font_name)),
+            &attrs,
             Shaping::Advanced,
         );
 

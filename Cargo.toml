@@ -25,13 +25,14 @@ lru = "0.11"
 cfg-if = "1.0.0"
 web-time = "0.2.3"
 futures = {version = "0.3.29", features = ["thread-pool"]}
-glyphon = {git = "https://github.com/grovesNL/glyphon.git"}
+glyphon = {version = "0.9.0"}
+#glyphon = {git = "https://github.com/grovesNL/glyphon.git"}
 # mint is the same version that glam uses
 mint = { version = "0.5.9", optional = true }
 dpi = "0.1.1"
 
 [dependencies.wgpu]
-version = "24"
+version = "25"
 default-features = true
 
 [dependencies.glam]
@@ -47,7 +48,7 @@ features = ["png", "jpeg"]
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 console_error_panic_hook = "0.1.6"
 console_log = "1.0"
-wgpu = { version = "24", features = ["webgl"]}
+wgpu = { version = "25", features = ["webgl"]}
 web-sys = { version = "0.3", features = [
     "Document",
     "Window",

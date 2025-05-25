@@ -468,10 +468,12 @@ impl Engine {
             Some(physical_height),
             Some(physical_width),
         );
+
+        let attrs = Attrs::new();
         buffer.set_text(
             &mut context.text_renderer.font_system,
             text,
-            Attrs::new(),
+            &attrs,
             Shaping::Basic,
         );
 
