@@ -87,8 +87,9 @@ impl GraphicsContext {
         let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
             backends: backend,
             backend_options: wgpu::BackendOptions {
-                gl: wgpu::GlBackendOptions { gles_minor_version: wgpu::Gles3MinorVersion::Automatic },
-                dx12: wgpu::Dx12BackendOptions { shader_compiler: wgpu::Dx12Compiler::Fxc } 
+                gl: wgpu::GlBackendOptions { gles_minor_version: wgpu::Gles3MinorVersion::Automatic, fence_behavior: wgpu::GlFenceBehavior::Normal },
+                dx12: wgpu::Dx12BackendOptions { shader_compiler: wgpu::Dx12Compiler::Fxc },
+                noop: wgpu::NoopBackendOptions { enable: (false) }
             },
             flags: wgpu::InstanceFlags::default(),
         });
@@ -113,14 +114,14 @@ impl GraphicsContext {
     }
 
     pub(crate) fn from_contiuned(
-        adapter: Option<wgpu::Adapter>,
+        adapter: Result<wgpu::Adapter, wgpu::RequestAdapterError>,
         pre_made: Intermediate,
         resource_manager: &mut ResourceManager,
         resources: &DefualtResources,
     ) -> Self {
         let adapter = match adapter {
-            Some(a) => a,
-            None => panic!("AHHHHHHHH no adapter"),
+            Ok(a) => a,
+            Err(e) => panic!("AHHHHHHHH no adapter: {}", e),
         };
 
         let limits = adapter.limits();
@@ -131,8 +132,8 @@ impl GraphicsContext {
                 required_limits: limits,
                 label: None,
                 memory_hints: wgpu::MemoryHints::Performance,
+                trace: wgpu::Trace::Off, //TODO: allow users to pass through directory for trace
             },
-            None,
         ))
         .unwrap();
 
