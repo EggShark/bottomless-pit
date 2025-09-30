@@ -40,10 +40,10 @@ impl Game for Position {
     fn render<'o>(&'o mut self, mut render: RenderHandle<'o>) {
         let mut render_handle = render.begin_pass(Colour::BLACK);
 
-        let defualt_size = vec2! { 50.0 };
+        let default_size = vec2! { 50.0 };
         self.regular_material.add_rectangle(
             vec2! { 0.0 },
-            defualt_size,
+            default_size,
             Colour::RED,
             &render_handle,
         );
@@ -51,13 +51,13 @@ impl Game for Position {
             .add_rectangle(self.pos, vec2! { 100.0 }, Colour::RED, &render_handle);
         self.texture_material.add_rectangle(
             vec2! { 0.0, 50.0 },
-            defualt_size,
+            default_size,
             Colour::WHITE,
             &render_handle,
         );
         self.texture_material.add_rectangle_with_uv(
             Vec2 { x: 0.0, y: 100.0 },
-            defualt_size,
+            default_size,
             vec2! { 311.0 },
             vec2! { 311.0 },
             Colour::WHITE,
@@ -65,7 +65,7 @@ impl Game for Position {
         );
         self.regular_material.add_rectangle_with_rotation(
             Vec2 { x: 0.0, y: 150.0 },
-            defualt_size,
+            default_size,
             Colour::GREEN,
             45.0,
             &render_handle,

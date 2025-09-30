@@ -106,7 +106,7 @@ impl Shader {
         }
     }
 
-    pub(crate) fn defualt(wgpu: &WgpuClump, texture_format: wgpu::TextureFormat) -> Self {
+    pub(crate) fn default(wgpu: &WgpuClump, texture_format: wgpu::TextureFormat) -> Self {
         let shader_descriptor = include_wgsl!("shaders/shader.wgsl");
         let shader = wgpu.device.create_shader_module(shader_descriptor);
         let pipeline = render::make_pipeline(

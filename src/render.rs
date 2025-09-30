@@ -116,9 +116,9 @@ pub struct RenderHandle<'a> {
     encoder: Option<wgpu::CommandEncoder>,
     surface: Option<wgpu::SurfaceTexture>,
     pub(crate) resources: &'a ResourceManager,
-    defualt_id: ResourceId<Shader>,
-    defualt_view: wgpu::TextureView,
-    defualt_view_size: Vec2<u32>,
+    default_id: ResourceId<Shader>,
+    default_view: wgpu::TextureView,
+    default_view_size: Vec2<u32>,
     camera_bindgroup: &'a wgpu::BindGroup,
     pub(crate) wgpu: &'a WgpuClump,
     format: wgpu::TextureFormat,
@@ -128,13 +128,13 @@ impl<'a> RenderHandle<'a> {
     /// Creates a render pass that will render onto the windows surface.
     pub fn begin_pass<'p>(&mut self, clear_colour: Colour) -> Renderer<'_, 'p> {
         let mut pass = match &mut self.encoder {
-            Some(encoder) => Self::create_pass(encoder, &self.defualt_view, clear_colour.into()),
+            Some(encoder) => Self::create_pass(encoder, &self.default_view, clear_colour.into()),
             None => unreachable!(),
         };
 
         let pipeline = &self
             .resources
-            .get_pipeline(&self.defualt_id)
+            .get_pipeline(&self.default_id)
             .unwrap()
             .pipeline;
 
@@ -143,8 +143,8 @@ impl<'a> RenderHandle<'a> {
 
         Renderer {
             pass,
-            size: self.defualt_view_size,
-            defualt_id: self.defualt_id,
+            size: self.default_view_size,
+            default_id: self.default_id,
             resources: self.resources,
             camera_bindgroup: self.camera_bindgroup,
             wgpu: self.wgpu,
@@ -172,7 +172,7 @@ impl<'a> RenderHandle<'a> {
 
         let pipeline = &self
             .resources
-            .get_pipeline(&self.defualt_id)
+            .get_pipeline(&self.default_id)
             .unwrap()
             .pipeline;
 
@@ -182,7 +182,7 @@ impl<'a> RenderHandle<'a> {
         Renderer {
             pass,
             size,
-            defualt_id: self.defualt_id,
+            default_id: self.default_id,
             resources: self.resources,
             camera_bindgroup: self.camera_bindgroup,
             wgpu: self.wgpu,
@@ -226,9 +226,9 @@ impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
 
         let texture = context.get_surface_texture().unwrap();
 
-        let defualt_view_size = texture.texture.size();
-        let defualt_view_size = vec2!(defualt_view_size.width, defualt_view_size.height);
-        let defualt_view = texture
+        let default_view_size = texture.texture.size();
+        let default_view_size = vec2!(default_view_size.width, default_view_size.height);
+        let default_view = texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
@@ -236,9 +236,9 @@ impl<'a> From<&'a mut Engine> for RenderHandle<'a> {
             encoder: Some(encoder),
             surface: Some(texture),
             resources: value.get_resources(),
-            defualt_id: value.defualt_pipe_id(),
-            defualt_view,
-            defualt_view_size,
+            default_id: value.default_pipe_id(),
+            default_view,
+            default_view_size,
             camera_bindgroup: &context.camera_bind_group,
             wgpu: &context.wgpu,
             format: context.get_texture_format(),
@@ -265,13 +265,13 @@ where
     pub(crate) pass: wgpu::RenderPass<'p>,
     pub(crate) size: Vec2<u32>,
     pub(crate) resources: &'o ResourceManager,
-    pub(crate) defualt_id: ResourceId<Shader>,
+    pub(crate) default_id: ResourceId<Shader>,
     pub(crate) camera_bindgroup: &'o wgpu::BindGroup,
     pub(crate) wgpu: &'o WgpuClump,
 }
 
 impl<'p, 'o> Renderer<'p, 'o> {
-    /// Resets the camera to the defualt camera.
+    /// Resets the camera to the default camera.
     pub fn reset_camera(&mut self) {
         self.pass.set_bind_group(1, self.camera_bindgroup, &[]);
     }

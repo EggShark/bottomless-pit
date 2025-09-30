@@ -50,7 +50,7 @@ pub struct Engine {
     size: Vec2<u32>,
     pub(crate) resource_manager: ResourceManager,
     pub(crate) loader: Loader,
-    pub(crate) defualt_resources: DefualtResources,
+    pub(crate) default_resources: DefualtResources,
     ma_frame_time: f32,
     pub(crate) context: Option<GraphicsContext>,
 }
@@ -82,9 +82,9 @@ impl Engine {
         let generic_id = resource::generate_id::<Shader>();
         let white_pixel_id = resource::generate_id::<Texture>();
 
-        let defualt_resources = DefualtResources {
+        let default_resources = DefualtResources {
             default_pipeline_id: generic_id,
-            defualt_texture_id: white_pixel_id,
+            default_texture_id: white_pixel_id,
             line_pipeline_id: line_id,
         };
 
@@ -104,7 +104,7 @@ impl Engine {
             context: None,
             resource_manager,
             loader: Loader::new(),
-            defualt_resources,
+            default_resources,
             ma_frame_time: 0.0,
         })
     }
@@ -526,16 +526,16 @@ impl Engine {
         &self.resource_manager
     }
 
-    pub(crate) fn defualt_material_bg_id(&self) -> ResourceId<Texture> {
-        self.defualt_resources.defualt_texture_id
+    pub(crate) fn default_material_bg_id(&self) -> ResourceId<Texture> {
+        self.default_resources.default_texture_id
     }
 
-    pub(crate) fn defualt_pipe_id(&self) -> ResourceId<Shader> {
-        self.defualt_resources.default_pipeline_id
+    pub(crate) fn default_pipe_id(&self) -> ResourceId<Shader> {
+        self.default_resources.default_pipeline_id
     }
 
     pub(crate) fn line_pipe_id(&self) -> ResourceId<Shader> {
-        self.defualt_resources.line_pipeline_id
+        self.default_resources.line_pipeline_id
     }
 
     /// Takes the struct that implements the Game trait and starts the winit event loop running the game
@@ -632,7 +632,7 @@ impl Engine {
             }
             Err(e) => {
                 log::error!(
-                    "could not load resource: {:?}, becuase: {:?}, loading defualt replacement",
+                    "could not load resource: {:?}, becuase: {:?}, loading default replacement",
                     e,
                     e.error
                 );
@@ -640,10 +640,10 @@ impl Engine {
                 self.loader.remove_item_loading(e.loading_op);
 
                 match e.resource_type {
-                    ResourceType::Bytes => self.add_defualt_bytes(e.id),
-                    ResourceType::Image(..) => self.add_defualt_image(e.id),
-                    ResourceType::Shader(_) => self.add_defualt_shader(e.id),
-                    ResourceType::Font => self.add_defualt_font(e.id),
+                    ResourceType::Bytes => self.add_default_bytes(e.id),
+                    ResourceType::Image(..) => self.add_default_image(e.id),
+                    ResourceType::Shader(_) => self.add_default_shader(e.id),
+                    ResourceType::Font => self.add_default_font(e.id),
                 }
             }
         }
@@ -670,7 +670,7 @@ impl Engine {
                 self.resource_manager.insert_texture(typed_id, texture);
                 log::info!("texture resource at: {:?} loaded succesfully", path);
             }
-            Err(e) => log::error!("{:?}, loading defualt replacement", e),
+            Err(e) => log::error!("{:?}, loading default replacement", e),
         }
     }
 
@@ -692,8 +692,8 @@ impl Engine {
                 log::info!("shader resource at: {:?} loaded succesfully", path);
             }
             Err(e) => {
-                log::error!("{:?}. loading defualt replacement", e);
-                self.add_defualt_shader(id);
+                log::error!("{:?}. loading default replacement", e);
+                self.add_default_shader(id);
             }
         }
     }
@@ -708,36 +708,36 @@ impl Engine {
         log::info!("Font resource at: {:?} loaded succesfully", resource.path);
     }
 
-    fn add_defualt_bytes(&mut self, id: NonZeroU64) {
+    fn add_default_bytes(&mut self, id: NonZeroU64) {
         let typed_id: ResourceId<Vec<u8>> = ResourceId::from_number(id);
         self.resource_manager.insert_bytes(typed_id, Vec::new());
     }
 
-    fn add_defualt_image(&mut self, id: NonZeroU64) {
+    fn add_default_image(&mut self, id: NonZeroU64) {
         let typed_id: ResourceId<Texture> = ResourceId::from_number(id);
         let image = Texture::default(self);
         self.resource_manager.insert_texture(typed_id, image);
     }
 
-    fn add_defualt_shader(&mut self, id: NonZeroU64) {
+    fn add_default_shader(&mut self, id: NonZeroU64) {
         let context = self
             .context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
 
         let typed_id: ResourceId<Shader> = ResourceId::from_number(id);
-        let shader = Shader::defualt(&context.wgpu, context.get_texture_format());
+        let shader = Shader::default(&context.wgpu, context.get_texture_format());
         self.resource_manager.insert_pipeline(typed_id, shader);
     }
 
-    fn add_defualt_font(&mut self, id: NonZeroU64) {
+    fn add_default_font(&mut self, id: NonZeroU64) {
         let context = self
             .context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
 
         let typed_id: ResourceId<Font> = ResourceId::from_number(id);
-        let font = Font::from_str(context.text_renderer.get_defualt_font_name());
+        let font = Font::from_str(context.text_renderer.get_default_font_name());
         self.resource_manager.insert_font(typed_id, font);
     }
 
@@ -765,7 +765,7 @@ impl<T: Game> ApplicationHandler<BpEvent> for (T, Engine) {
                 event_loop,
                 engine.window_options.take().unwrap(),
                 &mut engine.resource_manager,
-                &engine.defualt_resources,
+                &engine.default_resources,
             ))
         }
     }
@@ -844,7 +844,7 @@ pub struct EngineBuilder {
 }
 
 impl EngineBuilder {
-    /// Creates a builder with some defualt presets
+    /// Creates a builder with some default presets
     /// ```rust
     /// Self {
     ///     resolution: (600, 600),
@@ -869,7 +869,7 @@ impl EngineBuilder {
         }
     }
 
-    /// Overides the defualt resolution
+    /// Overides the default resolution
     pub fn with_resolution(self, resolution: (u32, u32)) -> Self {
         Self { resolution, ..self }
     }
@@ -895,7 +895,7 @@ impl EngineBuilder {
 
     /// Will cause the framerate to be uncapped if the platform supports it using
     /// wgpu's [PresentMode::AutoNoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html)
-    /// by defualt the engine uses
+    /// by default the engine uses
     /// [PresentMode::AutoVsync](https://docs.rs/wgpu/latest/wgpu/enum.PresentMode.html)
     pub fn remove_vsync(self) -> Self {
         Self {
@@ -1057,7 +1057,7 @@ impl std::fmt::Display for IconError {
 impl std::error::Error for IconError {}
 
 pub(crate) struct DefualtResources {
-    pub(crate) defualt_texture_id: ResourceId<Texture>,
+    pub(crate) default_texture_id: ResourceId<Texture>,
     pub(crate) default_pipeline_id: ResourceId<Shader>,
     pub(crate) line_pipeline_id: ResourceId<Shader>,
 }

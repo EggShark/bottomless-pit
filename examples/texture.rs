@@ -21,11 +21,11 @@ fn main() {
     let texture = MaterialBuilder::new()
         .add_texture(texture)
         .build(&mut engine);
-    let defualt = MaterialBuilder::new().build(&mut engine);
+    let default = MaterialBuilder::new().build(&mut engine);
 
     let s = TextureExample {
         current: texture,
-        other: defualt,
+        other: default,
         pos: vec2! { 0.0 },
     };
 

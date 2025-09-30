@@ -48,13 +48,13 @@ fn main() {
         .set_shader(circle_shader)
         .build(&mut engine);
 
-    let defualt_material = MaterialBuilder::new().build(&mut engine);
+    let default_material = MaterialBuilder::new().build(&mut engine);
 
     let game = ShaderExample {
         data,
         mouse_material,
         circle_material,
-        defualt_material,
+        default_material,
         theta: data,
     };
 
@@ -72,7 +72,7 @@ struct MousePos {
 struct ShaderExample {
     mouse_material: Material<MousePos>,
     circle_material: Material<MousePos>,
-    defualt_material: Material,
+    default_material: Material,
     data: MousePos,
     theta: MousePos,
 }
@@ -93,7 +93,7 @@ impl Game for ShaderExample {
             Colour::RED,
             &render_handle,
         );
-        self.defualt_material.add_rectangle(
+        self.default_material.add_rectangle(
             Vec2 { x: 0.0, y: 200.0 },
             vec2! { 100.0 },
             Colour::RED,
@@ -102,7 +102,7 @@ impl Game for ShaderExample {
 
         self.mouse_material.draw(&mut render_handle);
         self.circle_material.draw(&mut render_handle);
-        self.defualt_material.draw(&mut render_handle);
+        self.default_material.draw(&mut render_handle);
     }
 
     fn update(&mut self, engine_handle: &mut Engine) {

@@ -62,17 +62,17 @@ pub(crate) struct TextRenderer {
     text_cache: glyphon::Cache,
     atlas: TextAtlas,
     text_renderer: glyphon::TextRenderer,
-    defualt_font_name: String,
+    default_font_name: String,
 }
 
 impl TextRenderer {
     pub fn new(wgpu: &WgpuClump) -> Self {
         let mut font_system = FontSystem::new();
-        let defualt_font_id = font_system
+        let default_font_id = font_system
             .db_mut()
             .load_font_source(Source::Binary(Arc::new(include_bytes!("Monocraft.ttf"))))[0];
 
-        let defualt_font_name = font_system.db().face(defualt_font_id).unwrap().families[0]
+        let default_font_name = font_system.db().face(default_font_id).unwrap().families[0]
             .0
             .clone();
         // its expensive but whatever
@@ -99,12 +99,12 @@ impl TextRenderer {
             text_cache,
             atlas,
             text_renderer,
-            defualt_font_name,
+            default_font_name,
         }
     }
 
-    pub fn get_defualt_font_name(&self) -> &str {
-        &self.defualt_font_name
+    pub fn get_default_font_name(&self) -> &str {
+        &self.default_font_name
     }
 
     /// Loads in a font from a byte array
@@ -149,7 +149,7 @@ impl TextMaterial {
         }
     }
 
-    /// Sets the text for the widget, using the defualt font.
+    /// Sets the text for the widget, using the default font.
     /// This only needs to be done once, not every frame like Materials.
     pub fn set_text(&mut self, text: &str, colour: Colour, engine: &mut Engine) {
         self.text = text.into();
@@ -178,7 +178,7 @@ impl TextMaterial {
 
         let attrs = Attrs::new()
                 .color(colour.into())
-                .family(Family::Name(&font_info.text_handle.defualt_font_name));
+                .family(Family::Name(&font_info.text_handle.default_font_name));
 
         inner.text_buffer.set_text(
             &mut font_info.text_handle.font_system,
@@ -634,7 +634,7 @@ impl TextMaterial {
 
         let pipeline = &information
             .resources
-            .get_pipeline(&information.defualt_id)
+            .get_pipeline(&information.default_id)
             .unwrap()
             .pipeline;
 
@@ -697,7 +697,7 @@ impl InnerMaterial {
         let attrs = 
             Attrs::new()
                 .color(colour.into())
-                .family(Family::Name(&font_info.text_handle.defualt_font_name));
+                .family(Family::Name(&font_info.text_handle.default_font_name));
 
         text_buffer.set_text(
             &mut font_info.text_handle.font_system,
