@@ -21,6 +21,7 @@ use crate::context::WgpuClump;
 use crate::engine_handle::Engine;
 use crate::resource::{ResourceId, ResourceManager};
 use crate::shader::Shader;
+use crate::text::TextMaterial;
 use crate::texture::UniformTexture;
 use crate::vectors::Vec2;
 use crate::{vec2, Game};
@@ -103,9 +104,27 @@ where
         return Ok(());
     }
 
-    let render_handle = RenderHandle::from(engine);
+    let render_handle = RenderHandle::from(&mut *engine);
 
     game.render(render_handle);
+
+    if engine.get_has_fps_counter() {
+        let mut render_handle2 = RenderHandle::from(engine);
+        
+        let mut pass = render_handle2.begin_pass(Colour::BLACK);
+
+        let text_mat = Box::leak(Box::new(TextMaterial::new(
+            &format!("FPS"),
+            Colour::GREEN,
+            12.0,
+            12.0
+        )));
+
+        // text_mat.
+        text_mat.add_instance(vec2! { 0.0 }, Colour::WHITE, &pass);
+        
+        text_mat.draw(&mut pass);
+    }
 
     Ok(())
 }
