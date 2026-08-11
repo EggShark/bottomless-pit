@@ -102,7 +102,7 @@ impl Engine {
             close_key,
             target_fps,
             last_frame: Instant::now(),
-            frame_time: Duration::new(0, 0),
+            frame_time: Duration::new(1, 0),
             spin_sleeper: SpinSleeper::default(),
             size,
             context: None,
