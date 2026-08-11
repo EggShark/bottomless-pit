@@ -104,26 +104,29 @@ where
         return Ok(());
     }
 
-    let render_handle = RenderHandle::from(&mut *engine);
+    {
+        let render = RenderHandle::from(&mut *engine);
 
-    game.render(render_handle);
+        game.render(render);
+    }
 
     if engine.get_has_fps_counter() {
-        let mut render_handle2 = RenderHandle::from(engine);
-        
-        let mut pass = render_handle2.begin_pass(Colour::BLACK);
-
-        let text_mat = Box::leak(Box::new(TextMaterial::new(
-            &format!("FPS"),
+        let mut text_mat = TextMaterial::new(
+            format!("FPS: {:.0}", engine.get_stable_fps()).as_str(),
             Colour::GREEN,
-            12.0,
-            12.0
-        )));
-
-        // text_mat.
-        text_mat.add_instance(vec2! { 0.0 }, Colour::WHITE, &pass);
+            12.0, 
+            12.0 * 1.3);
+        text_mat.prepare(&mut *engine);
         
-        text_mat.draw(&mut pass);
+        let mut render = RenderHandle::from(&mut *engine);
+    
+        {
+            let mut render_handle = render.begin_pass(Colour::BLACK);
+            text_mat
+                .add_instance(vec2! { 0.0 }, Colour::WHITE, &render_handle);
+    
+            text_mat.draw(&mut render_handle);
+        }
     }
 
     Ok(())
