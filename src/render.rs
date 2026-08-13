@@ -112,19 +112,19 @@ where
 
     if engine.get_has_fps_counter() {
         let mut text_mat = TextMaterial::new(
-            format!("FPS: {:.0}", engine.get_stable_fps()).as_str(),
+            &format!("FPS: {:.0}", engine.get_stable_fps()),
             Colour::GREEN,
-            12.0, 
-            12.0 * 1.3);
-        text_mat.prepare(&mut *engine);
-        
-        let mut render = RenderHandle::from(&mut *engine);
-    
+            12.0,
+            12.0 * 1.3,
+        );
+        text_mat.prepare(engine);
+
+        let mut render = RenderHandle::from(engine);
+
         {
             let mut render_handle = render.begin_pass(Colour::BLACK);
-            text_mat
-                .add_instance(vec2! { 0.0 }, Colour::WHITE, &render_handle);
-    
+            text_mat.add_instance(vec2! { 0.0 }, Colour::WHITE, &render_handle);
+
             text_mat.draw(&mut render_handle);
         }
     }
