@@ -54,7 +54,6 @@ pub struct Engine {
     pub(crate) loader: Loader,
     pub(crate) default_resources: DefualtResources,
     pub(crate) context: Option<GraphicsContext>,
-    has_fps_counter: bool
 }
 
 impl Engine {
@@ -90,8 +89,6 @@ impl Engine {
             line_pipeline_id: line_id,
         };
 
-        let has_fps_counter = builder.has_fps_counter;
-
         Ok(Self {
             input_handle,
             event_loop: Some(event_loop),
@@ -108,8 +105,7 @@ impl Engine {
             context: None,
             resource_manager,
             loader: Loader::new(),
-            default_resources,
-            has_fps_counter
+            default_resources
         })
     }
 
@@ -339,14 +335,6 @@ impl Engine {
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
         context.window.scale_factor()
-    }
-
-    pub fn get_has_fps_counter(&self) -> bool {
-        self.has_fps_counter
-    }
-
-    pub fn set_has_fps_counter(&mut self, has_fps_counter: bool) {
-        self.has_fps_counter = has_fps_counter;
     }
 
     /// Toggels fullscreen mode may fail on certain Operating Systems
@@ -848,8 +836,6 @@ pub struct EngineBuilder {
     pub(crate) window_title: String,
     pub(crate) resizable: bool,
     pub(crate) vsync: wgpu::PresentMode,
-    // None means no fps counter
-    has_fps_counter: bool
 }
 
 impl EngineBuilder {
@@ -875,7 +861,6 @@ impl EngineBuilder {
             window_title: "Bottomless-Pit Game".into(),
             resizable: true,
             vsync: wgpu::PresentMode::AutoVsync,
-            has_fps_counter: false
         }
     }
 
@@ -943,13 +928,6 @@ impl EngineBuilder {
         Self {
             resizable: false,
             vsync: self.vsync,
-            ..self
-        }
-    }
-
-    pub fn with_fps_counter(self) -> Self {
-        Self {
-            has_fps_counter: true,
             ..self
         }
     }

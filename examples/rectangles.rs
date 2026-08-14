@@ -10,7 +10,7 @@ use bottomless_pit::vectors::Vec2;
 use bottomless_pit::Game;
 
 fn main() {
-    let mut engine = EngineBuilder::new().with_fps_counter().build().unwrap();
+    let mut engine = EngineBuilder::new().build().unwrap();
 
     let texture = Texture::new(&mut engine, "examples/bplogo.png", LoadingOp::Blocking);
 
