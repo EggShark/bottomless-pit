@@ -103,9 +103,9 @@ where
         return Ok(());
     }
 
-    let render = RenderHandle::from(&mut *engine);
+    let renderer = RenderHandle::from(engine);
 
-    game.render(render);
+    game.render(renderer);
 
     Ok(())
 }
