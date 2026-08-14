@@ -46,8 +46,15 @@ pub struct Engine {
     close_key: Option<Key>,
     target_fps: Option<u16>,
     last_frame: Instant,
-    // time between `last_frame` and the one before it
+    /// time between `last_frame` and the one before it
     frame_time: Duration,
+    /// average of `frame_time` and it's previous value
+    ///  
+    ///  <-d1------> <-d2------>
+    /// | <- frame  | <- frame  | <- frame
+    /// 
+    /// ma_frame_time = (d1 + d2) / 2
+    ma_frame_time: f32,
     spin_sleeper: SpinSleeper,
     size: Vec2<u32>,
     pub(crate) resource_manager: ResourceManager,
@@ -99,6 +106,7 @@ impl Engine {
             close_key,
             target_fps,
             last_frame: Instant::now(),
+            ma_frame_time: 1.0,
             frame_time: Duration::new(1, 0),
             spin_sleeper: SpinSleeper::default(),
             size,
@@ -387,6 +395,11 @@ impl Engine {
 
     /// Returns a moving average of the last two frame times
     pub fn get_stable_fps(&self) -> f32 {
+        1.0 / self.ma_frame_time
+    }
+
+    /// return 1 over the time between the last two frames
+    pub fn get_fps(&self) -> f32 {
         1.0 / self.frame_time.as_secs_f32()
     }
 
@@ -579,9 +592,13 @@ impl Engine {
         }
 
         let now = Instant::now();
+
+        let old_frame_time = self.frame_time.as_secs_f32();
         
         self.frame_time = now.duration_since(self.last_frame);
         self.last_frame = now;
+
+        self.ma_frame_time = (old_frame_time + self.frame_time.as_secs_f32()) / 2.0;
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
