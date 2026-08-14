@@ -9,6 +9,7 @@ use image::ImageError;
 use spin_sleep::SpinSleeper;
 use std::num::NonZeroU64;
 use std::path::Path;
+use std::time::Duration;
 use web_time::Instant;
 use wgpu::{CreateSurfaceError, RequestDeviceError};
 use winit::application::ApplicationHandler;
@@ -45,13 +46,20 @@ pub struct Engine {
     close_key: Option<Key>,
     target_fps: Option<u16>,
     last_frame: Instant,
+    /// time between `last_frame` and the one before it
+    frame_time: Duration,
+    /// average of `frame_time` and it's previous value
+    ///  
+    ///  <-d1------> <-d2------>
+    /// | <- frame  | <- frame  | <- frame
+    ///
+    /// ma_frame_time = (d1 + d2) / 2
+    ma_frame_time: f32,
     spin_sleeper: SpinSleeper,
-    current_frametime: Instant,
     size: Vec2<u32>,
     pub(crate) resource_manager: ResourceManager,
     pub(crate) loader: Loader,
     pub(crate) default_resources: DefualtResources,
-    ma_frame_time: f32,
     pub(crate) context: Option<GraphicsContext>,
 }
 
@@ -98,14 +106,14 @@ impl Engine {
             close_key,
             target_fps,
             last_frame: Instant::now(),
-            current_frametime: Instant::now(),
+            ma_frame_time: 1.0,
+            frame_time: Duration::new(1, 0),
             spin_sleeper: SpinSleeper::default(),
             size,
             context: None,
             resource_manager,
             loader: Loader::new(),
             default_resources,
-            ma_frame_time: 0.0,
         })
     }
 
@@ -304,7 +312,9 @@ impl Engine {
             .context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
-        let _ = context.window.request_inner_size(winit::dpi::PhysicalSize::new(width, height));
+        let _ = context
+            .window
+            .request_inner_size(winit::dpi::PhysicalSize::new(width, height));
     }
 
     /// Gets the physical postion of the window
@@ -385,9 +395,14 @@ impl Engine {
         Instant::now().duration_since(self.last_frame).as_secs_f32()
     }
 
-    /// Returns a moving average of the last two frame times
+    /// Returns a rounded moving average of the last two frame times
     pub fn get_stable_fps(&self) -> f32 {
-        1.0 / self.ma_frame_time
+        (1.0 / self.ma_frame_time).ceil()
+    }
+
+    /// return 1 over the time between the last two frames
+    pub fn get_fps(&self) -> f32 {
+        1.0 / self.frame_time.as_secs_f32()
     }
 
     /// Gets the current target fps
@@ -555,14 +570,6 @@ impl Engine {
     }
 
     fn update(&mut self, elwt: &ActiveEventLoop) {
-        self.last_frame = Instant::now();
-        let dt = self
-            .last_frame
-            .duration_since(self.current_frametime)
-            .as_secs_f32();
-
-        self.ma_frame_time = (self.ma_frame_time + dt) / 2.0;
-
         if self.should_close {
             elwt.exit();
             return;
@@ -577,15 +584,24 @@ impl Engine {
         }
 
         if let Some(frame_rate) = self.target_fps {
-            let frame_time = Instant::now()
-                .duration_since(self.current_frametime)
-                .as_nanos() as u64;
-            let desired_time_between_frames = 1000000000 / frame_rate as u64;
-            if frame_time < desired_time_between_frames {
+            let desired_time_between_frames = Duration::new(0, 1_000_000_000 / frame_rate as u32);
+
+            let since_last_frame = Instant::now().duration_since(self.last_frame);
+
+            if since_last_frame < desired_time_between_frames {
                 self.spin_sleeper
-                    .sleep_ns(desired_time_between_frames - frame_time);
+                    .sleep(desired_time_between_frames - since_last_frame);
             }
         }
+
+        let now = Instant::now();
+
+        let old_frame_time = self.frame_time.as_secs_f32();
+
+        self.frame_time = now.duration_since(self.last_frame);
+        self.last_frame = now;
+
+        self.ma_frame_time = (old_frame_time + self.frame_time.as_secs_f32()) / 2.0;
     }
 
     fn input(&mut self, event: &WindowEvent) -> bool {
@@ -796,7 +812,6 @@ impl<T: Game> ApplicationHandler<BpEvent> for (T, Engine) {
                     } else {
                         game.update(engine);
                         engine.update(event_loop);
-                        engine.current_frametime = Instant::now();
 
                         match render(game, engine) {
                             Ok(_) => {}

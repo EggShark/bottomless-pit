@@ -103,9 +103,9 @@ where
         return Ok(());
     }
 
-    let render_handle = RenderHandle::from(engine);
+    let renderer = RenderHandle::from(engine);
 
-    game.render(render_handle);
+    game.render(renderer);
 
     Ok(())
 }
