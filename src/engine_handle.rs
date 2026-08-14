@@ -52,7 +52,7 @@ pub struct Engine {
     ///  
     ///  <-d1------> <-d2------>
     /// | <- frame  | <- frame  | <- frame
-    /// 
+    ///
     /// ma_frame_time = (d1 + d2) / 2
     ma_frame_time: f32,
     spin_sleeper: SpinSleeper,
@@ -113,7 +113,7 @@ impl Engine {
             context: None,
             resource_manager,
             loader: Loader::new(),
-            default_resources
+            default_resources,
         })
     }
 
@@ -312,7 +312,9 @@ impl Engine {
             .context
             .as_ref()
             .expect("Context hasnt been created yet run inside impl Game");
-        let _ = context.window.request_inner_size(winit::dpi::PhysicalSize::new(width, height));
+        let _ = context
+            .window
+            .request_inner_size(winit::dpi::PhysicalSize::new(width, height));
     }
 
     /// Gets the physical postion of the window
@@ -393,9 +395,9 @@ impl Engine {
         Instant::now().duration_since(self.last_frame).as_secs_f32()
     }
 
-    /// Returns a moving average of the last two frame times
+    /// Returns a rounded moving average of the last two frame times
     pub fn get_stable_fps(&self) -> f32 {
-        1.0 / self.ma_frame_time
+        (1.0 / self.ma_frame_time).ceil()
     }
 
     /// return 1 over the time between the last two frames
@@ -587,14 +589,15 @@ impl Engine {
             let since_last_frame = Instant::now().duration_since(self.last_frame);
 
             if since_last_frame < desired_time_between_frames {
-                self.spin_sleeper.sleep(desired_time_between_frames - since_last_frame);
+                self.spin_sleeper
+                    .sleep(desired_time_between_frames - since_last_frame);
             }
         }
 
         let now = Instant::now();
 
         let old_frame_time = self.frame_time.as_secs_f32();
-        
+
         self.frame_time = now.duration_since(self.last_frame);
         self.last_frame = now;
 
