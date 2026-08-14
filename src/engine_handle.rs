@@ -587,8 +587,7 @@ impl Engine {
             let since_last_frame = Instant::now().duration_since(self.last_frame);
 
             if since_last_frame < desired_time_between_frames {
-                // we must call sleep_ns instead of just sleep because sleep panics on wasm for some reason
-                self.spin_sleeper.sleep_ns((desired_time_between_frames - since_last_frame).as_nanos() as u64);
+                self.spin_sleeper.sleep(desired_time_between_frames - since_last_frame);
             }
         }
 
