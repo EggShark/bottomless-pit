@@ -56,6 +56,7 @@ pub mod text;
 pub mod texture;
 pub mod vectors;
 mod vertex;
+pub mod time;
 
 #[cfg(feature = "mint")]
 pub use mint;
