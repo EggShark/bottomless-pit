@@ -6,7 +6,6 @@
 use glyphon::{Attrs, Metrics, Shaping};
 
 use image::ImageError;
-use spin_sleep::SpinSleeper;
 use std::num::NonZeroU64;
 use std::path::Path;
 use std::time::Duration;
@@ -55,7 +54,6 @@ pub struct Engine {
     ///
     /// ma_frame_time = (d1 + d2) / 2
     ma_frame_time: f32,
-    spin_sleeper: SpinSleeper,
     size: Vec2<u32>,
     pub(crate) resource_manager: ResourceManager,
     pub(crate) loader: Loader,
@@ -108,7 +106,6 @@ impl Engine {
             last_frame: Instant::now(),
             ma_frame_time: 1.0,
             frame_time: Duration::new(1, 0),
-            spin_sleeper: SpinSleeper::default(),
             size,
             context: None,
             resource_manager,
@@ -449,10 +446,9 @@ impl Engine {
             .configure(&context.wgpu.device, &context.config);
     }
 
-    /// Sets a target fps cap. The thread will spin sleep using the
-    /// [spin_sleep](https://docs.rs/spin_sleep/latest/spin_sleep/index.html) crate
-    /// untill the desired frame time is reached. If the frames are slower than the target
-    /// no action is taken to "speed" up the rendering and updating
+    /// Sets a target fps cap. The thread will sleep using the until the
+    /// desired frame time is reached. If the frames are slower than the
+    /// target no action is taken to "speed" up the rendering and updating
     pub fn set_target_fps(&mut self, fps: u16) {
         self.target_fps = Some(fps);
     }
@@ -589,8 +585,7 @@ impl Engine {
             let since_last_frame = Instant::now().duration_since(self.last_frame);
 
             if since_last_frame < desired_time_between_frames {
-                self.spin_sleeper
-                    .sleep(desired_time_between_frames - since_last_frame);
+                crate::time::sleep(desired_time_between_frames - since_last_frame);
             }
         }
 
